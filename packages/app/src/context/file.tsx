@@ -39,8 +39,11 @@ export type FileState = {
 }
 
 function stripFileProtocol(input: string) {
-  if (!input.startsWith("file://")) return input
-  return input.slice("file://".length)
+  let result = input
+  while (result.startsWith("file://")) {
+    result = result.slice("file://".length)
+  }
+  return result
 }
 
 function stripQueryAndHash(input: string) {

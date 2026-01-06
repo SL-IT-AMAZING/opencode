@@ -10,17 +10,21 @@ export default function FileTree(props: {
   class?: string
   nodeClass?: string
   level?: number
+  activeFile?: string
   onFileClick?: (file: LocalFile) => void
 }) {
   const local = useLocal()
   const level = props.level ?? 0
 
+  const isActive = (path: string) => props.activeFile === path
+
   const Node = (p: ParentProps & ComponentProps<"div"> & { node: LocalFile; as?: "div" | "button" }) => (
     <Dynamic
       component={p.as ?? "div"}
       classList={{
-        "p-0.5 w-full flex items-center gap-x-2 hover:bg-background-element": true,
-        // "bg-background-element": local.file.active()?.path === p.node.path,
+        "p-0.5 w-full flex items-center gap-x-2 rounded-sm transition-colors": true,
+        "hover:bg-background-element": !isActive(p.node.path),
+        "bg-background-element ring-1 ring-primary/30": isActive(p.node.path),
         [props.nodeClass ?? ""]: !!props.nodeClass,
       }}
       style={`padding-left: ${level * 10}px`}
@@ -54,10 +58,9 @@ export default function FileTree(props: {
       <span
         classList={{
           "text-xs whitespace-nowrap truncate": true,
-          "text-text-muted/40": p.node.ignored,
-          "text-text-muted/80": !p.node.ignored,
-          // "!text-text": local.file.active()?.path === p.node.path,
-          // "!text-primary": local.file.changed(p.node.path),
+          "text-text-muted/40": p.node.ignored && !isActive(p.node.path),
+          "text-text-muted/80": !p.node.ignored && !isActive(p.node.path),
+          "!text-text-strong": isActive(p.node.path),
         }}
       >
         {p.node.name}
@@ -93,7 +96,7 @@ export default function FileTree(props: {
                     </Node>
                   </Collapsible.Trigger>
                   <Collapsible.Content>
-                    <FileTree path={node.path} level={level + 1} onFileClick={props.onFileClick} />
+                    <FileTree path={node.path} level={level + 1} activeFile={props.activeFile} onFileClick={props.onFileClick} />
                   </Collapsible.Content>
                 </Collapsible>
               </Match>

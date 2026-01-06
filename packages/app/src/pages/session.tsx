@@ -26,6 +26,7 @@ import { useTerminal, type LocalPTY } from "@/context/terminal"
 import { useLayout } from "@/context/layout"
 import { Terminal } from "@/components/terminal"
 import { FileExplorerPanel } from "@/components/file-explorer-panel"
+import { FileViewer } from "@/components/file-viewer"
 import { checksum, base64Encode, base64Decode } from "@opencode-ai/util/encode"
 import { useDialog } from "@opencode-ai/ui/context/dialog"
 import { DialogSelectFile } from "@/components/dialog-select-file"
@@ -637,6 +638,57 @@ export default function Page() {
       .filter((tab) => tab !== "context"),
   )
 
+  // File tabs only (excluding context, review)
+  const openedFileTabs = createMemo(() =>
+    tabs().all().filter((tab) => tab.startsWith("file://"))
+  )
+
+  // Active file tab for file viewer
+  const activeFileTab = createMemo(() => {
+    const active = tabs().active()
+    if (!active?.startsWith("file://")) return null
+    return file.pathFromTab(active)
+  })
+
+  // Switch to session (deactivate file tabs)
+  const switchToSession = () => {
+    tabs().setActive(undefined)
+  }
+
+  // Close a specific tab
+  const closeTab = (tab: string) => {
+    tabs().close(tab)
+  }
+
+  // Handle ask about selection from file viewer
+  const handleAskAboutSelection = (selection: { text: string; startLine: number; endLine: number }) => {
+    const path = activeFileTab()
+    if (!path) return
+
+    // Add selected code to prompt context
+    prompt.context.add({
+      type: "file",
+      path,
+      selection: {
+        startLine: selection.startLine,
+        endLine: selection.endLine,
+        startChar: 0,
+        endChar: 0,
+      },
+    })
+
+    // Focus prompt input
+    inputRef?.focus()
+  }
+
+  // Close file viewer and go back to session
+  const closeFileViewer = () => {
+    const active = tabs().active()
+    if (active?.startsWith("file://")) {
+      tabs().close(active)
+    }
+  }
+
   const reviewTab = createMemo(() => diffs().length > 0 || tabs().active() === "review")
   const mobileReview = createMemo(() => !isDesktop() && diffs().length > 0 && store.mobileTab === "review")
 
@@ -799,15 +851,74 @@ export default function Page() {
         <div
           classList={{
             "@container relative flex flex-col min-h-0 h-full bg-background-stronger": true,
-            "flex-1 py-6 md:py-3": true,
+            "flex-1": true,
           }}
           style={{
             "min-width": isDesktop() ? "400px" : undefined,
             "--prompt-height": store.promptHeight ? `${store.promptHeight}px` : undefined,
           }}
         >
-          <div class="flex-1 min-h-0 overflow-hidden">
+          {/* File tabs bar - Chrome style */}
+          <Show when={openedFileTabs().length > 0}>
+            <DragDropProvider
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+              onDragOver={handleDragOver}
+              collisionDetector={closestCenter}
+            >
+              <DragDropSensors />
+              <ConstrainDragYAxis />
+              <Tabs value={tabs().active() ?? "session"} onChange={openTab}>
+                <Tabs.List class="h-10 shrink-0 border-b border-border-weak-base bg-background-base">
+                  {/* Session tab (always first) */}
+                  <Tabs.Trigger value="session" onClick={switchToSession}>
+                    <Icon name="bubble-5" />
+                    <span class="ml-1">Session</span>
+                  </Tabs.Trigger>
+
+                  {/* File tabs */}
+                  <SortableProvider ids={openedFileTabs()}>
+                    <For each={openedFileTabs()}>
+                      {(tab) => <SortableTab tab={tab} onTabClose={closeTab} />}
+                    </For>
+                  </SortableProvider>
+                </Tabs.List>
+              </Tabs>
+              <DragOverlay>
+                <Show when={store.activeDraggable}>
+                  {(draggedId) => {
+                    const path = createMemo(() => file.pathFromTab(draggedId()))
+                    return (
+                      <Show when={path()}>
+                        {(p) => (
+                          <div class="relative p-1 h-10 flex items-center bg-background-stronger text-14-regular">
+                            <FileVisual path={p()} />
+                          </div>
+                        )}
+                      </Show>
+                    )
+                  }}
+                </Show>
+              </DragOverlay>
+            </DragDropProvider>
+          </Show>
+
+          {/* Content area */}
+          <div classList={{
+            "flex-1 min-h-0 overflow-hidden": true,
+            "py-6 md:py-3": openedFileTabs().length === 0,
+          }}>
             <Switch>
+              {/* File viewer mode */}
+              <Match when={activeFileTab()}>
+                {(path) => (
+                  <FileViewer
+                    path={path()}
+                    onClose={closeFileViewer}
+                    onAskAboutSelection={handleAskAboutSelection}
+                  />
+                )}
+              </Match>
               <Match when={params.id}>
                 <Show when={activeMessage()}>
                   <Show
@@ -975,7 +1086,7 @@ export default function Page() {
               class="relative shrink-0 overflow-hidden"
               style={{ height: `${layout.fileExplorer.height()}px` }}
             >
-              <FileExplorerPanel onFileOpen={openTab} />
+              <FileExplorerPanel onFileOpen={openTab} activeFile={activeFileTab() ?? undefined} />
             </div>
 
             {/* Vertical resize handle between explorer and terminal */}
