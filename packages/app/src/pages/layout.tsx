@@ -26,7 +26,7 @@ import { Tooltip, TooltipKeybind } from "@opencode-ai/ui/tooltip"
 import { Collapsible } from "@opencode-ai/ui/collapsible"
 import { DiffChanges } from "@opencode-ai/ui/diff-changes"
 import { Spinner } from "@opencode-ai/ui/spinner"
-import { Mark } from "@opencode-ai/ui/logo"
+import { Mark, FullLogo } from "@opencode-ai/ui/logo"
 import { getFilename } from "@opencode-ai/util/path"
 import { DropdownMenu } from "@opencode-ai/ui/dropdown-menu"
 import { Session } from "@opencode-ai/sdk/v2/client"
@@ -903,7 +903,9 @@ export default function Layout(props: ParentProps) {
               }}
             >
               <A href="/" class="shrink-0 h-8 flex items-center justify-start px-2 w-full" data-tauri-drag-region>
-                <Mark class="shrink-0" />
+                <Show when={expanded()} fallback={<Mark class="shrink-0 h-8" />}>
+                  <FullLogo class="shrink-0" />
+                </Show>
               </A>
             </div>
           </Show>
@@ -1104,7 +1106,7 @@ export default function Layout(props: ParentProps) {
                 class="shrink-0 h-8 flex items-center justify-start px-2 w-full"
                 onClick={() => layout.mobileSidebar.hide()}
               >
-                <Mark class="shrink-0" />
+                <FullLogo class="shrink-0" />
               </A>
             </div>
             <SidebarContent mobile />

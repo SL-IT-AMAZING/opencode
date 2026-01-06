@@ -1,10 +1,23 @@
 import logoMark from "../assets/logo-mark.png"
+import logoFull from "../assets/logo-full.png"
 
 export const Mark = (props: { class?: string }) => {
   return (
     <img
       data-component="logo-mark"
       src={logoMark}
+      alt="OpenCode"
+      classList={{ [props.class ?? ""]: !!props.class }}
+      class="h-8 object-contain"
+    />
+  )
+}
+
+export const FullLogo = (props: { class?: string }) => {
+  return (
+    <img
+      data-component="logo-full"
+      src={logoFull}
       alt="OpenCode"
       classList={{ [props.class ?? ""]: !!props.class }}
       class="h-6 object-contain"
