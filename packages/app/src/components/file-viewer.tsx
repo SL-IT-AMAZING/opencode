@@ -96,43 +96,33 @@ export function FileViewer(props: FileViewerProps) {
       <div class="flex-1 overflow-auto p-4" onMouseUp={handleMouseUp}>
         <Switch>
           <Match when={!fileState() || fileState()?.loading}>
-            {() => (
-              <div class="flex items-center justify-center h-32 text-text-muted">
-                <div class="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                <span class="ml-2">Loading...</span>
-              </div>
-            )}
+            <div class="flex items-center justify-center h-32 text-text-muted">
+              <div class="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+              <span class="ml-2">Loading...</span>
+            </div>
           </Match>
           <Match when={fileState()?.error}>
-            {() => (
-              <div class="flex items-center justify-center h-32 text-text-danger">
-                <Icon name="circle-x" />
-                <span class="ml-2">{fileState()?.error}</span>
-              </div>
-            )}
+            <div class="flex items-center justify-center h-32 text-text-danger">
+              <Icon name="circle-x" />
+              <span class="ml-2">{fileState()?.error}</span>
+            </div>
           </Match>
           <Match when={fileState()?.loaded && !content()}>
-            {() => (
-              <div class="flex items-center justify-center h-32 text-text-muted">
-                <span>Empty file</span>
-              </div>
-            )}
+            <div class="flex items-center justify-center h-32 text-text-muted">
+              <span>Empty file</span>
+            </div>
           </Match>
           <Match when={viewMode() === "markdown"}>
-            {() => (
-              <div class="prose prose-sm prose-invert max-w-none">
-                <Markdown text={content()} />
-              </div>
-            )}
+            <div class="prose prose-sm prose-invert max-w-none">
+              <Markdown text={content()} />
+            </div>
           </Match>
           <Match when={viewMode() === "code" && content()}>
-            {() => (
-              <Code
-                file={fileContents()}
-                overflow="wrap"
-                class="select-text"
-              />
-            )}
+            <Code
+              file={fileContents()}
+              overflow="wrap"
+              class="select-text"
+            />
           </Match>
         </Switch>
       </div>
