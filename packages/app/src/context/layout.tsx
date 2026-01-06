@@ -50,7 +50,7 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
     const globalSync = useGlobalSync()
     const server = useServer()
     const [store, setStore, _, ready] = persisted(
-      "layout.v6",
+      "layout.v7",
       createStore({
         sidebar: {
           opened: false,
@@ -69,6 +69,13 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
         },
         mobileSidebar: {
           opened: false,
+        },
+        fileExplorer: {
+          opened: true,
+          height: 300,
+        },
+        rightPanel: {
+          width: 400,
         },
         sessionTabs: {} as Record<string, SessionTabs>,
         sessionView: {} as Record<string, SessionView>,
@@ -238,6 +245,36 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
             return
           }
           setStore("session", "width", width)
+        },
+      },
+      fileExplorer: {
+        opened: createMemo(() => store.fileExplorer?.opened ?? true),
+        height: createMemo(() => store.fileExplorer?.height ?? 300),
+        open() {
+          setStore("fileExplorer", "opened", true)
+        },
+        close() {
+          setStore("fileExplorer", "opened", false)
+        },
+        toggle() {
+          setStore("fileExplorer", "opened", (x) => !x)
+        },
+        resize(height: number) {
+          if (!store.fileExplorer) {
+            setStore("fileExplorer", { opened: true, height })
+            return
+          }
+          setStore("fileExplorer", "height", height)
+        },
+      },
+      rightPanel: {
+        width: createMemo(() => store.rightPanel?.width ?? 400),
+        resize(width: number) {
+          if (!store.rightPanel) {
+            setStore("rightPanel", { width })
+            return
+          }
+          setStore("rightPanel", "width", width)
         },
       },
       mobileSidebar: {

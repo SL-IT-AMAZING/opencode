@@ -489,6 +489,11 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
         load,
         init,
         expand(path: string) {
+          if (!store.node[path]) {
+            setStore("node", path, { path, expanded: true, loaded: true })
+            list(path)
+            return
+          }
           setStore("node", path, "expanded", true)
           if (store.node[path]?.loaded) return
           setStore("node", path, "loaded", true)
