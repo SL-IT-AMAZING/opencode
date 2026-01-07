@@ -16,10 +16,7 @@ export function FileExplorerPanel(props: { onFileOpen: (path: string) => void })
         <span class="text-12-medium text-text-strong">Files</span>
       </div>
       <div class="flex-1 overflow-auto py-2 px-2">
-        <FileTree
-          path=""
-          onFileClick={(file) => props.onFileOpen(`file://${file.path}`)}
-        />
+        <FileTree path="" onFileClick={(file) => props.onFileOpen(`file://${file.path}`)} />
       </div>
     </div>
   )

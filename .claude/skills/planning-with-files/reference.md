@@ -11,6 +11,7 @@ This skill is based on the context engineering principles from Manus, the AI age
 **Problem:** Context windows have limits. Stuffing everything in context degrades performance and increases costs.
 
 **Solution:** Treat the filesystem as unlimited memory:
+
 - Store large content in files
 - Keep only paths in context
 - Agent can "look up" information when needed
@@ -21,6 +22,7 @@ This skill is based on the context engineering principles from Manus, the AI age
 **Problem:** After ~50 tool calls, models forget original goals ("lost in the middle" effect).
 
 **Solution:** Keep a `task_plan.md` file that gets RE-READ throughout execution:
+
 ```
 Start of context: [Original goal - far away, forgotten]
 ...many tool calls...
@@ -36,8 +38,10 @@ By reading the plan file before each decision, goals appear in the attention win
 **Problem:** Instinct says hide errors, retry silently. This wastes tokens and loses learning.
 
 **Solution:** KEEP failed actions in the plan file:
+
 ```markdown
 ## Errors Encountered
+
 - [2025-01-03] FileNotFoundError: config.json not found → Created default config
 - [2025-01-03] API timeout → Retried with exponential backoff, succeeded
 ```
@@ -51,6 +55,7 @@ The model updates its internal understanding when seeing failures.
 **Problem:** Repetitive action-observation pairs cause drift and hallucination.
 
 **Solution:** Introduce controlled variation:
+
 - Vary phrasings slightly
 - Don't copy-paste patterns blindly
 - Recalibrate on repetitive tasks
@@ -60,6 +65,7 @@ The model updates its internal understanding when seeing failures.
 **Problem:** Agents are input-heavy (100:1 ratio). Every token costs money.
 
 **Solution:** Structure for cache hits:
+
 - Put static content FIRST
 - Append-only context (never modify history)
 - Consistent serialization
@@ -80,21 +86,21 @@ Manus operates in a continuous loop:
 
 ### File Operations in the Loop:
 
-| Operation | When to Use |
-|-----------|-------------|
-| `write` | New files or complete rewrites |
-| `append` | Adding sections incrementally |
-| `edit` | Updating specific parts (checkboxes, status) |
-| `read` | Reviewing before decisions |
+| Operation | When to Use                                  |
+| --------- | -------------------------------------------- |
+| `write`   | New files or complete rewrites               |
+| `append`  | Adding sections incrementally                |
+| `edit`    | Updating specific parts (checkboxes, status) |
+| `read`    | Reviewing before decisions                   |
 
 ## Manus Statistics
 
-| Metric | Value |
-|--------|-------|
-| Average tool calls per task | ~50 |
-| Input-to-output ratio | 100:1 |
-| Acquisition price | $2 billion |
-| Time to $100M revenue | 8 months |
+| Metric                      | Value      |
+| --------------------------- | ---------- |
+| Average tool calls per task | ~50        |
+| Input-to-output ratio       | 100:1      |
+| Acquisition price           | $2 billion |
+| Time to $100M revenue       | 8 months   |
 
 ## Key Quotes
 

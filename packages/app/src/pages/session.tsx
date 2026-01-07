@@ -971,10 +971,7 @@ export default function Page() {
             />
 
             {/* File Explorer - Top */}
-            <div
-              class="relative shrink-0 overflow-hidden"
-              style={{ height: `${layout.fileExplorer.height()}px` }}
-            >
+            <div class="relative shrink-0 overflow-hidden" style={{ height: `${layout.fileExplorer.height()}px` }}>
               <FileExplorerPanel onFileOpen={openTab} />
             </div>
 
@@ -1020,7 +1017,11 @@ export default function Page() {
                     <For each={terminal.all()}>
                       {(pty) => (
                         <Tabs.Content value={pty.id}>
-                          <Terminal pty={pty} onCleanup={terminal.update} onConnectError={() => terminal.clone(pty.id)} />
+                          <Terminal
+                            pty={pty}
+                            onCleanup={terminal.update}
+                            onConnectError={() => terminal.clone(pty.id)}
+                          />
                         </Tabs.Content>
                       )}
                     </For>

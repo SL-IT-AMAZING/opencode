@@ -2,43 +2,49 @@
 
 ## 브랜딩 요소 (확정)
 
-| 항목 | 값 |
-|------|-----|
-| 앱 이름 | ANYON |
-| CLI 명령어 | `anyon` (소문자) |
-| 패키지 네임스페이스 | `@anyon` |
-| 앱 식별자 | `ai.anyon.desktop` |
-| 로고 | 나선형 흰색 디자인 (Group 11.svg) |
+| 항목                | 값                                |
+| ------------------- | --------------------------------- |
+| 앱 이름             | ANYON                             |
+| CLI 명령어          | `anyon` (소문자)                  |
+| 패키지 네임스페이스 | `@anyon`                          |
+| 앱 식별자           | `ai.anyon.desktop`                |
+| 로고                | 나선형 흰색 디자인 (Group 11.svg) |
 
 ---
 
 ## Part 1: 리브랜딩 완료 내역
 
 ### 패키지명 변경
-| 이전 | 이후 |
-|------|------|
-| `opencode` | `anyon` |
+
+| 이전             | 이후       |
+| ---------------- | ---------- |
+| `opencode`       | `anyon`    |
 | `@opencode-ai/*` | `@anyon/*` |
 
 ### Rust/Tauri 파일 (완료 ✅)
+
 1. `Cargo.toml`: name = "anyon-desktop", lib name = "anyon_lib"
 2. `cli.rs`: CLI_INSTALL_DIR=".anyon/bin", CLI_BINARY_NAME="anyon"
-3. `lib.rs`: sidecar "anyon-cli", ANYON_* 환경 변수, window.__ANYON__
+3. `lib.rs`: sidecar "anyon-cli", ANYON\_\* 환경 변수, window.**ANYON**
 4. `main.rs`: anyon_lib::run(), ANYON_ALLOW_WAYLAND
 
 ### VS Code Extension (완료 ✅)
-- package.json: name="anyon", commands="anyon.*"
+
+- package.json: name="anyon", commands="anyon.\*"
 - extension.ts: TERMINAL_NAME="anyon", ANYON_CALLER, anyon CLI 명령
 
 ### Install Script (완료 ✅)
+
 - APP=anyon, INSTALL_DIR=~/.anyon/bin
 - ASCII 로고 ANYON으로 변경
 
 ### Nix Build Scripts (완료 ✅)
+
 - nix/bundle.ts: ANYON_VERSION, ANYON_CHANNEL
 - nix/scripts/bun-build.ts: anyon-assets.manifest, anyon 바이너리
 
 ### 빌드 테스트 결과
+
 ```
 bun run typecheck: 12개 패키지 성공
 - @anyon/app, @anyon/console-app, @anyon/console-core
@@ -120,9 +126,7 @@ packages/opencode/src/session/llm.ts
 
 export const URL =
   process.env["ANYON_API"] ??
-  (Installation.isPreview() || Installation.isLocal()
-    ? "https://api.dev.anyon.cc"
-    : "https://api.anyon.cc")
+  (Installation.isPreview() || Installation.isLocal() ? "https://api.dev.anyon.cc" : "https://api.anyon.cc")
 
 // 엔드포인트:
 // POST /share_create { sessionID } → { url, secret }
@@ -140,7 +144,7 @@ const GITHUB_CLIENT_SECRET_CONSOLE = new sst.Secret("GITHUB_CLIENT_SECRET_CONSOL
 const GOOGLE_CLIENT_ID = new sst.Secret("GOOGLE_CLIENT_ID")
 
 export const auth = new sst.cloudflare.Worker("AuthApi", {
-  domain: `auth.${domain}`,  // auth.anyon.cc
+  domain: `auth.${domain}`, // auth.anyon.cc
   handler: "packages/console/function/src/auth.ts",
   // ...
 })
@@ -151,15 +155,17 @@ export const auth = new sst.cloudflare.Worker("AuthApi", {
 ## GitHub URL 현황
 
 ### 이미 변경됨
+
 - `install`: github.com/SL-IT-AMAZING/opencode
 
 ### 아직 변경 안 됨 (SL-IT-AMAZING/opencode)
+
 - tauri.prod.conf.json (자동 업데이터 - 중요!)
 - packages/extensions/zed/extension.toml
 - packages/console/app/src/routes/download/
 - packages/console/app/src/config.ts
 - packages/opencode/src/cli/cmd/tui/app.tsx (이슈 URL)
-- packages/opencode/src/session/prompt/*.txt
+- packages/opencode/src/session/prompt/\*.txt
 - README.md, CONTRIBUTING.md
 - sdks/vscode/README.md, package.json
 - nix/opencode.nix
@@ -186,14 +192,14 @@ export const auth = new sst.cloudflare.Worker("AuthApi", {
 
 ## 환경 변수 매핑
 
-| 이전 | 이후 | 용도 |
-|------|------|------|
-| OPENCODE_VERSION | ANYON_VERSION | 버전 |
-| OPENCODE_CHANNEL | ANYON_CHANNEL | 릴리스 채널 |
-| OPENCODE_API | ANYON_API | Share API URL |
-| OPENCODE_CLIENT | ANYON_CLIENT | 클라이언트 식별 |
-| OPENCODE_CALLER | ANYON_CALLER | 호출자 (vscode 등) |
-| OPENCODE_BIN_PATH | ANYON_BIN_PATH | 바이너리 경로 |
+| 이전              | 이후           | 용도               |
+| ----------------- | -------------- | ------------------ |
+| OPENCODE_VERSION  | ANYON_VERSION  | 버전               |
+| OPENCODE_CHANNEL  | ANYON_CHANNEL  | 릴리스 채널        |
+| OPENCODE_API      | ANYON_API      | Share API URL      |
+| OPENCODE_CLIENT   | ANYON_CLIENT   | 클라이언트 식별    |
+| OPENCODE_CALLER   | ANYON_CALLER   | 호출자 (vscode 등) |
+| OPENCODE_BIN_PATH | ANYON_BIN_PATH | 바이너리 경로      |
 
 ---
 
