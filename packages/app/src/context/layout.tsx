@@ -79,6 +79,7 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
         },
         sessionTabs: {} as Record<string, SessionTabs>,
         sessionView: {} as Record<string, SessionView>,
+        openSessions: {} as Record<string, string[]>,  // Track open session tabs per directory
       }),
     )
 
@@ -407,6 +408,29 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
                 opened.splice(to, 0, opened.splice(index, 1)[0])
               }),
             )
+          },
+        }
+      },
+      sessions(directoryKey: string) {
+        const sessions = createMemo(() => store.openSessions?.[directoryKey] ?? [])
+        return {
+          list: sessions,
+          isOpen(sessionId: string) {
+            return sessions().includes(sessionId)
+          },
+          open(sessionId: string) {
+            const current = store.openSessions?.[directoryKey] ?? []
+            if (current.includes(sessionId)) return
+            if (!store.openSessions) {
+              setStore("openSessions", { [directoryKey]: [sessionId] })
+            } else {
+              setStore("openSessions", directoryKey, [...current, sessionId])
+            }
+          },
+          close(sessionId: string) {
+            const current = store.openSessions?.[directoryKey]
+            if (!current) return
+            setStore("openSessions", directoryKey, current.filter((id) => id !== sessionId))
           },
         }
       },

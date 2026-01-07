@@ -53,7 +53,11 @@
     letter-spacing: var(--letter-spacing-normal);
 
     white-space: nowrap;
-    flex-shrink: 0;
+    flex-shrink: 1;
+    flex-grow: 0;
+    min-width: 80px;
+    max-width: 200px;
+    overflow: hidden;
     border-bottom: 1px solid var(--border-weak-base);
     border-right: 1px solid var(--border-weak-base);
     background-color: var(--background-base);
@@ -63,6 +67,13 @@
       align-items: center;
       justify-content: center;
       padding: 14px 24px;
+      overflow: hidden;
+
+      span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
     }
 
     [data-slot="tabs-trigger-close-button"] {

@@ -61,6 +61,8 @@ interface PromptInputProps {
   ref?: (el: HTMLDivElement) => void
   newSessionWorktree?: string
   onNewSessionWorktreeReset?: () => void
+  onMessageSent?: () => void
+  activeSessionId?: string  // Active session from tabs (for multi-tab support)
 }
 
 const PLACEHOLDERS = [
@@ -157,13 +159,14 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     if (!tab) return
     return files.pathFromTab(tab)
   })
-  const info = createMemo(() => (params.id ? sync.session.get(params.id) : undefined))
-  const status = createMemo(
-    () =>
-      sync.data.session_status[params.id ?? ""] ?? {
-        type: "idle",
-      },
-  )
+  const info = createMemo(() => {
+    const sessionId = props.activeSessionId ?? params.id
+    return sessionId ? sync.session.get(sessionId) : undefined
+  })
+  const status = createMemo(() => {
+    const sessionId = props.activeSessionId ?? params.id ?? ""
+    return sync.data.session_status[sessionId] ?? { type: "idle" }
+  })
   const working = createMemo(() => status()?.type !== "idle")
   const imageAttachments = createMemo(
     () => prompt.current().filter((part) => part.type === "image") as ImageAttachmentPart[],
@@ -995,7 +998,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     setStore("savedPrompt", null)
 
     const projectDirectory = sdk.directory
-    const isNewSession = !params.id
+    const isNewSession = !props.activeSessionId && !params.id
     const worktreeSelection = props.newSessionWorktree ?? "main"
 
     let sessionDirectory = projectDirectory
@@ -1271,6 +1274,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
     clearInput()
     addOptimisticMessage()
+    props.onMessageSent?.()
 
     client.session
       .prompt({

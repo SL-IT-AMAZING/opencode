@@ -1,4 +1,4 @@
-import { For, onCleanup, Show, Match, Switch, createMemo, createEffect, on } from "solid-js"
+import { For, onCleanup, Show, Match, Switch, createMemo, createEffect, on, createSignal } from "solid-js"
 import { createMediaQuery } from "@solid-primitives/media"
 import { createResizeObserver } from "@solid-primitives/resize-observer"
 import { Dynamic } from "solid-js/web"
@@ -160,6 +160,20 @@ export default function Page() {
   const sessionKey = createMemo(() => `${params.dir}${params.id ? "/" + params.id : ""}`)
   const tabs = createMemo(() => layout.tabs(sessionKey()))
   const view = createMemo(() => layout.view(sessionKey()))
+  const sessions = createMemo(() => layout.sessions(params.dir))
+
+  // Derive current session from active tab (for multi-tab support)
+  const activeSessionId = createMemo(() => {
+    const active = tabs().active()
+    if (active?.startsWith("session-")) {
+      return active.replace("session-", "")
+    }
+    // Fall back to URL param when no session tab is active
+    return params.id
+  })
+
+  // Track the last active session tab (for returning after file operations)
+  const [lastActiveSession, setLastActiveSession] = createSignal<string | undefined>()
 
   const isDesktop = createMediaQuery("(min-width: 768px)")
 
@@ -182,6 +196,13 @@ export default function Page() {
 
   const openTab = (value: string) => {
     const next = normalizeTab(value)
+    // Track last session before switching to a file tab
+    if (next.startsWith("file://")) {
+      const currentActive = tabs().active()
+      if (currentActive?.startsWith("session-")) {
+        setLastActiveSession(currentActive)
+      }
+    }
     tabs().open(next)
     const path = file.pathFromTab(next)
     if (path) file.load(path)
@@ -213,11 +234,28 @@ export default function Page() {
     tabs().setActive(normalized)
   })
 
-  const info = createMemo(() => (params.id ? sync.session.get(params.id) : undefined))
+  // Auto-add session to open tabs when navigating via sidebar
+  createEffect(() => {
+    const sessionId = params.id
+    if (!sessionId) return
+    // Only add and set active if session wasn't already open
+    const wasOpen = sessions().isOpen(sessionId)
+    if (!wasOpen) {
+      sessions().open(sessionId)
+      // Only set as active tab if session was just added
+      tabs().setActive(`session-${sessionId}`)
+    }
+  })
+
+  const info = createMemo(() => (activeSessionId() ? sync.session.get(activeSessionId()!) : undefined))
+  const getSessionTitle = (sessionId: string) => {
+    const session = sync.session.get(sessionId)
+    return session?.title || "New Session"
+  }
   const revertMessageID = createMemo(() => info()?.revert?.messageID)
-  const messages = createMemo(() => (params.id ? (sync.data.message[params.id] ?? []) : []))
+  const messages = createMemo(() => (activeSessionId() ? (sync.data.message[activeSessionId()!] ?? []) : []))
   const messagesReady = createMemo(() => {
-    const id = params.id
+    const id = activeSessionId()
     if (!id) return true
     return sync.data.message[id] !== undefined
   })
@@ -287,7 +325,7 @@ export default function Page() {
     scrollToMessage(msgs[targetIndex], "auto")
   }
 
-  const diffs = createMemo(() => (params.id ? (sync.data.session_diff[params.id] ?? []) : []))
+  const diffs = createMemo(() => (activeSessionId() ? (sync.data.session_diff[activeSessionId()!] ?? []) : []))
 
   const idle = { type: "idle" as const }
   let inputRef!: HTMLDivElement
@@ -295,8 +333,8 @@ export default function Page() {
   let scroller: HTMLDivElement | undefined
 
   createEffect(() => {
-    if (!params.id) return
-    sync.session.sync(params.id)
+    if (!activeSessionId()) return
+    sync.session.sync(activeSessionId()!)
   })
 
   createEffect(() => {
@@ -319,11 +357,11 @@ export default function Page() {
     ),
   )
 
-  const status = createMemo(() => sync.data.session_status[params.id ?? ""] ?? idle)
+  const status = createMemo(() => sync.data.session_status[activeSessionId() ?? ""] ?? idle)
 
   createEffect(
     on(
-      () => params.id,
+      () => activeSessionId(),
       () => {
         setStore("messageId", undefined)
         setStore("expanded", {})
@@ -389,7 +427,7 @@ export default function Page() {
       category: "View",
       keybind: "mod+e",
       slash: "steps",
-      disabled: !params.id,
+      disabled: !activeSessionId(),
       onSelect: () => {
         const msg = activeMessage()
         if (!msg) return
@@ -402,7 +440,7 @@ export default function Page() {
       description: "Go to the previous user message",
       category: "Session",
       keybind: "mod+arrowup",
-      disabled: !params.id,
+      disabled: !activeSessionId(),
       onSelect: () => navigateMessageByOffset(-1),
     },
     {
@@ -411,7 +449,7 @@ export default function Page() {
       description: "Go to the next user message",
       category: "Session",
       keybind: "mod+arrowdown",
-      disabled: !params.id,
+      disabled: !activeSessionId(),
       onSelect: () => navigateMessageByOffset(1),
     },
     {
@@ -465,12 +503,12 @@ export default function Page() {
     },
     {
       id: "permissions.autoaccept",
-      title: params.id && permission.isAutoAccepting(params.id) ? "Stop auto-accepting edits" : "Auto-accept edits",
+      title: activeSessionId() && permission.isAutoAccepting(activeSessionId()!) ? "Stop auto-accepting edits" : "Auto-accept edits",
       category: "Permissions",
       keybind: "mod+shift+a",
-      disabled: !params.id || !permission.permissionsEnabled(),
+      disabled: !activeSessionId() || !permission.permissionsEnabled(),
       onSelect: () => {
-        const sessionID = params.id
+        const sessionID = activeSessionId()
         if (!sessionID) return
         permission.toggleAutoAccept(sessionID, sdk.directory)
         showToast({
@@ -487,9 +525,9 @@ export default function Page() {
       description: "Undo the last message",
       category: "Session",
       slash: "undo",
-      disabled: !params.id || visibleUserMessages().length === 0,
+      disabled: !activeSessionId() || visibleUserMessages().length === 0,
       onSelect: async () => {
-        const sessionID = params.id
+        const sessionID = activeSessionId()
         if (!sessionID) return
         if (status()?.type !== "idle") {
           await sdk.client.session.abort({ sessionID }).catch(() => {})
@@ -516,9 +554,9 @@ export default function Page() {
       description: "Redo the last undone message",
       category: "Session",
       slash: "redo",
-      disabled: !params.id || !info()?.revert?.messageID,
+      disabled: !activeSessionId() || !info()?.revert?.messageID,
       onSelect: async () => {
-        const sessionID = params.id
+        const sessionID = activeSessionId()
         if (!sessionID) return
         const revertMessageID = info()?.revert?.messageID
         if (!revertMessageID) return
@@ -545,9 +583,9 @@ export default function Page() {
       description: "Summarize the session to reduce context size",
       category: "Session",
       slash: "compact",
-      disabled: !params.id || visibleUserMessages().length === 0,
+      disabled: !activeSessionId() || visibleUserMessages().length === 0,
       onSelect: async () => {
-        const sessionID = params.id
+        const sessionID = activeSessionId()
         if (!sessionID) return
         const model = local.model.current()
         if (!model) {
@@ -675,8 +713,19 @@ export default function Page() {
       },
     })
 
-    // Switch to session view so user sees the prompt with context
-    tabs().setActive(undefined)
+    // Switch to the last active session (or first session if none)
+    const targetSession = lastActiveSession()
+    if (targetSession) {
+      tabs().setActive(targetSession)
+    } else {
+      // Fall back to first open session
+      const firstSession = sessions().list()[0]
+      if (firstSession) {
+        tabs().setActive(`session-${firstSession}`)
+      } else {
+        tabs().setActive(undefined)
+      }
+    }
 
     // Focus prompt input
     inputRef?.focus()
@@ -796,7 +845,7 @@ export default function Page() {
   }
 
   createEffect(() => {
-    const sessionID = params.id
+    const sessionID = activeSessionId()
     const ready = messagesReady()
     if (!sessionID || !ready) return
 
@@ -859,7 +908,7 @@ export default function Page() {
           }}
         >
           {/* Session and file tabs bar - Chrome style */}
-          <Show when={params.id || openedFileTabs().length > 0}>
+          <Show when={sessions().list().length > 0 || openedFileTabs().length > 0}>
             <DragDropProvider
               onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
@@ -870,25 +919,37 @@ export default function Page() {
               <ConstrainDragYAxis />
               <Tabs value={tabs().active() ?? "session"} onChange={openTab} class="shrink-0 !h-auto">
                 <Tabs.List class="h-10 shrink-0 border-b border-border-weak-base bg-background-base">
-                  {/* Session tab (always first) */}
-                  <Tabs.Trigger
-                    value="session"
-                    onClick={switchToSession}
-                    hideCloseButton={!params.id}
-                    closeButton={
-                      <IconButton
-                        icon="close"
-                        variant="ghost"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          navigate(`/${params.dir}/session`)
+                  {/* Session tabs */}
+                  <For each={sessions().list()}>
+                    {(sessionId) => (
+                      <Tabs.Trigger
+                        value={`session-${sessionId}`}
+                        onClick={() => {
+                          tabs().setActive(`session-${sessionId}`)
                         }}
-                      />
-                    }
-                  >
-                    <Icon name="bubble-5" />
-                    <span class="ml-1 max-w-32 truncate">{info()?.title || "New Session"}</span>
-                  </Tabs.Trigger>
+                        closeButton={
+                          <IconButton
+                            icon="close"
+                            variant="ghost"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              sessions().close(sessionId)
+                              // If closing active session, switch to another
+                              const remaining = sessions().list().filter((id) => id !== sessionId)
+                              if (remaining.length > 0) {
+                                tabs().setActive(`session-${remaining[0]}`)
+                              } else {
+                                tabs().setActive(undefined)
+                              }
+                            }}
+                          />
+                        }
+                      >
+                        <Icon name="bubble-5" />
+                        <span class="ml-1 max-w-32 truncate">{getSessionTitle(sessionId)}</span>
+                      </Tabs.Trigger>
+                    )}
+                  </For>
 
                   {/* File tabs */}
                   <SortableProvider ids={openedFileTabs()}>
@@ -903,7 +964,17 @@ export default function Page() {
                       icon="plus"
                       variant="ghost"
                       class="ml-1 shrink-0"
-                      onClick={() => navigate(`/${params.dir}/session`)}
+                      onClick={async () => {
+                        // Create actual session via API
+                        const newSession = await sdk.client.session.create().then((x) => x.data)
+                        if (newSession) {
+                          // Add real session to tabs (not "new" placeholder)
+                          sessions().open(newSession.id)
+                          tabs().setActive(`session-${newSession.id}`)
+                          setLastActiveSession(`session-${newSession.id}`)
+                        }
+                        prompt.reset()
+                      }}
                     />
                   </Tooltip>
                 </Tabs.List>
@@ -930,7 +1001,7 @@ export default function Page() {
           {/* Content area */}
           <div classList={{
             "flex-1 min-h-0 overflow-hidden relative": true,
-            "py-6 md:py-3": !params.id && openedFileTabs().length === 0,
+            "py-6 md:py-3": !activeSessionId() && openedFileTabs().length === 0,
           }}>
             {/* File Viewer */}
             <Show when={activeFileTab()}>
@@ -943,7 +1014,7 @@ export default function Page() {
 
             <Show when={!activeFileTab()}>
             <Switch>
-              <Match when={params.id}>
+              <Match when={activeSessionId()}>
                 <Show when={activeMessage()}>
                   <Show
                     when={!mobileReview()}
@@ -1005,7 +1076,7 @@ export default function Page() {
                                 }}
                               >
                                 <SessionTurn
-                                  sessionID={params.id!}
+                                  sessionID={activeSessionId()!}
                                   messageID={message.id}
                                   lastUserMessageID={lastUserMessage()?.id}
                                   stepsExpanded={store.expanded[message.id] ?? false}
@@ -1072,8 +1143,16 @@ export default function Page() {
                 ref={(el) => {
                   inputRef = el
                 }}
+                activeSessionId={activeSessionId()}
                 newSessionWorktree={newSessionWorktree()}
                 onNewSessionWorktreeReset={() => setStore("newSessionWorktree", "main")}
+                onMessageSent={() => {
+                  // Track the current session as last active when a message is sent
+                  const active = tabs().active()
+                  if (active?.startsWith("session-")) {
+                    setLastActiveSession(active)
+                  }
+                }}
               />
             </div>
           </div>
