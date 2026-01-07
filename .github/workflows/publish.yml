@@ -30,8 +30,7 @@ permissions:
 
 jobs:
   publish:
-    runs-on: blacksmith-4vcpu-ubuntu-2404
-    if: github.repository == 'anomalyco/opencode'
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
         with:
@@ -101,11 +100,11 @@ jobs:
             target: x86_64-apple-darwin
           - host: macos-latest
             target: aarch64-apple-darwin
-          - host: blacksmith-4vcpu-windows-2025
+          - host: windows-latest
             target: x86_64-pc-windows-msvc
-          - host: blacksmith-4vcpu-ubuntu-2404
+          - host: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
-          - host: blacksmith-4vcpu-ubuntu-2404-arm
+          - host: ubuntu-22.04
             target: aarch64-unknown-linux-gnu
     runs-on: ${{ matrix.settings.host }}
     steps:
@@ -139,7 +138,7 @@ jobs:
       - uses: ./.github/actions/setup-bun
 
       - name: install dependencies (ubuntu only)
-        if: contains(matrix.settings.host, 'ubuntu')
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
@@ -170,14 +169,21 @@ jobs:
 
       # Fixes AppImage build issues, can be removed when https://github.com/tauri-apps/tauri/pull/12491 is released
       - name: Install tauri-cli from portable appimage branch
-        if: contains(matrix.settings.host, 'ubuntu')
+        if: runner.os == 'Linux'
         run: |
           cargo install tauri-cli --git https://github.com/tauri-apps/tauri --branch feat/truly-portable-appimage --force
           echo "Installed tauri-cli version:"
           cargo tauri --version
 
+      # Install cross-compilation tools for ARM64 Linux
+      - name: Install ARM64 cross-compilation tools
+        if: runner.os == 'Linux' && matrix.settings.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+          echo "PKG_CONFIG_SYSROOT_DIR=/usr/aarch64-linux-gnu" >> $GITHUB_ENV
+
       - name: Build and upload artifacts
-        timeout-minutes: 20
+        timeout-minutes: 30
         uses: tauri-apps/tauri-action@390cbe447412ced1303d35abe75287949e43437a
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -193,7 +199,7 @@ jobs:
         with:
           projectPath: packages/desktop
           uploadWorkflowArtifacts: true
-          tauriScript: ${{ (contains(matrix.settings.host, 'ubuntu') && 'cargo tauri') || '' }}
+          tauriScript: ${{ (runner.os == 'Linux' && 'cargo tauri') || '' }}
           args: --target ${{ matrix.settings.target }} --config ./src-tauri/tauri.prod.conf.json --verbose
           updaterJsonPreferNsis: true
           releaseId: ${{ needs.publish.outputs.release }}
@@ -206,7 +212,7 @@ jobs:
       - publish
       - publish-tauri
     if: needs.publish.outputs.tag
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
         with:

@@ -75,6 +75,7 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
           height: 300,
         },
         rightPanel: {
+          opened: true,
           width: 400,
         },
         sessionTabs: {} as Record<string, SessionTabs>,
@@ -269,10 +270,20 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
         },
       },
       rightPanel: {
+        opened: createMemo(() => store.rightPanel?.opened ?? true),
+        open() {
+          setStore("rightPanel", "opened", true)
+        },
+        close() {
+          setStore("rightPanel", "opened", false)
+        },
+        toggle() {
+          setStore("rightPanel", "opened", (x) => !x)
+        },
         width: createMemo(() => store.rightPanel?.width ?? 400),
         resize(width: number) {
           if (!store.rightPanel) {
-            setStore("rightPanel", { width })
+            setStore("rightPanel", { opened: true, width })
             return
           }
           setStore("rightPanel", "width", width)
@@ -432,6 +443,24 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
             if (!current) return
             setStore("openSessions", directoryKey, current.filter((id) => id !== sessionId))
           },
+        }
+      },
+      // Close a session tab from ALL sessionTabs entries (used when archiving)
+      closeSessionTab(tab: string) {
+        const allSessionKeys = Object.keys(store.sessionTabs)
+        for (const sessionKey of allSessionKeys) {
+          const current = store.sessionTabs[sessionKey]
+          if (!current?.all.includes(tab)) continue
+          
+          const all = current.all.filter((x) => x !== tab)
+          batch(() => {
+            setStore("sessionTabs", sessionKey, "all", all)
+            if (current.active === tab) {
+              const index = current.all.findIndex((f) => f === tab)
+              const next = all[index - 1] ?? all[0]
+              setStore("sessionTabs", sessionKey, "active", next)
+            }
+          })
         }
       },
     }

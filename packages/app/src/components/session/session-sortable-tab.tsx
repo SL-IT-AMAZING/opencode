@@ -33,7 +33,11 @@ export function SortableSessionTab(props: {
   const sortable = createSortable(`session-${props.sessionId}`)
   return (
     // @ts-ignore
-    <div use:sortable classList={{ "h-full flex-shrink min-w-0": true, "opacity-0": sortable.isActiveDraggable }}>
+    <div use:sortable classList={{ 
+      "h-full flex-shrink min-w-0": true, 
+      "transition-transform duration-200 ease-out": !sortable.isActiveDraggable,
+      "opacity-0": sortable.isActiveDraggable 
+    }}>
       <div class="relative h-full">
         <Tooltip value={props.title} placement="bottom">
           <Tabs.Trigger
@@ -69,7 +73,11 @@ export function SortableTab(props: {
   const path = createMemo(() => file.pathFromTab(props.tab))
   return (
     // @ts-ignore
-    <div use:sortable classList={{ "h-full flex-shrink min-w-0": true, "opacity-0": sortable.isActiveDraggable }}>
+    <div use:sortable classList={{ 
+      "h-full flex-shrink min-w-0": true, 
+      "transition-transform duration-200 ease-out": !sortable.isActiveDraggable,
+      "opacity-0": sortable.isActiveDraggable 
+    }}>
       <div class="relative h-full">
         <Tooltip value={path() ?? props.tab} placement="bottom">
           <Tabs.Trigger

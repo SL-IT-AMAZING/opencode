@@ -41,7 +41,6 @@ export namespace FileWatcher {
 
   const state = Instance.state(
     async () => {
-      if (Instance.project.vcs !== "git") return {}
       log.info("init")
       const cfg = await Config.get()
       const backend = (() => {

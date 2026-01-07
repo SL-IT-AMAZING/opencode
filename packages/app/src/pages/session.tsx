@@ -8,6 +8,7 @@ import { createStore } from "solid-js/store"
 import { PromptInput } from "@/components/prompt-input"
 import { SessionContextUsage } from "@/components/session-context-usage"
 import { IconButton } from "@opencode-ai/ui/icon-button"
+import { Button } from "@opencode-ai/ui/button"
 import { Icon } from "@opencode-ai/ui/icon"
 import { Tooltip, TooltipKeybind } from "@opencode-ai/ui/tooltip"
 import { DiffChanges } from "@opencode-ai/ui/diff-changes"
@@ -632,19 +633,21 @@ export default function Page() {
     setStore("activeDraggable", id)
   }
 
-  const handleDragOver = (event: DragEvent) => {
+  const handleDragOver = (_event: DragEvent) => {
+    // SortableProvider handles visual reordering during drag
+    // Do not modify actual tab order here - it causes index conflicts
+  }
+
+  const handleDragEnd = (event: DragEvent) => {
     const { draggable, droppable } = event
     if (draggable && droppable) {
       const currentTabs = tabs().all()
-      const fromIndex = currentTabs?.indexOf(draggable.id.toString())
-      const toIndex = currentTabs?.indexOf(droppable.id.toString())
-      if (fromIndex !== toIndex && toIndex !== undefined) {
+      const fromIndex = currentTabs.indexOf(draggable.id.toString())
+      const toIndex = currentTabs.indexOf(droppable.id.toString())
+      if (fromIndex !== -1 && toIndex !== -1 && fromIndex !== toIndex) {
         tabs().move(draggable.id.toString(), toIndex)
       }
     }
-  }
-
-  const handleDragEnd = () => {
     setStore("activeDraggable", undefined)
   }
 
@@ -914,6 +917,29 @@ export default function Page() {
             "--prompt-height": store.promptHeight ? `${store.promptHeight}px` : undefined,
           }}
         >
+          {/* Right panel toggle - shows when panel is closed */}
+          <Show when={isDesktop() && !layout.rightPanel.opened()}>
+            <div class="absolute top-0 right-0 z-10 h-12 flex items-center pr-2">
+              <TooltipKeybind
+                placement="left"
+                title="Toggle right panel"
+                keybind={command.keybind("rightPanel.toggle")}
+              >
+                <Button
+                  variant="ghost"
+                  class="group/panel-toggle shrink-0 size-8 p-0 rounded-lg"
+                  onClick={layout.rightPanel.toggle}
+                >
+                  <div class="relative flex items-center justify-center size-4 [&>*]:absolute [&>*]:inset-0">
+                    <Icon name="layout-left" size="small" class="group-hover/panel-toggle:hidden" />
+                    <Icon name="layout-left-partial" size="small" class="hidden group-hover/panel-toggle:inline-block" />
+                    <Icon name="layout-left-full" size="small" class="hidden group-active/panel-toggle:inline-block" />
+                  </div>
+                </Button>
+              </TooltipKeybind>
+            </div>
+          </Show>
+
           {/* Session and file tabs bar - Chrome style */}
           <Show when={allTabs().length > 0}>
             <DragDropProvider
@@ -925,7 +951,10 @@ export default function Page() {
               <DragDropSensors />
               <ConstrainDragYAxis />
               <Tabs value={tabs().active() ?? "session"} onChange={openTab} class="shrink-0 !h-auto">
-                <Tabs.List class="h-12 shrink-0 border-b border-border-weak-base bg-background-base overflow-hidden">
+                <Tabs.List classList={{
+                    "h-12 shrink-0 border-b border-border-weak-base bg-background-base overflow-hidden": true,
+                    "pr-10": !layout.rightPanel.opened(),
+                  }}>
                   {/* Unified tabs: sessions + files mixed together */}
                   <SortableProvider ids={allTabs()}>
                     <For each={allTabs()}>
@@ -1172,7 +1201,7 @@ export default function Page() {
         </div>
 
         {/* Right panel - File Explorer + Terminal */}
-        <Show when={isDesktop()}>
+        <Show when={isDesktop() && layout.rightPanel.opened()}>
           <div
             class="relative flex flex-col h-full border-l border-border-weak-base ml-auto"
             style={{ width: `${layout.rightPanel.width()}px` }}

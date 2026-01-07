@@ -488,18 +488,15 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
         }
 
         if (removedPaths.size > 0) {
-          setStore(
-            "node",
-            produce((draft) => {
-              for (const path of removedPaths) {
-                for (const nodePath of Object.keys(draft)) {
-                  if (nodePath === path || nodePath.startsWith(path + "/")) {
-                    delete draft[nodePath]
-                  }
-                }
+          const newNode = { ...store.node }
+          for (const path of removedPaths) {
+            for (const nodePath of Object.keys(newNode)) {
+              if (nodePath === path || nodePath.startsWith(path + "/")) {
+                delete newNode[nodePath]
               }
-            }),
-          )
+            }
+          }
+          setStore("node", reconcile(newNode))
         }
 
         for (const dir of affectedDirs) {
@@ -608,6 +605,14 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
         searchFiles,
         searchFilesAndDirectories,
         relative,
+        refresh() {
+          // Re-list all expanded directories to pick up new files
+          for (const node of Object.values(store.node)) {
+            if (node.expanded) {
+              list(node.path)
+            }
+          }
+        },
       }
     })()
 
