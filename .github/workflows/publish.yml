@@ -154,6 +154,11 @@ jobs:
           workspaces: packages/desktop/src-tauri
           shared-key: ${{ matrix.settings.target }}
 
+      - uses: actions/download-artifact@v4
+        with:
+          name: opencode-cli
+          path: packages/desktop/src-tauri/target/opencode-binaries
+
       - name: Prepare
         run: |
           cd packages/desktop
