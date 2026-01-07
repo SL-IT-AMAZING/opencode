@@ -11,6 +11,7 @@ export namespace Share {
   const pending = new Map<string, any>()
 
   export async function sync(key: string, content: any) {
+    if (!URL) return
     const [root, ...splits] = key.split("/")
     if (root !== "session") return
     const [sub, sessionID] = splits
@@ -65,11 +66,12 @@ export namespace Share {
     })
   }
 
-  export const URL =
-    process.env["OPENCODE_API"] ??
-    (Installation.isPreview() || Installation.isLocal() ? "https://api.dev.opencode.ai" : "https://api.opencode.ai")
+  // Set ANYON_API environment variable to enable session sharing
+  // Example: ANYON_API=https://api.yourdomain.com
+  export const URL = process.env["ANYON_API"]
 
   export async function create(sessionID: string) {
+    if (!URL) throw new Error("Session sharing is not configured. Set ANYON_API environment variable.")
     return fetch(`${URL}/share_create`, {
       method: "POST",
       body: JSON.stringify({ sessionID: sessionID }),
@@ -79,6 +81,7 @@ export namespace Share {
   }
 
   export async function remove(sessionID: string, secret: string) {
+    if (!URL) throw new Error("Session sharing is not configured. Set ANYON_API environment variable.")
     return fetch(`${URL}/share_delete`, {
       method: "POST",
       body: JSON.stringify({ sessionID, secret }),

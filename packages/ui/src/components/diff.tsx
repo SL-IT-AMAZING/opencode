@@ -1,4 +1,4 @@
-import { checksum } from "@opencode-ai/util/encode"
+import { checksum } from "@anyon/util/encode"
 import { FileDiff } from "@pierre/diffs"
 import { createEffect, createMemo, onCleanup, splitProps } from "solid-js"
 import { createDefaultOptions, type DiffProps, styleVariables } from "../pierre"

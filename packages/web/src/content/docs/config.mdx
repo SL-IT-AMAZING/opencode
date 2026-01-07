@@ -13,7 +13,7 @@ OpenCode supports both **JSON** and **JSONC** (JSON with Comments) formats.
 
 ```jsonc title="opencode.jsonc"
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://anyon.cc/config.json",
   // Theme configuration
   "theme": "opencode",
   "model": "anthropic/claude-sonnet-4-5",
@@ -89,7 +89,7 @@ The custom directory is loaded after the global config and `.opencode` directori
 
 ## Schema
 
-The config file has a schema that's defined in [**`opencode.ai/config.json`**](https://opencode.ai/config.json).
+The config file has a schema that's defined in [**`anyon.cc/config.json`**](https://anyon.cc/config.json).
 
 Your editor should be able to validate and autocomplete based on the schema.
 
@@ -101,7 +101,7 @@ You can configure TUI-specific settings through the `tui` option.
 
 ```json title="opencode.json"
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://anyon.cc/config.json",
   "tui": {
     "scroll_speed": 3,
     "scroll_acceleration": {
@@ -128,7 +128,7 @@ You can configure server settings for the `opencode serve` and `opencode web` co
 
 ```json title="opencode.json"
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://anyon.cc/config.json",
   "server": {
     "port": 4096,
     "hostname": "0.0.0.0",
@@ -155,7 +155,7 @@ You can manage the tools an LLM can use through the `tools` option.
 
 ```json title="opencode.json"
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://anyon.cc/config.json",
   "tools": {
     "write": false,
     "bash": false
@@ -173,7 +173,7 @@ You can configure the providers and models you want to use in your OpenCode conf
 
 ```json title="opencode.json"
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://anyon.cc/config.json",
   "provider": {},
   "model": "anthropic/claude-sonnet-4-5",
   "small_model": "anthropic/claude-haiku-4-5"
@@ -186,7 +186,7 @@ Provider options can include `timeout` and `setCacheKey`:
 
 ```json title="opencode.json"
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://anyon.cc/config.json",
   "provider": {
     "anthropic": {
       "options": {
@@ -215,7 +215,7 @@ Amazon Bedrock supports AWS-specific configuration:
 
 ```json title="opencode.json"
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://anyon.cc/config.json",
   "provider": {
     "amazon-bedrock": {
       "options": {
@@ -246,7 +246,7 @@ You can configure the theme you want to use in your OpenCode config through the 
 
 ```json title="opencode.json"
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://anyon.cc/config.json",
   "theme": ""
 }
 ```
@@ -261,7 +261,7 @@ You can configure specialized agents for specific tasks through the `agent` opti
 
 ```jsonc title="opencode.jsonc"
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://anyon.cc/config.json",
   "agent": {
     "code-reviewer": {
       "description": "Reviews code for best practices and potential issues",
@@ -287,7 +287,7 @@ You can set the default agent using the `default_agent` option. This determines 
 
 ```json title="opencode.json"
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://anyon.cc/config.json",
   "default_agent": "plan"
 }
 ```
@@ -304,7 +304,7 @@ You can configure the [share](/docs/share) feature through the `share` option.
 
 ```json title="opencode.json"
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://anyon.cc/config.json",
   "share": "manual"
 }
 ```
@@ -325,7 +325,7 @@ You can configure custom commands for repetitive tasks through the `command` opt
 
 ```jsonc title="opencode.jsonc"
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://anyon.cc/config.json",
   "command": {
     "test": {
       "template": "Run the full test suite with coverage report and show any failures.\nFocus on the failing tests and suggest fixes.",
@@ -351,7 +351,7 @@ You can customize your keybinds through the `keybinds` option.
 
 ```json title="opencode.json"
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://anyon.cc/config.json",
   "keybinds": {}
 }
 ```
@@ -366,7 +366,7 @@ OpenCode will automatically download any new updates when it starts up. You can 
 
 ```json title="opencode.json"
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://anyon.cc/config.json",
   "autoupdate": false
 }
 ```
@@ -381,7 +381,7 @@ You can configure code formatters through the `formatter` option.
 
 ```json title="opencode.json"
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://anyon.cc/config.json",
   "formatter": {
     "prettier": {
       "disabled": true
@@ -409,7 +409,7 @@ For example, to ensure that the `edit` and `bash` tools require user approval:
 
 ```json title="opencode.json"
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://anyon.cc/config.json",
   "permission": {
     "edit": "ask",
     "bash": "ask"
@@ -427,7 +427,7 @@ You can control context compaction behavior through the `compaction` option.
 
 ```json title="opencode.json"
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://anyon.cc/config.json",
   "compaction": {
     "auto": true,
     "prune": true
@@ -446,7 +446,7 @@ You can configure file watcher ignore patterns through the `watcher` option.
 
 ```json title="opencode.json"
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://anyon.cc/config.json",
   "watcher": {
     "ignore": ["node_modules/**", "dist/**", ".git/**"]
   }
@@ -463,7 +463,7 @@ You can configure MCP servers you want to use through the `mcp` option.
 
 ```json title="opencode.json"
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://anyon.cc/config.json",
   "mcp": {}
 }
 ```
@@ -480,7 +480,7 @@ Place plugin files in `.opencode/plugin/` or `~/.config/opencode/plugin/`. You c
 
 ```json title="opencode.json"
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://anyon.cc/config.json",
   "plugin": ["opencode-helicone-session", "@my-org/custom-plugin"]
 }
 ```
@@ -495,7 +495,7 @@ You can configure the instructions for the model you're using through the `instr
 
 ```json title="opencode.json"
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://anyon.cc/config.json",
   "instructions": ["CONTRIBUTING.md", "docs/guidelines.md", ".cursor/rules/*.md"]
 }
 ```
@@ -511,7 +511,7 @@ You can disable providers that are loaded automatically through the `disabled_pr
 
 ```json title="opencode.json"
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://anyon.cc/config.json",
   "disabled_providers": ["openai", "gemini"]
 }
 ```
@@ -534,7 +534,7 @@ You can specify an allowlist of providers through the `enabled_providers` option
 
 ```json title="opencode.json"
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://anyon.cc/config.json",
   "enabled_providers": ["anthropic", "openai"]
 }
 ```
@@ -555,7 +555,7 @@ The `experimental` key contains options that are under active development.
 
 ```json title="opencode.json"
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://anyon.cc/config.json",
   "experimental": {}
 }
 ```
@@ -578,7 +578,7 @@ Use `{env:VARIABLE_NAME}` to substitute environment variables:
 
 ```json title="opencode.json"
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://anyon.cc/config.json",
   "model": "{env:OPENCODE_MODEL}",
   "provider": {
     "anthropic": {
@@ -601,7 +601,7 @@ Use `{file:path/to/file}` to substitute the contents of a file:
 
 ```json title="opencode.json"
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://anyon.cc/config.json",
   "instructions": ["./custom-instructions.md"],
   "provider": {
     "openai": {

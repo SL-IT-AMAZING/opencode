@@ -16,8 +16,8 @@ import { Shell } from "@/shell/shell"
 
 import { BashArity } from "@/permission/arity"
 
-const MAX_OUTPUT_LENGTH = Flag.OPENCODE_EXPERIMENTAL_BASH_MAX_OUTPUT_LENGTH || 30_000
-const DEFAULT_TIMEOUT = Flag.OPENCODE_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS || 2 * 60 * 1000
+const MAX_OUTPUT_LENGTH = Flag.ANYON_EXPERIMENTAL_BASH_MAX_OUTPUT_LENGTH || 30_000
+const DEFAULT_TIMEOUT = Flag.ANYON_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS || 2 * 60 * 1000
 
 export const log = Log.create({ service: "bash-tool" })
 

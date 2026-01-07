@@ -1,16 +1,16 @@
 import type { APIEvent } from "@solidjs/start/server"
-import { and, Database, eq, isNull, lt, or, sql } from "@opencode-ai/console-core/drizzle/index.js"
-import { KeyTable } from "@opencode-ai/console-core/schema/key.sql.js"
-import { BillingTable, UsageTable } from "@opencode-ai/console-core/schema/billing.sql.js"
-import { centsToMicroCents } from "@opencode-ai/console-core/util/price.js"
-import { Identifier } from "@opencode-ai/console-core/identifier.js"
-import { Billing } from "@opencode-ai/console-core/billing.js"
-import { Actor } from "@opencode-ai/console-core/actor.js"
-import { WorkspaceTable } from "@opencode-ai/console-core/schema/workspace.sql.js"
-import { ZenData } from "@opencode-ai/console-core/model.js"
-import { UserTable } from "@opencode-ai/console-core/schema/user.sql.js"
-import { ModelTable } from "@opencode-ai/console-core/schema/model.sql.js"
-import { ProviderTable } from "@opencode-ai/console-core/schema/provider.sql.js"
+import { and, Database, eq, isNull, lt, or, sql } from "@anyon/console-core/drizzle/index.js"
+import { KeyTable } from "@anyon/console-core/schema/key.sql.js"
+import { BillingTable, UsageTable } from "@anyon/console-core/schema/billing.sql.js"
+import { centsToMicroCents } from "@anyon/console-core/util/price.js"
+import { Identifier } from "@anyon/console-core/identifier.js"
+import { Billing } from "@anyon/console-core/billing.js"
+import { Actor } from "@anyon/console-core/actor.js"
+import { WorkspaceTable } from "@anyon/console-core/schema/workspace.sql.js"
+import { ZenData } from "@anyon/console-core/model.js"
+import { UserTable } from "@anyon/console-core/schema/user.sql.js"
+import { ModelTable } from "@anyon/console-core/schema/model.sql.js"
+import { ProviderTable } from "@anyon/console-core/schema/provider.sql.js"
 import { logger } from "./logger"
 import { AuthError, CreditsError, MonthlyLimitError, UserLimitError, ModelError, RateLimitError } from "./error"
 import { createBodyConverter, createStreamPartConverter, createResponseConverter, UsageInfo } from "./provider/provider"
@@ -449,11 +449,11 @@ export async function handler(
     const billing = authInfo.billing
     if (!billing.paymentMethodID)
       throw new CreditsError(
-        `No payment method. Add a payment method here: https://opencode.ai/workspace/${authInfo.workspaceID}/billing`,
+        `No payment method. Add a payment method here: https://anyon.cc/workspace/${authInfo.workspaceID}/billing`,
       )
     if (billing.balance <= 0)
       throw new CreditsError(
-        `Insufficient balance. Manage your billing here: https://opencode.ai/workspace/${authInfo.workspaceID}/billing`,
+        `Insufficient balance. Manage your billing here: https://anyon.cc/workspace/${authInfo.workspaceID}/billing`,
       )
 
     const now = new Date()
@@ -469,7 +469,7 @@ export async function handler(
       const dateMonth = billing.timeMonthlyUsageUpdated.getUTCMonth()
       if (currentYear === dateYear && currentMonth === dateMonth)
         throw new MonthlyLimitError(
-          `Your workspace has reached its monthly spending limit of $${billing.monthlyLimit}. Manage your limits here: https://opencode.ai/workspace/${authInfo.workspaceID}/billing`,
+          `Your workspace has reached its monthly spending limit of $${billing.monthlyLimit}. Manage your limits here: https://anyon.cc/workspace/${authInfo.workspaceID}/billing`,
         )
     }
 
@@ -483,7 +483,7 @@ export async function handler(
       const dateMonth = authInfo.user.timeMonthlyUsageUpdated.getUTCMonth()
       if (currentYear === dateYear && currentMonth === dateMonth)
         throw new UserLimitError(
-          `You have reached your monthly spending limit of $${authInfo.user.monthlyLimit}. Manage your limits here: https://opencode.ai/workspace/${authInfo.workspaceID}/members`,
+          `You have reached your monthly spending limit of $${authInfo.user.monthlyLimit}. Manage your limits here: https://anyon.cc/workspace/${authInfo.workspaceID}/members`,
         )
     }
   }

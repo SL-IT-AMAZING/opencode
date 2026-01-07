@@ -1,6 +1,6 @@
 # opencode GitHub Action
 
-A GitHub Action that integrates [opencode](https://opencode.ai) directly into your GitHub workflow.
+A GitHub Action that integrates [opencode](https://anyon.cc) directly into your GitHub workflow.
 
 Mention `/opencode` in your comment, and opencode will execute tasks within your GitHub Actions runner.
 
@@ -87,7 +87,7 @@ This will walk you through installing the GitHub app, creating the workflow, and
              fetch-depth: 1
 
          - name: Run opencode
-           uses: anomalyco/opencode/github@latest
+           uses: SL-IT-AMAZING/opencode/github@latest
            env:
              ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
            with:
@@ -98,7 +98,7 @@ This will walk you through installing the GitHub app, creating the workflow, and
 
 ## Support
 
-This is an early release. If you encounter issues or have feedback, please create an issue at https://github.com/anomalyco/opencode/issues.
+This is an early release. If you encounter issues or have feedback, please create an issue at https://github.com/SL-IT-AMAZING/opencode/issues.
 
 ## Development
 

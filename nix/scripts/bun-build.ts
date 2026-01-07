@@ -14,7 +14,7 @@ if (!target) {
 
 process.chdir(pkg)
 
-const manifestName = "opencode-assets.manifest"
+const manifestName = "anyon-assets.manifest"
 const manifestPath = path.join(pkg, manifestName)
 
 const readTrackedAssets = () => {
@@ -53,14 +53,14 @@ const result = await Bun.build({
   sourcemap: "external",
   entrypoints: ["./src/index.ts", parser, worker],
   define: {
-    OPENCODE_VERSION: `'@VERSION@'`,
+    ANYON_VERSION: `'@VERSION@'`,
     OTUI_TREE_SITTER_WORKER_PATH: "/$bunfs/root/" + path.relative(pkg, parser).replace(/\\/g, "/"),
-    OPENCODE_CHANNEL: "'latest'",
+    ANYON_CHANNEL: "'latest'",
   },
   compile: {
     target,
-    outfile: "opencode",
-    execArgv: ["--user-agent=opencode/" + version, '--env-file=""', "--"],
+    outfile: "anyon",
+    execArgv: ["--user-agent=anyon/" + version, '--env-file=""', "--"],
     windows: {},
   },
 })
@@ -83,7 +83,7 @@ const bundle = await Bun.build({
   tsconfig: "./tsconfig.json",
   plugins: [solidPlugin],
   target: "bun",
-  outdir: "./.opencode-worker",
+  outdir: "./.anyon-worker",
   sourcemap: "none",
 })
 
@@ -105,7 +105,7 @@ if (!output) {
   throw new Error("Worker build produced no entry-point output")
 }
 
-const dest = path.join(pkg, "opencode-worker.js")
+const dest = path.join(pkg, "anyon-worker.js")
 await Bun.write(dest, Bun.file(output.path))
 fs.rmSync(path.dirname(output.path), { recursive: true, force: true })
 

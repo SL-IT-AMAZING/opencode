@@ -83,7 +83,7 @@
             src = ./.;
             scripts = ./nix/scripts;
             mkNodeModules = mkNodeModules;
-            opencode = opencodePkg;
+            anyon = opencodePkg;
           };
         in
         {

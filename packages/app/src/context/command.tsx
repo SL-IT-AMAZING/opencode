@@ -1,8 +1,8 @@
 import { createMemo, createSignal, onCleanup, onMount, Show, type Accessor } from "solid-js"
-import { createSimpleContext } from "@opencode-ai/ui/context"
-import { useDialog } from "@opencode-ai/ui/context/dialog"
-import { Dialog } from "@opencode-ai/ui/dialog"
-import { List } from "@opencode-ai/ui/list"
+import { createSimpleContext } from "@anyon/ui/context"
+import { useDialog } from "@anyon/ui/context/dialog"
+import { Dialog } from "@anyon/ui/dialog"
+import { List } from "@anyon/ui/list"
 
 const IS_MAC = typeof navigator === "object" && /(Mac|iPod|iPhone|iPad)/.test(navigator.platform)
 

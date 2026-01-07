@@ -17,15 +17,15 @@ import {
   type VcsInfo,
   type PermissionRequest,
   createOpencodeClient,
-} from "@opencode-ai/sdk/v2/client"
+} from "@anyon/sdk/v2/client"
 import { createStore, produce, reconcile } from "solid-js/store"
-import { Binary } from "@opencode-ai/util/binary"
-import { retry } from "@opencode-ai/util/retry"
+import { Binary } from "@anyon/util/binary"
+import { retry } from "@anyon/util/retry"
 import { useGlobalSDK } from "./global-sdk"
 import { ErrorPage, type InitError } from "../pages/error"
 import { batch, createContext, useContext, onCleanup, onMount, type ParentProps, Switch, Match } from "solid-js"
-import { showToast } from "@opencode-ai/ui/toast"
-import { getFilename } from "@opencode-ai/util/path"
+import { showToast } from "@anyon/ui/toast"
+import { getFilename } from "@anyon/util/path"
 
 type State = {
   status: "loading" | "partial" | "complete"

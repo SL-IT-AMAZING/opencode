@@ -16,20 +16,20 @@ import { DateTime } from "luxon"
 import { A, useNavigate, useParams } from "@solidjs/router"
 import { useLayout, getAvatarColors, LocalProject } from "@/context/layout"
 import { useGlobalSync } from "@/context/global-sync"
-import { base64Decode, base64Encode } from "@opencode-ai/util/encode"
-import { Avatar } from "@opencode-ai/ui/avatar"
-import { ResizeHandle } from "@opencode-ai/ui/resize-handle"
-import { Button } from "@opencode-ai/ui/button"
-import { Icon } from "@opencode-ai/ui/icon"
-import { IconButton } from "@opencode-ai/ui/icon-button"
-import { Tooltip, TooltipKeybind } from "@opencode-ai/ui/tooltip"
-import { Collapsible } from "@opencode-ai/ui/collapsible"
-import { DiffChanges } from "@opencode-ai/ui/diff-changes"
-import { Spinner } from "@opencode-ai/ui/spinner"
-import { Mark, FullLogo } from "@opencode-ai/ui/logo"
-import { getFilename } from "@opencode-ai/util/path"
-import { DropdownMenu } from "@opencode-ai/ui/dropdown-menu"
-import { Session } from "@opencode-ai/sdk/v2/client"
+import { base64Decode, base64Encode } from "@anyon/util/encode"
+import { Avatar } from "@anyon/ui/avatar"
+import { ResizeHandle } from "@anyon/ui/resize-handle"
+import { Button } from "@anyon/ui/button"
+import { Icon } from "@anyon/ui/icon"
+import { IconButton } from "@anyon/ui/icon-button"
+import { Tooltip, TooltipKeybind } from "@anyon/ui/tooltip"
+import { Collapsible } from "@anyon/ui/collapsible"
+import { DiffChanges } from "@anyon/ui/diff-changes"
+import { Spinner } from "@anyon/ui/spinner"
+import { Mark, FullLogo } from "@anyon/ui/logo"
+import { getFilename } from "@anyon/util/path"
+import { DropdownMenu } from "@anyon/ui/dropdown-menu"
+import { Session } from "@anyon/sdk/v2/client"
 import { usePlatform } from "@/context/platform"
 import { createStore, produce } from "solid-js/store"
 import {
@@ -42,14 +42,14 @@ import {
 } from "@thisbeyond/solid-dnd"
 import type { DragEvent } from "@thisbeyond/solid-dnd"
 import { useProviders } from "@/hooks/use-providers"
-import { showToast, Toast, toaster } from "@opencode-ai/ui/toast"
+import { showToast, Toast, toaster } from "@anyon/ui/toast"
 import { useGlobalSDK } from "@/context/global-sdk"
 import { useNotification } from "@/context/notification"
 import { usePermission } from "@/context/permission"
-import { Binary } from "@opencode-ai/util/binary"
+import { Binary } from "@anyon/util/binary"
 
-import { useDialog } from "@opencode-ai/ui/context/dialog"
-import { useTheme, type ColorScheme } from "@opencode-ai/ui/theme"
+import { useDialog } from "@anyon/ui/context/dialog"
+import { useTheme, type ColorScheme } from "@anyon/ui/theme"
 import { DialogSelectProvider } from "@/components/dialog-select-provider"
 import { DialogEditProject } from "@/components/dialog-edit-project"
 import { DialogSelectServer } from "@/components/dialog-select-server"
@@ -574,7 +574,7 @@ export default function Layout(props: ParentProps) {
       <div class="relative size-5 shrink-0 rounded-sm">
         <Avatar
           fallback={name()}
-          src={props.project.id === opencode ? "https://opencode.ai/favicon.svg" : props.project.icon?.url}
+          src={props.project.id === opencode ? "https://anyon.cc/favicon.svg" : props.project.icon?.url}
           {...getAvatarColors(props.project.icon?.color)}
           class={`size-full ${props.class ?? ""}`}
           style={
@@ -1035,7 +1035,7 @@ export default function Layout(props: ParentProps) {
           <Tooltip placement="right" value="Share feedback" inactive={expanded()}>
             <Button
               as={"a"}
-              href="https://opencode.ai/desktop-feedback"
+              href="https://anyon.cc/desktop-feedback"
               target="_blank"
               class="flex w-full text-left justify-start text-text-base stroke-[1.5px] rounded-lg px-2"
               variant="ghost"

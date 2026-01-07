@@ -29,7 +29,7 @@ import { Config } from "@/config/config"
 import { Todo } from "@/session/todo"
 import { z } from "zod"
 import { LoadAPIKeyError } from "ai"
-import type { OpencodeClient, SessionMessageResponse } from "@opencode-ai/sdk/v2"
+import type { OpencodeClient, SessionMessageResponse } from "@anyon/sdk/v2"
 
 export namespace ACP {
   const log = Log.create({ service: "acp-agent" })
@@ -644,6 +644,7 @@ export namespace ACP {
     private async loadSessionMode(params: LoadSessionRequest) {
       const directory = params.cwd
       const model = await defaultModel(this.config, directory)
+      if (!model) throw new Error("No model available. Please configure a provider first.")
       const sessionId = params.sessionId
 
       const providers = await this.sdk.config.providers({ directory }).then((x) => x.data!.providers)
@@ -799,6 +800,7 @@ export namespace ACP {
 
       const current = session.model
       const model = current ?? (await defaultModel(this.config, directory))
+      if (!model) throw new Error("No model available. Please configure a provider first.")
       if (!current) {
         this.sessionManager.setModel(session.id, model)
       }
@@ -1017,20 +1019,6 @@ export namespace ACP {
 
     if (specified && !providers.length) return specified
 
-    const opencodeProvider = providers.find((p) => p.id === "opencode")
-    if (opencodeProvider) {
-      if (opencodeProvider.models["big-pickle"]) {
-        return { providerID: "opencode", modelID: "big-pickle" }
-      }
-      const [best] = Provider.sort(Object.values(opencodeProvider.models))
-      if (best) {
-        return {
-          providerID: best.providerID,
-          modelID: best.id,
-        }
-      }
-    }
-
     const models = providers.flatMap((p) => Object.values(p.models))
     const [best] = Provider.sort(models)
     if (best) {
@@ -1040,9 +1028,7 @@ export namespace ACP {
       }
     }
 
-    if (specified) return specified
-
-    return { providerID: "opencode", modelID: "big-pickle" }
+    return specified
   }
 
   function parseUri(

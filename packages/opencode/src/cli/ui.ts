@@ -1,13 +1,12 @@
 import z from "zod"
 import { EOL } from "os"
-import { NamedError } from "@opencode-ai/util/error"
+import { NamedError } from "@anyon/util/error"
 
 export namespace UI {
   const LOGO = [
-    [`                    `, `             ▄     `],
-    [`█▀▀█ █▀▀█ █▀▀█ █▀▀▄ `, `█▀▀▀ █▀▀█ █▀▀█ █▀▀█`],
-    [`█░░█ █░░█ █▀▀▀ █░░█ `, `█░░░ █░░█ █░░█ █▀▀▀`],
-    [`▀▀▀▀ █▀▀▀ ▀▀▀▀ ▀  ▀ `, `▀▀▀▀ ▀▀▀▀ ▀▀▀▀ ▀▀▀▀`],
+    [``, `▄▀▀▄ █▄ █ █  █ █▀▀█ █▄ █`],
+    [``, `█▀▀█ █ ▀█  ▀▀  █░░█ █ ▀█`],
+    [``, `▀  ▀ ▀  ▀  ▀▀  ▀▀▀▀ ▀  ▀`],
   ]
 
   export const CancelledError = NamedError.create("UICancelledError", z.void())

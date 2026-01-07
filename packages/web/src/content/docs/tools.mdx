@@ -23,7 +23,7 @@ Disable or enable tools globally using the `tools` option.
 
 ```json title="opencode.json"
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://anyon.cc/config.json",
   "tools": {
     "write": false,
     "bash": false,
@@ -36,7 +36,7 @@ You can also use wildcards to control multiple tools at once. For example, to di
 
 ```json title="opencode.json"
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://anyon.cc/config.json",
   "tools": {
     "mymcp_*": false
   }
@@ -51,7 +51,7 @@ Override global tool settings for specific agents using the `tools` config in th
 
 ```json title="opencode.json" {3-6,9-12}
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://anyon.cc/config.json",
   "tools": {
     "write": true,
     "bash": true
@@ -100,7 +100,7 @@ Execute shell commands in your project environment.
 
 ```json title="opencode.json" {4}
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://anyon.cc/config.json",
   "tools": {
     "bash": true
   }
@@ -117,7 +117,7 @@ Modify existing files using exact string replacements.
 
 ```json title="opencode.json" {4}
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://anyon.cc/config.json",
   "tools": {
     "edit": true
   }
@@ -134,7 +134,7 @@ Create new files or overwrite existing ones.
 
 ```json title="opencode.json" {4}
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://anyon.cc/config.json",
   "tools": {
     "write": true
   }
@@ -151,7 +151,7 @@ Read file contents from your codebase.
 
 ```json title="opencode.json" {4}
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://anyon.cc/config.json",
   "tools": {
     "read": true
   }
@@ -168,7 +168,7 @@ Search file contents using regular expressions.
 
 ```json title="opencode.json" {4}
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://anyon.cc/config.json",
   "tools": {
     "grep": true
   }
@@ -185,7 +185,7 @@ Find files by pattern matching.
 
 ```json title="opencode.json" {4}
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://anyon.cc/config.json",
   "tools": {
     "glob": true
   }
@@ -202,7 +202,7 @@ List files and directories in a given path.
 
 ```json title="opencode.json" {4}
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://anyon.cc/config.json",
   "tools": {
     "list": true
   }
@@ -223,7 +223,7 @@ This tool is only available when `OPENCODE_EXPERIMENTAL_LSP_TOOL=true` (or `OPEN
 
 ```json title="opencode.json" {4}
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://anyon.cc/config.json",
   "tools": {
     "lsp": true
   }
@@ -242,7 +242,7 @@ Apply patches to files.
 
 ```json title="opencode.json" {4}
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://anyon.cc/config.json",
   "tools": {
     "patch": true
   }
@@ -259,7 +259,7 @@ Load a [skill](/docs/skills) (a `SKILL.md` file) and return its content in the c
 
 ```json title="opencode.json" {4}
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://anyon.cc/config.json",
   "tools": {
     "skill": true
   }
@@ -276,7 +276,7 @@ Manage todo lists during coding sessions.
 
 ```json title="opencode.json" {4}
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://anyon.cc/config.json",
   "tools": {
     "todowrite": true
   }
@@ -297,7 +297,7 @@ Read existing todo lists.
 
 ```json title="opencode.json" {4}
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://anyon.cc/config.json",
   "tools": {
     "todoread": true
   }
@@ -318,7 +318,7 @@ Fetch web content.
 
 ```json title="opencode.json" {4}
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https://anyon.cc/config.json",
   "tools": {
     "webfetch": true
   }

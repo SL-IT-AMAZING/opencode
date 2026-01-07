@@ -25,11 +25,11 @@ fn configure_display_backend() -> Option<String> {
 
     // Allow users to explicitly keep Wayland if they know their setup is stable.
     let allow_wayland = matches!(
-        env::var("OC_ALLOW_WAYLAND"),
+        env::var("ANYON_ALLOW_WAYLAND"),
         Ok(v) if matches!(v.to_ascii_lowercase().as_str(), "1" | "true" | "yes")
     );
     if allow_wayland {
-        return Some("Wayland session detected; respecting OC_ALLOW_WAYLAND=1".into());
+        return Some("Wayland session detected; respecting ANYON_ALLOW_WAYLAND=1".into());
     }
 
     // Prefer XWayland when available to avoid Wayland protocol errors seen during startup.
@@ -59,5 +59,5 @@ fn main() {
         }
     }
 
-    opencode_lib::run()
+    anyon_lib::run()
 }

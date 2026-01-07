@@ -7,16 +7,16 @@ import { THEME_OPENAUTH } from "@openauthjs/openauth/ui/theme"
 import { GithubProvider } from "@openauthjs/openauth/provider/github"
 import { GoogleOidcProvider } from "@openauthjs/openauth/provider/google"
 import { CloudflareStorage } from "@openauthjs/openauth/storage/cloudflare"
-import { Account } from "@opencode-ai/console-core/account.js"
-import { Workspace } from "@opencode-ai/console-core/workspace.js"
-import { Actor } from "@opencode-ai/console-core/actor.js"
-import { Resource } from "@opencode-ai/console-resource"
-import { User } from "@opencode-ai/console-core/user.js"
-import { and, Database, eq, isNull, or } from "@opencode-ai/console-core/drizzle/index.js"
-import { WorkspaceTable } from "@opencode-ai/console-core/schema/workspace.sql.js"
-import { UserTable } from "@opencode-ai/console-core/schema/user.sql.js"
-import { AuthTable } from "@opencode-ai/console-core/schema/auth.sql.js"
-import { Identifier } from "@opencode-ai/console-core/identifier.js"
+import { Account } from "@anyon/console-core/account.js"
+import { Workspace } from "@anyon/console-core/workspace.js"
+import { Actor } from "@anyon/console-core/actor.js"
+import { Resource } from "@anyon/console-resource"
+import { User } from "@anyon/console-core/user.js"
+import { and, Database, eq, isNull, or } from "@anyon/console-core/drizzle/index.js"
+import { WorkspaceTable } from "@anyon/console-core/schema/workspace.sql.js"
+import { UserTable } from "@anyon/console-core/schema/user.sql.js"
+import { AuthTable } from "@anyon/console-core/schema/auth.sql.js"
+import { Identifier } from "@anyon/console-core/identifier.js"
 
 type Env = {
   AuthStorage: KVNamespace
@@ -35,7 +35,7 @@ export const subjects = createSubjects({
 
 const MY_THEME: Theme = {
   ...THEME_OPENAUTH,
-  logo: "https://opencode.ai/favicon.svg",
+  logo: "https://anyon.cc/favicon.svg",
 }
 
 export default {

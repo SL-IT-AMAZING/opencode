@@ -9,7 +9,7 @@ import { Log } from "@/util/log"
 import { withNetworkOptions, resolveNetworkOptions } from "@/cli/network"
 
 declare global {
-  const OPENCODE_WORKER_PATH: string
+  const ANYON_WORKER_PATH: string
 }
 
 export const TuiThreadCommand = cmd({
@@ -51,7 +51,7 @@ export const TuiThreadCommand = cmd({
     const localWorker = new URL("./worker.ts", import.meta.url)
     const distWorker = new URL("./cli/cmd/tui/worker.js", import.meta.url)
     const workerPath = await iife(async () => {
-      if (typeof OPENCODE_WORKER_PATH !== "undefined") return OPENCODE_WORKER_PATH
+      if (typeof ANYON_WORKER_PATH !== "undefined") return ANYON_WORKER_PATH
       if (await Bun.file(distWorker).exists()) return distWorker
       return localWorker
     })
