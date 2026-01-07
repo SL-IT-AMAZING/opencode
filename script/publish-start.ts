@@ -28,14 +28,14 @@ for (const file of pkgjsons) {
 
 await $`bun install`
 
-console.log("\n=== opencode ===\n")
-await import(`../packages/opencode/script/publish.ts`)
+console.log("\n=== building CLI (no npm publish) ===\n")
+// npm publish disabled - Desktop app only
+// await import(`../packages/opencode/script/publish.ts`)
+// await import(`../packages/sdk/js/script/publish.ts`)
+// await import(`../packages/plugin/script/publish.ts`)
 
-console.log("\n=== sdk ===\n")
-await import(`../packages/sdk/js/script/publish.ts`)
-
-console.log("\n=== plugin ===\n")
-await import(`../packages/plugin/script/publish.ts`)
+// Build CLI binaries for Desktop sidecar
+await $`bun run build`.cwd("./packages/opencode")
 
 const dir = new URL("..", import.meta.url).pathname
 process.chdir(dir)
