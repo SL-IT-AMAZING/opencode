@@ -179,7 +179,7 @@ jobs:
 
       - name: Setup Tauri signing key
         run: |
-          echo "${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}" > $RUNNER_TEMP/tauri-signing-key.key
+          printf '%s' "${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}" > $RUNNER_TEMP/tauri-signing-key.key
 
       - name: Build and upload artifacts
         timeout-minutes: 40
