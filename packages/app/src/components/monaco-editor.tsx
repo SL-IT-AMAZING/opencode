@@ -69,6 +69,10 @@ export default function MonacoEditor(props: MonacoEditorProps) {
         contextmenu: false,
       })
 
+      // Force layout after mount to ensure proper dimensions
+      setTimeout(() => editor?.layout(), 50)
+      setTimeout(() => editor?.layout(), 200)
+
       // Selection handler
       editor.onDidChangeCursorSelection(() => {
         if (!editor) return
@@ -112,15 +116,17 @@ export default function MonacoEditor(props: MonacoEditorProps) {
   })
 
   return (
-    <Show
-      when={!error()}
-      fallback={
-        <pre class="h-full w-full overflow-auto p-4 text-sm font-mono bg-zinc-900 text-zinc-300">
-          {props.content}
-        </pre>
-      }
-    >
-      <div ref={containerRef} class="h-full w-full" />
-    </Show>
+    <div class="flex-1 min-h-0 w-full flex flex-col">
+      <Show
+        when={!error()}
+        fallback={
+          <pre class="flex-1 min-h-0 w-full overflow-auto p-4 text-sm font-mono bg-zinc-900 text-zinc-300">
+            {props.content}
+          </pre>
+        }
+      >
+        <div ref={containerRef} class="flex-1 min-h-0 w-full" />
+      </Show>
+    </div>
   )
 }

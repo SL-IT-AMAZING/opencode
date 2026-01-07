@@ -2,7 +2,6 @@ import {
   createEffect,
   createMemo,
   createSignal,
-  on,
   Show,
   Suspense,
   ErrorBoundary,
@@ -23,7 +22,6 @@ interface FileViewerProps {
 
 export function FileViewer(props: FileViewerProps) {
   const file = useFile()
-  const [version, setVersion] = createSignal(0)
   const [selection, setSelection] = createSignal<{
     text: string
     startLine: number
@@ -36,22 +34,14 @@ export function FileViewer(props: FileViewerProps) {
     return p?.endsWith(".md") || p?.endsWith(".mdx")
   })
 
-  // Load file
-  createEffect(
-    on(normalizedPath, async (path) => {
-      if (!path) return
-      const currentPath = path
-      await file.load(path)
-      if (normalizedPath() === currentPath) {
-        setVersion((v) => v + 1)
-      }
-    })
-  )
-
-  const fileData = createMemo(() => {
-    version()
-    return file.get(normalizedPath())
+  // Load file when path changes
+  createEffect(() => {
+    const path = normalizedPath()
+    if (path) file.load(path)
   })
+
+  // Direct store access - Solid handles reactivity automatically
+  const fileData = createMemo(() => file.get(normalizedPath() ?? ""))
 
   const content = createMemo(() => fileData()?.content?.content ?? "")
   const isLoading = createMemo(() => fileData()?.loading ?? false)
@@ -99,8 +89,7 @@ export function FileViewer(props: FileViewerProps) {
           fallback={
             <ErrorBoundary
               fallback={(err) => (
-                <pre class="h-full w-full overflow-auto p-4 text-sm font-mono bg-zinc-900 text-zinc-300">
-                  {/* Monaco failed, show plain text */}
+                <pre class="flex-1 overflow-auto p-4 text-sm font-mono bg-zinc-900 text-zinc-300 whitespace-pre-wrap">
                   {content()}
                 </pre>
               )}
@@ -115,11 +104,13 @@ export function FileViewer(props: FileViewerProps) {
                   </div>
                 }
               >
-                <MonacoEditor
-                  content={content()}
-                  path={normalizedPath()}
-                  onSelect={handleSelect}
-                />
+                <div class="flex-1 min-h-0 flex flex-col">
+                  <MonacoEditor
+                    path={normalizedPath() ?? ""}
+                    content={content()}
+                    onSelect={handleSelect}
+                  />
+                </div>
               </Suspense>
             </ErrorBoundary>
           }

@@ -867,7 +867,7 @@ export default function Page() {
             >
               <DragDropSensors />
               <ConstrainDragYAxis />
-              <Tabs value={tabs().active() ?? "session"} onChange={openTab}>
+              <Tabs value={tabs().active() ?? "session"} onChange={openTab} class="shrink-0 !h-auto">
                 <Tabs.List class="h-10 shrink-0 border-b border-border-weak-base bg-background-base">
                   {/* Session tab (always first) */}
                   <Tabs.Trigger value="session" onClick={switchToSession}>
@@ -904,16 +904,15 @@ export default function Page() {
 
           {/* Content area */}
           <div classList={{
-            "flex-1 min-h-0 overflow-hidden": true,
+            "flex-1 min-h-0 overflow-hidden relative": true,
             "py-6 md:py-3": openedFileTabs().length === 0,
           }}>
             {/* File Viewer */}
             <Show when={activeFileTab()}>
               {(path) => (
-                <FileViewer
-                  path={path()}
-                  onAskAboutSelection={handleAskAboutSelection}
-                />
+                <div class="absolute inset-0" style={{ "background-color": "#1e1e1e" }}>
+                  <FileViewer path={path()} onAskAboutSelection={handleAskAboutSelection} />
+                </div>
               )}
             </Show>
 
