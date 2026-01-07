@@ -33,7 +33,7 @@ export default function MonacoEditor(props: MonacoEditorProps) {
     try {
       monacoInstance = await loader.init()
 
-      if (!containerRef) return
+      if (!containerRef || !monacoInstance) return
 
       // Dark theme
       monacoInstance.editor.defineTheme("opencode-dark", {
