@@ -178,8 +178,10 @@ jobs:
           cargo tauri --version
 
       - name: Setup Tauri signing key
+        shell: bash
         run: |
-          printf '%s' "${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}" > $RUNNER_TEMP/tauri-signing-key.key
+          printf '%s' "${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}" > packages/desktop/tauri-signing-key.key
+          echo "TAURI_KEY_PATH=tauri-signing-key.key" >> $GITHUB_ENV
 
       - name: Build and upload artifacts
         timeout-minutes: 40
@@ -187,7 +189,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_BUNDLER_NEW_APPIMAGE_FORMAT: true
-          TAURI_SIGNING_PRIVATE_KEY: ${{ runner.temp }}/tauri-signing-key.key
+          TAURI_SIGNING_PRIVATE_KEY: ${{ env.TAURI_KEY_PATH }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
