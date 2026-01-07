@@ -160,7 +160,7 @@ export default function Page() {
   const sessionKey = createMemo(() => `${params.dir}${params.id ? "/" + params.id : ""}`)
   const tabs = createMemo(() => layout.tabs(sessionKey()))
   const view = createMemo(() => layout.view(sessionKey()))
-  const sessions = createMemo(() => layout.sessions(params.dir))
+  const sessions = createMemo(() => layout.sessions(params.dir ?? ""))
 
   // Derive current session from active tab (for multi-tab support)
   const activeSessionId = createMemo(() => {
@@ -959,7 +959,7 @@ export default function Page() {
                   </SortableProvider>
 
                   {/* New session button */}
-                  <Tooltip content="New session">
+                  <Tooltip value="New session">
                     <IconButton
                       icon="plus"
                       variant="ghost"
