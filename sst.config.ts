@@ -3,7 +3,7 @@
 export default $config({
   app(input) {
     return {
-      name: "opencode",
+      name: "anyon",
       removal: input?.stage === "production" ? "retain" : "remove",
       protect: ["production"].includes(input?.stage),
       home: "cloudflare",
@@ -17,7 +17,6 @@ export default $config({
   },
   async run() {
     await import("./infra/app.js")
-    await import("./infra/console.js")
     await import("./infra/enterprise.js")
   },
 })
