@@ -23,7 +23,11 @@ export function FileVisual(props: { path: string; active?: boolean }): JSX.Eleme
   )
 }
 
-export function SortableTab(props: { tab: string; onTabClose: (tab: string) => void }): JSX.Element {
+export function SortableTab(props: {
+  tab: string
+  onTabClose: (tab: string) => void
+  onTabClick?: (tab: string) => void
+}): JSX.Element {
   const file = useFile()
   const sortable = createSortable(props.tab)
   const path = createMemo(() => file.pathFromTab(props.tab))
@@ -33,6 +37,7 @@ export function SortableTab(props: { tab: string; onTabClose: (tab: string) => v
       <div class="relative h-full">
         <Tabs.Trigger
           value={props.tab}
+          onClick={() => props.onTabClick?.(props.tab)}
           closeButton={
             <Tooltip value="Close tab" placement="bottom">
               <IconButton icon="close" variant="ghost" onClick={() => props.onTabClose(props.tab)} />

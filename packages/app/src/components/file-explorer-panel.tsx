@@ -15,10 +15,10 @@ export function FileExplorerPanel(props: {
 
   return (
     <div class="flex flex-col h-full overflow-hidden">
-      <div class="flex items-center px-4 py-2 border-b border-border-weak-base shrink-0">
-        <span class="text-12-medium text-text-strong">Files</span>
+      <div class="flex items-center justify-between px-3 py-2 border-b border-border-weak-base shrink-0">
+        <span class="text-xs font-semibold uppercase tracking-wide text-text-muted">Explorer</span>
       </div>
-      <div class="flex-1 overflow-auto py-2 px-2">
+      <div class="flex-1 overflow-auto py-1 px-1">
         <FileTree
           path=""
           activeFile={props.activeFile}

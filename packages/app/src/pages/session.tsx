@@ -184,7 +184,6 @@ export default function Page() {
   const openTab = (value: string) => {
     const next = normalizeTab(value)
     tabs().open(next)
-
     const path = file.pathFromTab(next)
     if (path) file.load(path)
   }
@@ -879,7 +878,7 @@ export default function Page() {
                   {/* File tabs */}
                   <SortableProvider ids={openedFileTabs()}>
                     <For each={openedFileTabs()}>
-                      {(tab) => <SortableTab tab={tab} onTabClose={closeTab} />}
+                      {(tab) => <SortableTab tab={tab} onTabClose={closeTab} onTabClick={openTab} />}
                     </For>
                   </SortableProvider>
                 </Tabs.List>
@@ -908,17 +907,18 @@ export default function Page() {
             "flex-1 min-h-0 overflow-hidden": true,
             "py-6 md:py-3": openedFileTabs().length === 0,
           }}>
+            {/* File Viewer */}
+            <Show when={activeFileTab()}>
+              {(path) => (
+                <FileViewer
+                  path={path()}
+                  onAskAboutSelection={handleAskAboutSelection}
+                />
+              )}
+            </Show>
+
+            <Show when={!activeFileTab()}>
             <Switch>
-              {/* File viewer mode */}
-              <Match when={activeFileTab()}>
-                {(path) => (
-                  <FileViewer
-                    path={path()}
-                    onClose={closeFileViewer}
-                    onAskAboutSelection={handleAskAboutSelection}
-                  />
-                )}
-              </Match>
               <Match when={params.id}>
                 <Show when={activeMessage()}>
                   <Show
@@ -1030,6 +1030,7 @@ export default function Page() {
                 />
               </Match>
             </Switch>
+            </Show>
           </div>
 
           {/* Prompt input */}

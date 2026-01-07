@@ -465,17 +465,77 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
       const searchFilesAndDirectories = (query: string) =>
         sdk.client.find.files({ query, dirs: "true" }).then((x) => x.data!)
 
+      const DEBOUNCE_MS = 100
+      let pendingChanges: { path: string; type: "add" | "unlink" }[] = []
+      let batchTimeout: ReturnType<typeof setTimeout> | null = null
+
+      const processBatchedChanges = () => {
+        const changes = pendingChanges
+        pendingChanges = []
+        batchTimeout = null
+        if (changes.length === 0) return
+
+        const affectedDirs = new Set<string>()
+        const removedPaths = new Set<string>()
+
+        for (const change of changes) {
+          if (change.type === "unlink") {
+            removedPaths.add(change.path)
+          } else if (change.type === "add") {
+            const parentPath = change.path.split("/").slice(0, -1).join("/")
+            affectedDirs.add(parentPath)
+          }
+        }
+
+        if (removedPaths.size > 0) {
+          setStore(
+            "node",
+            produce((draft) => {
+              for (const path of removedPaths) {
+                for (const nodePath of Object.keys(draft)) {
+                  if (nodePath === path || nodePath.startsWith(path + "/")) {
+                    delete draft[nodePath]
+                  }
+                }
+              }
+            }),
+          )
+        }
+
+        for (const dir of affectedDirs) {
+          const parentNode = store.node[dir]
+          if (dir === "" || (parentNode && parentNode.expanded)) {
+            list(dir)
+          }
+        }
+      }
+
+      const queueChange = (path: string, type: "add" | "unlink") => {
+        pendingChanges.push({ path, type })
+        if (batchTimeout) clearTimeout(batchTimeout)
+        batchTimeout = setTimeout(processBatchedChanges, DEBOUNCE_MS)
+      }
+
       const unsub = sdk.event.listen((e) => {
         const event = e.details
         switch (event.type) {
-          case "file.watcher.updated":
+          case "file.watcher.updated": {
             const relativePath = relative(event.properties.file)
             if (relativePath.startsWith(".git/")) return
-            if (store.node[relativePath]) load(relativePath)
+            const eventType = event.properties.event
+            if (eventType === "change") {
+              if (store.node[relativePath]) load(relativePath)
+            } else if (eventType === "add" || eventType === "unlink") {
+              queueChange(relativePath, eventType)
+            }
             break
+          }
         }
       })
-      onCleanup(unsub)
+      onCleanup(() => {
+        unsub()
+        if (batchTimeout) clearTimeout(batchTimeout)
+      })
 
       return {
         node: async (path: string) => {

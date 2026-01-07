@@ -66,18 +66,16 @@ export namespace FileWatcher {
       const subs: ParcelWatcher.AsyncSubscription[] = []
       const cfgIgnores = cfg.watcher?.ignore ?? []
 
-      if (Flag.OPENCODE_EXPERIMENTAL_FILEWATCHER) {
-        const pending = watcher().subscribe(Instance.directory, subscribe, {
-          ignore: [...FileIgnore.PATTERNS, ...cfgIgnores],
-          backend,
-        })
-        const sub = await withTimeout(pending, SUBSCRIBE_TIMEOUT_MS).catch((err) => {
-          log.error("failed to subscribe to Instance.directory", { error: err })
-          pending.then((s) => s.unsubscribe()).catch(() => {})
-          return undefined
-        })
-        if (sub) subs.push(sub)
-      }
+      const pending = watcher().subscribe(Instance.directory, subscribe, {
+        ignore: [...FileIgnore.PATTERNS, ...cfgIgnores],
+        backend,
+      })
+      const sub = await withTimeout(pending, SUBSCRIBE_TIMEOUT_MS).catch((err) => {
+        log.error("failed to subscribe to Instance.directory", { error: err })
+        pending.then((s) => s.unsubscribe()).catch(() => {})
+        return undefined
+      })
+      if (sub) subs.push(sub)
 
       const vcsDir = await $`git rev-parse --git-dir`
         .quiet()

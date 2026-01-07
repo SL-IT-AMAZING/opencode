@@ -1,152 +1,159 @@
-import { createEffect, createMemo, createSignal, Match, onCleanup, Show, Switch } from "solid-js"
+import {
+  createEffect,
+  createMemo,
+  createSignal,
+  on,
+  Show,
+  Suspense,
+  ErrorBoundary,
+  lazy,
+} from "solid-js"
+import { Portal } from "solid-js/web"
 import { useFile } from "@/context/file"
 import { Markdown } from "@opencode-ai/ui/markdown"
-import { Code } from "@opencode-ai/ui/code"
-import { Icon } from "@opencode-ai/ui/icon"
+import { Button } from "@opencode-ai/ui/button"
+
+// Lazy load Monaco - won't crash app if it fails
+const MonacoEditor = lazy(() => import("./monaco-editor"))
 
 interface FileViewerProps {
   path: string
-  onClose?: () => void
   onAskAboutSelection?: (selection: { text: string; startLine: number; endLine: number }) => void
-}
-
-function getViewMode(path: string): "markdown" | "code" {
-  const ext = path.split(".").pop()?.toLowerCase()
-  return ext === "md" || ext === "mdx" ? "markdown" : "code"
 }
 
 export function FileViewer(props: FileViewerProps) {
   const file = useFile()
-  const [selectionPosition, setSelectionPosition] = createSignal<{ x: number; y: number } | null>(null)
-  const [selectedText, setSelectedText] = createSignal<string>("")
-  let containerRef: HTMLDivElement | undefined
+  const [version, setVersion] = createSignal(0)
+  const [selection, setSelection] = createSignal<{
+    text: string
+    startLine: number
+    endLine: number
+  } | null>(null)
 
-  const fileState = createMemo(() => file.get(props.path))
-  const content = createMemo(() => fileState()?.content?.content ?? "")
-  const viewMode = createMemo(() => getViewMode(props.path))
-
-  // FileContents format for the Code component (from @pierre/diffs)
-  const fileContents = createMemo(() => ({
-    name: props.path,
-    contents: content(),
-    cacheKey: `${props.path}-${content().length}`,
-  }))
-
-  // Load file content
-  createEffect(() => {
-    if (props.path) {
-      file.load(props.path)
-    }
+  const normalizedPath = createMemo(() => file.normalize(props.path))
+  const isMarkdown = createMemo(() => {
+    const p = normalizedPath()
+    return p?.endsWith(".md") || p?.endsWith(".mdx")
   })
 
-  // Handle text selection
-  const handleMouseUp = () => {
-    const selection = window.getSelection()
-    if (!selection || selection.isCollapsed) {
-      setSelectionPosition(null)
-      return
-    }
-
-    const text = selection.toString()
-    if (!text.trim()) {
-      setSelectionPosition(null)
-      return
-    }
-
-    const range = selection.getRangeAt(0)
-    const rect = range.getBoundingClientRect()
-
-    setSelectedText(text)
-    setSelectionPosition({
-      x: rect.left + rect.width / 2,
-      y: rect.top,
+  // Load file
+  createEffect(
+    on(normalizedPath, async (path) => {
+      if (!path) return
+      const currentPath = path
+      await file.load(path)
+      if (normalizedPath() === currentPath) {
+        setVersion((v) => v + 1)
+      }
     })
-  }
+  )
 
-  const handleMouseDown = (e: MouseEvent) => {
-    // Close floating button if clicking outside
-    if (selectionPosition() && containerRef && !containerRef.contains(e.target as Node)) {
-      setSelectionPosition(null)
-    }
-  }
-
-  const handleAskClick = () => {
-    const text = selectedText()
-    if (!text || !props.onAskAboutSelection) return
-
-    // Estimate line numbers from selection
-    const lines = text.split("\n")
-    props.onAskAboutSelection({
-      text,
-      startLine: 1,
-      endLine: lines.length,
-    })
-    setSelectionPosition(null)
-    window.getSelection()?.removeAllRanges()
-  }
-
-  createEffect(() => {
-    document.addEventListener("mousedown", handleMouseDown)
-    onCleanup(() => document.removeEventListener("mousedown", handleMouseDown))
+  const fileData = createMemo(() => {
+    version()
+    return file.get(normalizedPath())
   })
+
+  const content = createMemo(() => fileData()?.content?.content ?? "")
+  const isLoading = createMemo(() => fileData()?.loading ?? false)
+  const isLoaded = createMemo(() => fileData()?.loaded ?? false)
+  const error = createMemo(() => fileData()?.error)
+
+  const handleSelect = (text: string, startLine: number, endLine: number) => {
+    if (text.trim()) {
+      setSelection({ text, startLine, endLine })
+    } else {
+      setSelection(null)
+    }
+  }
+
+  const handleAskAI = () => {
+    const sel = selection()
+    if (!sel) return
+    props.onAskAboutSelection?.(sel)
+    setSelection(null)
+  }
 
   return (
-    <div ref={containerRef} class="flex flex-col h-full bg-background-base overflow-hidden">
-      {/* Content - full height, no header (file name shown in tab bar) */}
-      <div class="flex-1 overflow-auto p-4" onMouseUp={handleMouseUp}>
-        <Switch>
-          <Match when={!fileState() || fileState()?.loading}>
-            <div class="flex items-center justify-center h-32 text-text-muted">
-              <div class="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-              <span class="ml-2">Loading...</span>
-            </div>
-          </Match>
-          <Match when={fileState()?.error}>
-            <div class="flex items-center justify-center h-32 text-text-danger">
-              <Icon name="circle-x" />
-              <span class="ml-2">{fileState()?.error}</span>
-            </div>
-          </Match>
-          <Match when={fileState()?.loaded && !content()}>
-            <div class="flex items-center justify-center h-32 text-text-muted">
-              <span>Empty file</span>
-            </div>
-          </Match>
-          <Match when={viewMode() === "markdown"}>
-            <div class="prose prose-sm prose-invert max-w-none">
-              <Markdown text={content()} />
-            </div>
-          </Match>
-          <Match when={viewMode() === "code" && content()}>
-            <Code
-              file={fileContents()}
-              overflow="wrap"
-              class="select-text"
-            />
-          </Match>
-        </Switch>
-      </div>
-
-      {/* Floating "Ask" button */}
-      <Show when={selectionPosition()}>
-        {(pos) => (
-          <div
-            class="fixed z-50 bg-background-stronger border border-border-base rounded-md shadow-lg p-1 flex items-center gap-1"
-            style={{
-              left: `${pos().x}px`,
-              top: `${pos().y - 8}px`,
-              transform: "translate(-50%, -100%)",
-            }}
-          >
-            <button
-              class="flex items-center gap-1.5 px-2 py-1 text-12-medium text-text-strong hover:bg-background-element rounded transition-colors"
-              onClick={handleAskClick}
-            >
-              <Icon name="speech-bubble" />
-              Ask
-            </button>
+    <div class="h-full w-full flex flex-col bg-background-base overflow-hidden">
+      {/* Loading */}
+      <Show when={isLoading() || (!fileData() && !error())}>
+        <div class="flex-1 flex items-center justify-center">
+          <div class="flex items-center gap-2">
+            <div class="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <span class="text-text-muted">Loading...</span>
           </div>
-        )}
+        </div>
+      </Show>
+
+      {/* Error */}
+      <Show when={error()}>
+        <div class="flex-1 flex items-center justify-center">
+          <div class="text-red-400">Error: {error()}</div>
+        </div>
+      </Show>
+
+      {/* Content */}
+      <Show when={isLoaded() && content()}>
+        <Show
+          when={isMarkdown()}
+          fallback={
+            <ErrorBoundary
+              fallback={(err) => (
+                <pre class="h-full w-full overflow-auto p-4 text-sm font-mono bg-zinc-900 text-zinc-300">
+                  {/* Monaco failed, show plain text */}
+                  {content()}
+                </pre>
+              )}
+            >
+              <Suspense
+                fallback={
+                  <div class="flex-1 flex items-center justify-center">
+                    <div class="flex items-center gap-2">
+                      <div class="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                      <span class="text-text-muted">Loading editor...</span>
+                    </div>
+                  </div>
+                }
+              >
+                <MonacoEditor
+                  content={content()}
+                  path={normalizedPath()}
+                  onSelect={handleSelect}
+                />
+              </Suspense>
+            </ErrorBoundary>
+          }
+        >
+          {/* Markdown */}
+          <div class="flex-1 overflow-auto">
+            <div class="max-w-4xl mx-auto p-6">
+              <Markdown
+                text={content()}
+                class="prose prose-invert prose-zinc max-w-none"
+              />
+            </div>
+          </div>
+        </Show>
+      </Show>
+
+      {/* Empty */}
+      <Show when={isLoaded() && !content() && !error()}>
+        <div class="flex-1 flex items-center justify-center">
+          <span class="text-text-muted">Empty file</span>
+        </div>
+      </Show>
+
+      {/* Ask AI button */}
+      <Show when={selection()}>
+        <Portal>
+          <div
+            class="fixed z-[9999] bottom-20 left-1/2 -translate-x-1/2 animate-in fade-in slide-in-from-bottom-2"
+          >
+            <Button variant="primary" size="small" onClick={handleAskAI}>
+              Ask AI about selection
+            </Button>
+          </div>
+        </Portal>
       </Show>
     </div>
   )

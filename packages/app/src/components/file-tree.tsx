@@ -5,6 +5,8 @@ import { Tooltip } from "@opencode-ai/ui/tooltip"
 import { For, Match, Switch, type ComponentProps, type ParentProps } from "solid-js"
 import { Dynamic } from "solid-js/web"
 
+const INDENT_SIZE = 16 // VS Code uses ~16px per level
+
 export default function FileTree(props: {
   path: string
   class?: string
@@ -22,26 +24,26 @@ export default function FileTree(props: {
     <Dynamic
       component={p.as ?? "div"}
       classList={{
-        "p-0.5 w-full flex items-center gap-x-2 rounded-sm transition-colors": true,
-        "hover:bg-background-element": !isActive(p.node.path),
-        "bg-background-element ring-1 ring-primary/30": isActive(p.node.path),
+        // Base styles
+        "relative py-1 px-2 w-full flex items-center gap-x-2 rounded-sm transition-colors cursor-pointer": true,
+        // Hover state (VS Code-like)
+        "hover:bg-background-element/70": !isActive(p.node.path),
+        // Active state (more prominent)
+        "bg-primary/15 text-text-strong": isActive(p.node.path),
         [props.nodeClass ?? ""]: !!props.nodeClass,
       }}
-      style={`padding-left: ${level * 10}px`}
+      style={`padding-left: ${8 + level * INDENT_SIZE}px`}
       draggable={true}
       onDragStart={(e: any) => {
         const evt = e as globalThis.DragEvent
         evt.dataTransfer!.effectAllowed = "copy"
         evt.dataTransfer!.setData("text/plain", `file:${p.node.path}`)
 
-        // Create custom drag image without margins
         const dragImage = document.createElement("div")
-        dragImage.className =
-          "flex items-center gap-x-2 px-2 py-1 bg-background-element rounded-md border border-border-1"
+        dragImage.className = "flex items-center gap-x-2 px-2 py-1 bg-background-element rounded-md border border-border-1"
         dragImage.style.position = "absolute"
         dragImage.style.top = "-1000px"
 
-        // Copy only the icon and text content without padding
         const icon = e.currentTarget.querySelector("svg")
         const text = e.currentTarget.querySelector("span")
         if (icon && text) {
@@ -54,56 +56,69 @@ export default function FileTree(props: {
       }}
       {...p}
     >
+      {/* Indentation guide lines */}
+      <For each={Array(level).fill(0)}>
+        {(_, i) => (
+          <div
+            class="absolute top-0 bottom-0 w-px bg-border-weak-base/50"
+            style={`left: ${12 + i() * INDENT_SIZE}px`}
+          />
+        )}
+      </For>
+
       {p.children}
+
       <span
         classList={{
-          "text-xs whitespace-nowrap truncate": true,
+          "text-sm whitespace-nowrap truncate flex-1": true,
           "text-text-muted/40": p.node.ignored && !isActive(p.node.path),
-          "text-text-muted/80": !p.node.ignored && !isActive(p.node.path),
-          "!text-text-strong": isActive(p.node.path),
+          "text-text-muted": !p.node.ignored && !isActive(p.node.path),
+          "text-text-strong font-medium": isActive(p.node.path),
         }}
       >
         {p.node.name}
       </span>
-      {/* <Show when={local.file.changed(p.node.path)}> */}
-      {/*   <span class="ml-auto mr-1 w-1.5 h-1.5 rounded-full bg-primary/50 shrink-0" /> */}
-      {/* </Show> */}
+
+      {/* TODO: Modified indicator - uncomment when local.file.changed() is implemented */}
+      {/* <Show when={local.file.changed(p.node.path)}>
+        <span class="ml-auto mr-1 w-2 h-2 rounded-full bg-primary/70 shrink-0" />
+      </Show> */}
     </Dynamic>
   )
 
   return (
-    <div class={`flex flex-col ${props.class}`}>
+    <div class={`flex flex-col ${props.class ?? ""}`}>
       <For each={local.file.children(props.path)}>
         {(node) => (
-          <Tooltip forceMount={false} openDelay={2000} value={node.path} placement="right">
+          <Tooltip forceMount={false} openDelay={800} value={node.path} placement="right">
             <Switch>
               <Match when={node.type === "directory"}>
                 <Collapsible
                   variant="ghost"
                   class="w-full"
                   forceMount={false}
-                  // open={local.file.node(node.path)?.expanded}
                   onOpenChange={(open) => (open ? local.file.expand(node.path) : local.file.collapse(node.path))}
                 >
                   <Collapsible.Trigger>
                     <Node node={node}>
-                      <Collapsible.Arrow class="text-text-muted/60 ml-1" />
-                      <FileIcon
-                        node={node}
-                        // expanded={local.file.node(node.path).expanded}
-                        class="text-text-muted/60 -ml-1"
-                      />
+                      <Collapsible.Arrow class="text-text-muted/70 w-4 h-4 shrink-0" />
+                      <FileIcon node={node} class="text-text-muted/70 w-4 h-4 shrink-0" />
                     </Node>
                   </Collapsible.Trigger>
                   <Collapsible.Content>
-                    <FileTree path={node.path} level={level + 1} activeFile={props.activeFile} onFileClick={props.onFileClick} />
+                    <FileTree
+                      path={node.path}
+                      level={level + 1}
+                      activeFile={props.activeFile}
+                      onFileClick={props.onFileClick}
+                    />
                   </Collapsible.Content>
                 </Collapsible>
               </Match>
               <Match when={node.type === "file"}>
                 <Node node={node} as="button" onClick={() => props.onFileClick?.(node)}>
-                  <div class="w-4 shrink-0" />
-                  <FileIcon node={node} class="text-primary" />
+                  <div class="w-4 shrink-0" /> {/* Spacer for alignment with folders */}
+                  <FileIcon node={node} class="text-primary/80 w-4 h-4 shrink-0" />
                 </Node>
               </Match>
             </Switch>
