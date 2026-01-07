@@ -41,10 +41,6 @@ jobs:
 
       - uses: ./.github/actions/setup-bun
 
-      - name: Install OpenCode
-        if: inputs.bump || inputs.version
-        run: bun i -g opencode-ai@1.0.169
-
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -65,8 +61,8 @@ jobs:
 
       - name: Setup Git Identity
         run: |
-          git config --global user.email "opencode@sst.dev"
-          git config --global user.name "opencode"
+          git config --global user.email "anyon@sst.dev"
+          git config --global user.name "anyon"
           git remote set-url origin https://x-access-token:${{ secrets.SST_GITHUB_TOKEN }}@github.com/${{ github.repository }}
 
       - name: Publish
@@ -82,7 +78,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: opencode-cli
+          name: anyon-cli
           path: packages/opencode/dist
 
     outputs:
@@ -156,8 +152,8 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          name: opencode-cli
-          path: packages/desktop/src-tauri/target/opencode-binaries
+          name: anyon-cli
+          path: packages/desktop/src-tauri/target/anyon-binaries
 
       - name: Prepare
         run: |
@@ -203,7 +199,7 @@ jobs:
           updaterJsonPreferNsis: true
           releaseId: ${{ needs.publish.outputs.release }}
           tagName: ${{ needs.publish.outputs.tag }}
-          releaseAssetNamePattern: opencode-desktop-[platform]-[arch][ext]
+          releaseAssetNamePattern: anyon-desktop-[platform]-[arch][ext]
           releaseDraft: true
 
   publish-release:
@@ -227,8 +223,8 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.AUR_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          git config --global user.email "opencode@sst.dev"
-          git config --global user.name "opencode"
+          git config --global user.email "anyon@sst.dev"
+          git config --global user.name "anyon"
           ssh-keyscan -H aur.archlinux.org >> ~/.ssh/known_hosts || true
 
       - run: ./script/publish-complete.ts
