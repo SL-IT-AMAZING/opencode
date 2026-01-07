@@ -925,7 +925,7 @@ export default function Page() {
               <DragDropSensors />
               <ConstrainDragYAxis />
               <Tabs value={tabs().active() ?? "session"} onChange={openTab} class="shrink-0 !h-auto">
-                <Tabs.List class="h-10 shrink-0 border-b border-border-weak-base bg-background-base overflow-hidden">
+                <Tabs.List class="h-12 shrink-0 border-b border-border-weak-base bg-background-base overflow-hidden">
                   {/* Unified tabs: sessions + files mixed together */}
                   <SortableProvider ids={allTabs()}>
                     <For each={allTabs()}>
@@ -979,15 +979,21 @@ export default function Page() {
               <DragOverlay>
                 <Show when={store.activeDraggable}>
                   {(draggedId) => {
+                    const isSession = () => draggedId().startsWith("session-")
+                    const sessionId = () => draggedId().replace("session-", "")
                     const path = createMemo(() => file.pathFromTab(draggedId()))
                     return (
-                      <Show when={path()}>
-                        {(p) => (
-                          <div class="relative p-1 h-10 flex items-center bg-background-stronger text-14-regular">
-                            <FileVisual path={p()} />
-                          </div>
-                        )}
-                      </Show>
+                      <div class="relative p-1 h-12 flex items-center bg-background-stronger text-14-regular">
+                        <Show
+                          when={isSession()}
+                          fallback={
+                            <Show when={path()}>{(p) => <FileVisual path={p()} />}</Show>
+                          }
+                        >
+                          <Icon name="bubble-5" />
+                          <span class="ml-1 truncate">{getSessionTitle(sessionId())}</span>
+                        </Show>
+                      </div>
                     )
                   }}
                 </Show>
