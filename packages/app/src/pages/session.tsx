@@ -43,7 +43,6 @@ import { ConstrainDragYAxis, getDraggableId } from "@/utils/solid-dnd"
 import { usePermission } from "@/context/permission"
 import { showToast } from "@opencode-ai/ui/toast"
 import {
-  SessionHeader,
   SessionContextTab,
   SortableTab,
   FileVisual,
@@ -676,6 +675,9 @@ export default function Page() {
       },
     })
 
+    // Switch to session view so user sees the prompt with context
+    tabs().setActive(undefined)
+
     // Focus prompt input
     inputRef?.focus()
   }
@@ -820,7 +822,6 @@ export default function Page() {
 
   return (
     <div class="relative bg-background-base size-full overflow-hidden flex flex-col">
-      <SessionHeader />
       <div class="flex-1 min-h-0 flex flex-col md:flex-row">
         {/* Mobile tab bar - only shown on mobile when there are diffs */}
         <Show when={!isDesktop() && diffs().length > 0}>
@@ -857,8 +858,8 @@ export default function Page() {
             "--prompt-height": store.promptHeight ? `${store.promptHeight}px` : undefined,
           }}
         >
-          {/* File tabs bar - Chrome style */}
-          <Show when={openedFileTabs().length > 0}>
+          {/* Session and file tabs bar - Chrome style */}
+          <Show when={params.id || openedFileTabs().length > 0}>
             <DragDropProvider
               onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
@@ -870,9 +871,23 @@ export default function Page() {
               <Tabs value={tabs().active() ?? "session"} onChange={openTab} class="shrink-0 !h-auto">
                 <Tabs.List class="h-10 shrink-0 border-b border-border-weak-base bg-background-base">
                   {/* Session tab (always first) */}
-                  <Tabs.Trigger value="session" onClick={switchToSession}>
+                  <Tabs.Trigger
+                    value="session"
+                    onClick={switchToSession}
+                    hideCloseButton={!params.id}
+                    closeButton={
+                      <IconButton
+                        icon="close"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          navigate(`/${params.dir}/session`)
+                        }}
+                      />
+                    }
+                  >
                     <Icon name="bubble-5" />
-                    <span class="ml-1">Session</span>
+                    <span class="ml-1 max-w-32 truncate">{info()?.title || "New Session"}</span>
                   </Tabs.Trigger>
 
                   {/* File tabs */}
@@ -881,6 +896,16 @@ export default function Page() {
                       {(tab) => <SortableTab tab={tab} onTabClose={closeTab} onTabClick={openTab} />}
                     </For>
                   </SortableProvider>
+
+                  {/* New session button */}
+                  <Tooltip content="New session">
+                    <IconButton
+                      icon="plus"
+                      variant="ghost"
+                      class="ml-1 shrink-0"
+                      onClick={() => navigate(`/${params.dir}/session`)}
+                    />
+                  </Tooltip>
                 </Tabs.List>
               </Tabs>
               <DragOverlay>
@@ -905,7 +930,7 @@ export default function Page() {
           {/* Content area */}
           <div classList={{
             "flex-1 min-h-0 overflow-hidden relative": true,
-            "py-6 md:py-3": openedFileTabs().length === 0,
+            "py-6 md:py-3": !params.id && openedFileTabs().length === 0,
           }}>
             {/* File Viewer */}
             <Show when={activeFileTab()}>
