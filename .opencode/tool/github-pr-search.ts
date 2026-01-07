@@ -1,5 +1,5 @@
 /// <reference path="../env.d.ts" />
-import { tool } from "@opencode-ai/plugin"
+import { tool } from "@anyon/plugin"
 import DESCRIPTION from "./github-pr-search.txt"
 
 async function githubFetch(endpoint: string, options: RequestInit = {}) {
@@ -31,7 +31,7 @@ export default tool({
     offset: tool.schema.number().describe("Number of results to skip for pagination").default(0),
   },
   async execute(args) {
-    const owner = "anomalyco"
+    const owner = "SL-IT-AMAZING"
     const repo = "opencode"
 
     const page = Math.floor(args.offset / args.limit) + 1

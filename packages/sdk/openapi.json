@@ -8781,7 +8781,7 @@
             "$ref": "#/components/schemas/ServerConfig"
           },
           "command": {
-            "description": "Command configuration, see https://opencode.ai/docs/commands",
+            "description": "Command configuration, see https://anyon.cc/docs/commands",
             "type": "object",
             "propertyNames": {
               "type": "string"
@@ -8895,7 +8895,7 @@
             }
           },
           "agent": {
-            "description": "Agent configuration, see https://opencode.ai/docs/agent",
+            "description": "Agent configuration, see https://anyon.cc/docs/agent",
             "type": "object",
             "properties": {
               "plan": {

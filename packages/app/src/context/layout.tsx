@@ -1,10 +1,10 @@
 import { createStore, produce } from "solid-js/store"
 import { batch, createEffect, createMemo, onMount } from "solid-js"
-import { createSimpleContext } from "@opencode-ai/ui/context"
+import { createSimpleContext } from "@anyon/ui/context"
 import { useGlobalSync } from "./global-sync"
 import { useGlobalSDK } from "./global-sdk"
 import { useServer } from "./server"
-import { Project } from "@opencode-ai/sdk/v2"
+import { Project } from "@anyon/sdk/v2"
 import { persisted } from "@/utils/persist"
 import { same } from "@/utils/same"
 

@@ -32,7 +32,7 @@ let
     );
 in
 rustPlatform.buildRustPackage rec {
-  pname = "opencode-desktop";
+  pname = "anyon-desktop";
   version = args.version;
 
   src = args.src;
@@ -96,7 +96,7 @@ rustPlatform.buildRustPackage rec {
     # Copy sidecar
     mkdir -p packages/desktop/src-tauri/sidecars
     targetTriple=${stdenv.hostPlatform.rust.rustcTarget}
-    cp ${args.opencode}/bin/opencode packages/desktop/src-tauri/sidecars/opencode-cli-$targetTriple
+    cp ${args.anyon}/bin/anyon packages/desktop/src-tauri/sidecars/anyon-cli-$targetTriple
 
     # Merge prod config into tauri.conf.json
     if ! jq -s '.[0] * .[1]' \
@@ -122,7 +122,7 @@ rustPlatform.buildRustPackage rec {
 
   postInstall = lib.optionalString stdenv.isLinux ''
     # Wrap the binary to ensure it finds the libraries
-    wrapProgram $out/bin/opencode-desktop \
+    wrapProgram $out/bin/anyon-desktop \
       --prefix LD_LIBRARY_PATH : ${
         lib.makeLibraryPath [
           gtk3
@@ -135,11 +135,11 @@ rustPlatform.buildRustPackage rec {
   '';
 
   meta = with lib; {
-    description = "OpenCode Desktop App";
-    homepage = "https://opencode.ai";
+    description = "ANYON Desktop App";
+    homepage = "https://anyon.cc";
     license = licenses.mit;
     maintainers = with maintainers; [ ];
-    mainProgram = "opencode-desktop";
+    mainProgram = "anyon-desktop";
     platforms = platforms.linux ++ platforms.darwin;
   };
 }

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "name": "opencode",
+  "name": "anyon",
   "description": "AI-powered development tool",
   "private": true,
   "type": "module",
@@ -16,7 +16,6 @@
   "workspaces": {
     "packages": [
       "packages/*",
-      "packages/console/*",
       "packages/sdk/js",
       "packages/slack"
     ],
@@ -69,14 +68,14 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.933.0",
-    "@opencode-ai/plugin": "workspace:*",
-    "@opencode-ai/script": "workspace:*",
-    "@opencode-ai/sdk": "workspace:*",
+    "@anyon/plugin": "workspace:*",
+    "@anyon/script": "workspace:*",
+    "@anyon/sdk": "workspace:*",
     "typescript": "catalog:"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/anomalyco/opencode"
+    "url": "https://github.com/SL-IT-AMAZING/opencode"
   },
   "license": "MIT",
   "prettier": {

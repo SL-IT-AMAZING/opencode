@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 import { $ } from "bun"
-import { Script } from "@opencode-ai/script"
+import { Script } from "@anyon/script"
 import { buildNotes, getLatestRelease } from "./changelog"
 
 let notes: string[] = []
@@ -25,13 +25,6 @@ for (const file of pkgjsons) {
   console.log("updated:", file)
   await Bun.file(file).write(pkg)
 }
-
-const extensionToml = new URL("../packages/extensions/zed/extension.toml", import.meta.url).pathname
-let toml = await Bun.file(extensionToml).text()
-toml = toml.replace(/^version = "[^"]+"/m, `version = "${Script.version}"`)
-toml = toml.replaceAll(/releases\/download\/v[^/]+\//g, `releases/download/v${Script.version}/`)
-console.log("updated:", extensionToml)
-await Bun.file(extensionToml).write(toml)
 
 await $`bun install`
 
