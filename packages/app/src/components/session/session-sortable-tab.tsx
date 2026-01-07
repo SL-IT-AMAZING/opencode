@@ -3,6 +3,7 @@ import type { JSX } from "solid-js"
 import { createSortable } from "@thisbeyond/solid-dnd"
 import { FileIcon } from "@opencode-ai/ui/file-icon"
 import { IconButton } from "@opencode-ai/ui/icon-button"
+import { Icon } from "@opencode-ai/ui/icon"
 import { Tooltip } from "@opencode-ai/ui/tooltip"
 import { Tabs } from "@opencode-ai/ui/tabs"
 import { getFilename } from "@opencode-ai/util/path"
@@ -18,7 +19,42 @@ export function FileVisual(props: { path: string; active?: boolean }): JSX.Eleme
           "grayscale-0": props.active,
         }}
       />
-      <span class="text-14-medium">{getFilename(props.path)}</span>
+      <span class="text-14-medium truncate">{getFilename(props.path)}</span>
+    </div>
+  )
+}
+
+export function SortableSessionTab(props: {
+  sessionId: string
+  title: string
+  onClose: (id: string) => void
+  onClick?: (id: string) => void
+}): JSX.Element {
+  const sortable = createSortable(`session-${props.sessionId}`)
+  return (
+    // @ts-ignore
+    <div use:sortable classList={{ "h-full flex-shrink min-w-0": true, "opacity-0": sortable.isActiveDraggable }}>
+      <div class="relative h-full">
+        <Tooltip value={props.title} placement="bottom">
+          <Tabs.Trigger
+            value={`session-${props.sessionId}`}
+            onClick={() => props.onClick?.(props.sessionId)}
+            closeButton={
+              <IconButton
+                icon="close"
+                variant="ghost"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  props.onClose(props.sessionId)
+                }}
+              />
+            }
+          >
+            <Icon name="bubble-5" />
+            <span class="ml-1 truncate">{props.title}</span>
+          </Tabs.Trigger>
+        </Tooltip>
+      </div>
     </div>
   )
 }
@@ -33,20 +69,20 @@ export function SortableTab(props: {
   const path = createMemo(() => file.pathFromTab(props.tab))
   return (
     // @ts-ignore
-    <div use:sortable classList={{ "h-full": true, "opacity-0": sortable.isActiveDraggable }}>
+    <div use:sortable classList={{ "h-full flex-shrink min-w-0": true, "opacity-0": sortable.isActiveDraggable }}>
       <div class="relative h-full">
-        <Tabs.Trigger
-          value={props.tab}
-          onClick={() => props.onTabClick?.(props.tab)}
-          closeButton={
-            <Tooltip value="Close tab" placement="bottom">
+        <Tooltip value={path() ?? props.tab} placement="bottom">
+          <Tabs.Trigger
+            value={props.tab}
+            onClick={() => props.onTabClick?.(props.tab)}
+            closeButton={
               <IconButton icon="close" variant="ghost" onClick={() => props.onTabClose(props.tab)} />
-            </Tooltip>
-          }
-          hideCloseButton
-        >
-          <Show when={path()}>{(p) => <FileVisual path={p()} />}</Show>
-        </Tabs.Trigger>
+            }
+            hideCloseButton
+          >
+            <Show when={path()}>{(p) => <FileVisual path={p()} />}</Show>
+          </Tabs.Trigger>
+        </Tooltip>
       </div>
     </div>
   )

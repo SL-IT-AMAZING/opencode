@@ -45,6 +45,7 @@ import { showToast } from "@opencode-ai/ui/toast"
 import {
   SessionContextTab,
   SortableTab,
+  SortableSessionTab,
   FileVisual,
   SortableTerminalTab,
   NewSessionView,
@@ -239,11 +240,13 @@ export default function Page() {
     const sessionId = params.id
     if (!sessionId) return
     // Only add and set active if session wasn't already open
-    const wasOpen = sessions().isOpen(sessionId)
+    const sessionTab = `session-${sessionId}`
+    const wasOpen = tabs().all().includes(sessionTab)
     if (!wasOpen) {
+      // Add to unified tabs list (appends to end - Chrome style)
+      tabs().open(sessionTab)
+      // Also track in sessions for sidebar
       sessions().open(sessionId)
-      // Only set as active tab if session was just added
-      tabs().setActive(`session-${sessionId}`)
     }
   })
 
@@ -674,10 +677,14 @@ export default function Page() {
       .filter((tab) => tab !== "context"),
   )
 
-  // File tabs only (excluding context, review)
-  const openedFileTabs = createMemo(() =>
-    tabs().all().filter((tab) => tab.startsWith("file://"))
+  // All tabs unified: sessions + files in single ordered list (Chrome-style)
+  // New tabs (sessions or files) appear at the end (right side)
+  const allTabs = createMemo(() =>
+    tabs().all().filter((tab) => tab.startsWith("session-") || tab.startsWith("file://"))
   )
+
+  // Helper: check if there are any file tabs open
+  const hasFileTabs = createMemo(() => allTabs().some((tab) => tab.startsWith("file://")))
 
   // Active file tab for file viewer
   const activeFileTab = createMemo(() => {
@@ -908,7 +915,7 @@ export default function Page() {
           }}
         >
           {/* Session and file tabs bar - Chrome style */}
-          <Show when={sessions().list().length > 0 || openedFileTabs().length > 0}>
+          <Show when={allTabs().length > 0}>
             <DragDropProvider
               onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
@@ -918,43 +925,32 @@ export default function Page() {
               <DragDropSensors />
               <ConstrainDragYAxis />
               <Tabs value={tabs().active() ?? "session"} onChange={openTab} class="shrink-0 !h-auto">
-                <Tabs.List class="h-10 shrink-0 border-b border-border-weak-base bg-background-base">
-                  {/* Session tabs */}
-                  <For each={sessions().list()}>
-                    {(sessionId) => (
-                      <Tabs.Trigger
-                        value={`session-${sessionId}`}
-                        onClick={() => {
-                          tabs().setActive(`session-${sessionId}`)
-                        }}
-                        closeButton={
-                          <IconButton
-                            icon="close"
-                            variant="ghost"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              sessions().close(sessionId)
-                              // If closing active session, switch to another
-                              const remaining = sessions().list().filter((id) => id !== sessionId)
-                              if (remaining.length > 0) {
-                                tabs().setActive(`session-${remaining[0]}`)
-                              } else {
-                                tabs().setActive(undefined)
-                              }
+                <Tabs.List class="h-10 shrink-0 border-b border-border-weak-base bg-background-base overflow-hidden">
+                  {/* Unified tabs: sessions + files mixed together */}
+                  <SortableProvider ids={allTabs()}>
+                    <For each={allTabs()}>
+                      {(tab) => (
+                        <Show
+                          when={tab.startsWith("session-")}
+                          fallback={<SortableTab tab={tab} onTabClose={closeTab} onTabClick={openTab} />}
+                        >
+                          <SortableSessionTab
+                            sessionId={tab.replace("session-", "")}
+                            title={getSessionTitle(tab.replace("session-", ""))}
+                            onClose={(id) => {
+                              const sessionTab = `session-${id}`
+                              // Close from unified tabs list (handles active tab switch)
+                              tabs().close(sessionTab)
+                              // Also remove from sessions tracking
+                              sessions().close(id)
+                            }}
+                            onClick={(id) => {
+                              tabs().setActive(`session-${id}`)
+                              setLastActiveSession(`session-${id}`)
                             }}
                           />
-                        }
-                      >
-                        <Icon name="bubble-5" />
-                        <span class="ml-1 max-w-32 truncate">{getSessionTitle(sessionId)}</span>
-                      </Tabs.Trigger>
-                    )}
-                  </For>
-
-                  {/* File tabs */}
-                  <SortableProvider ids={openedFileTabs()}>
-                    <For each={openedFileTabs()}>
-                      {(tab) => <SortableTab tab={tab} onTabClose={closeTab} onTabClick={openTab} />}
+                        </Show>
+                      )}
                     </For>
                   </SortableProvider>
 
@@ -968,9 +964,10 @@ export default function Page() {
                         // Create actual session via API
                         const newSession = await sdk.client.session.create().then((x) => x.data)
                         if (newSession) {
-                          // Add real session to tabs (not "new" placeholder)
+                          // Add session tab to unified tabs list (appends to end - Chrome style)
+                          tabs().open(`session-${newSession.id}`)
+                          // Also track in sessions for sidebar
                           sessions().open(newSession.id)
-                          tabs().setActive(`session-${newSession.id}`)
                           setLastActiveSession(`session-${newSession.id}`)
                         }
                         prompt.reset()
@@ -1001,7 +998,7 @@ export default function Page() {
           {/* Content area */}
           <div classList={{
             "flex-1 min-h-0 overflow-hidden relative": true,
-            "py-6 md:py-3": !activeSessionId() && openedFileTabs().length === 0,
+            "py-6 md:py-3": !activeSessionId() && !hasFileTabs(),
           }}>
             {/* File Viewer */}
             <Show when={activeFileTab()}>

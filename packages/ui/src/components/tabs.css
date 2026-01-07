@@ -12,14 +12,7 @@
     position: relative;
     display: flex;
     align-items: center;
-    overflow-x: auto;
-
-    /* Hide scrollbar */
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    &::-webkit-scrollbar {
-      display: none;
-    }
+    overflow-x: clip;  /* Force compression instead of scrolling (Chrome-style tabs) */
 
     /* After element to fill remaining space */
     &::after {
