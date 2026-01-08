@@ -32,15 +32,9 @@ export function SortableSessionTab(props: {
 }): JSX.Element {
   const sortable = createSortable("session-" + props.sessionId)
   return (
+    // prettier-ignore
     // @ts-ignore
-    <div
-      use:sortable
-      classList={{
-        "h-full flex-shrink min-w-0": true,
-        "transition-transform duration-200 ease-out": !sortable.isActiveDraggable,
-        "opacity-0": sortable.isActiveDraggable,
-      }}
-    >
+    <div use:sortable classList={{ "h-full flex-shrink min-w-0": true, "transition-transform duration-200 ease-out": !sortable.isActiveDraggable, "opacity-0": sortable.isActiveDraggable }}>
       <div class="relative h-full">
         <Tooltip value={props.title} placement="bottom">
           <Tabs.Trigger
@@ -75,15 +69,9 @@ export function SortableTab(props: {
   const sortable = createSortable(props.tab)
   const path = createMemo(() => file.pathFromTab(props.tab))
   return (
+    // prettier-ignore
     // @ts-ignore
-    <div
-      use:sortable
-      classList={{
-        "h-full flex-shrink min-w-0": true,
-        "transition-transform duration-200 ease-out": !sortable.isActiveDraggable,
-        "opacity-0": sortable.isActiveDraggable,
-      }}
-    >
+    <div use:sortable classList={{ "h-full flex-shrink min-w-0": true, "transition-transform duration-200 ease-out": !sortable.isActiveDraggable, "opacity-0": sortable.isActiveDraggable }}>
       <div class="relative h-full">
         <Tooltip value={path() ?? props.tab} placement="bottom">
           <Tabs.Trigger
