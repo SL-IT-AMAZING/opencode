@@ -1,6 +1,6 @@
 {
-  "name": "@opencode-ai/app",
-  "version": "1.1.3",
+  "name": "@anyon/app",
+  "version": "0.1.0",
   "description": "",
   "type": "module",
   "exports": {
@@ -30,10 +30,11 @@
   },
   "dependencies": {
     "@kobalte/core": "catalog:",
+    "@anyon/sdk": "workspace:*",
+    "@anyon/ui": "workspace:*",
+    "@anyon/util": "workspace:*",
     "@monaco-editor/loader": "1.7.0",
-    "@opencode-ai/sdk": "workspace:*",
-    "@opencode-ai/ui": "workspace:*",
-    "@opencode-ai/util": "workspace:*",
+    "monaco-editor": "0.55.1",
     "@shikijs/transformers": "3.9.2",
     "@solid-primitives/active-element": "2.1.3",
     "@solid-primitives/audio": "1.4.2",
@@ -52,7 +53,6 @@
     "luxon": "catalog:",
     "marked": "catalog:",
     "marked-shiki": "catalog:",
-    "monaco-editor": "0.55.1",
     "remeda": "catalog:",
     "shiki": "catalog:",
     "solid-js": "catalog:",
