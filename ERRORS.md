@@ -5,19 +5,25 @@ This file documents errors encountered during development.
 ## Pre-existing Type Errors (unrelated to multi-session tabs feature)
 
 ### 1. params.dir undefined error
+
 **File**: `packages/app/src/pages/session.tsx:163`
 **Error**: `Argument of type 'string | undefined' is not assignable to parameter of type 'string'`
+
 ```tsx
 const sessions = createMemo(() => layout.sessions(params.dir))
 ```
+
 `params.dir` can be `undefined` but `layout.sessions()` expects a `string`.
 
 ### 2. Tooltip content prop error
+
 **File**: `packages/app/src/pages/session.tsx:962`
 **Error**: `Property 'content' does not exist on type 'IntrinsicAttributes & TooltipProps'`
+
 ```tsx
 <Tooltip content="New session">
 ```
+
 The `Tooltip` component may use a different prop name (e.g., `value` instead of `content`).
 
 ---
@@ -25,8 +31,10 @@ The `Tooltip` component may use a different prop name (e.g., `value` instead of 
 ## Fixed Issues
 
 ### Multi-session tabs - Messages sent to wrong session
+
 **Date**: 2025-01-07
 **Files Modified**:
+
 - `packages/app/src/pages/session.tsx`
 - `packages/app/src/components/prompt-input.tsx`
 - `packages/app/src/context/layout.tsx`
@@ -36,8 +44,10 @@ The `Tooltip` component may use a different prop name (e.g., `value` instead of 
 **Fix**: Added `activeSessionId` prop to PromptInput, updated `info`, `status`, and `isNewSession` checks to use the active tab's session ID.
 
 ### Tab Compression Issue - ATTEMPT 2 (ACTUAL FIX)
+
 **Date**: 2025-01-07
 **Files Modified**:
+
 - `packages/app/src/components/session/session-sortable-tab.tsx`
 
 **Symptom**: Tabs STILL overflow instead of compressing even after overflow-x fix.
@@ -51,8 +61,10 @@ The `Tooltip` component may use a different prop name (e.g., `value` instead of 
 ---
 
 ### Tab Compression Issue - ATTEMPT 1 (PARTIAL)
+
 **Date**: 2025-01-07
 **Files Modified**:
+
 - `packages/ui/src/components/tabs.css`
 - `packages/app/src/pages/session.tsx`
 
@@ -63,6 +75,7 @@ The `Tooltip` component may use a different prop name (e.g., `value` instead of 
 **Root Cause**: `overflow-x: auto` in tabs.css (line 15) allowed scrolling instead of forcing compression.
 
 **Fix Applied**:
+
 - Changed `overflow-x: auto` to `overflow-x: clip` in tabs.css
 - Added `overflow-hidden` class to Tabs.List in session.tsx
 

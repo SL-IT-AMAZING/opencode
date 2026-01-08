@@ -12,7 +12,7 @@
     position: relative;
     display: flex;
     align-items: center;
-    overflow-x: clip;  /* Force compression instead of scrolling (Chrome-style tabs) */
+    overflow-x: clip; /* Force compression instead of scrolling (Chrome-style tabs) */
 
     /* After element to fill remaining space */
     &::after {

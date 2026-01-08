@@ -65,6 +65,7 @@ OpenCode is a monorepo using Bun workspaces with a client/server architecture.
 ### Event Flow
 
 The server uses an Event Bus pattern:
+
 1. Backend publishes events via `Bus.publish()`
 2. Events stream to clients via SSE (`/event` endpoint)
 3. Frontend subscribes via `sdk.event.listen()`

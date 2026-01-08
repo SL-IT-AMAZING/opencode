@@ -40,7 +40,8 @@ export default function FileTree(props: {
         evt.dataTransfer!.setData("text/plain", `file:${p.node.path}`)
 
         const dragImage = document.createElement("div")
-        dragImage.className = "flex items-center gap-x-2 px-2 py-1 bg-background-element rounded-md border border-border-1"
+        dragImage.className =
+          "flex items-center gap-x-2 px-2 py-1 bg-background-element rounded-md border border-border-1"
         dragImage.style.position = "absolute"
         dragImage.style.top = "-1000px"
 

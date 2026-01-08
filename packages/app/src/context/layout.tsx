@@ -80,7 +80,7 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
         },
         sessionTabs: {} as Record<string, SessionTabs>,
         sessionView: {} as Record<string, SessionView>,
-        openSessions: {} as Record<string, string[]>,  // Track open session tabs per directory
+        openSessions: {} as Record<string, string[]>, // Track open session tabs per directory
       }),
     )
 
@@ -441,7 +441,11 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
           close(sessionId: string) {
             const current = store.openSessions?.[directoryKey]
             if (!current) return
-            setStore("openSessions", directoryKey, current.filter((id) => id !== sessionId))
+            setStore(
+              "openSessions",
+              directoryKey,
+              current.filter((id) => id !== sessionId),
+            )
           },
         }
       },
@@ -451,7 +455,7 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
         for (const sessionKey of allSessionKeys) {
           const current = store.sessionTabs[sessionKey]
           if (!current?.all.includes(tab)) continue
-          
+
           const all = current.all.filter((x) => x !== tab)
           batch(() => {
             setStore("sessionTabs", sessionKey, "all", all)

@@ -332,10 +332,10 @@ export default function Layout(props: ParentProps) {
     // Close the session tab from openSessions and sessionTabs
     const directoryKey = base64Encode(session.directory)
     const sessionTab = `session-${session.id}`
-    
+
     // Remove from openSessions (sidebar tracking)
     layout.sessions(directoryKey).close(session.id)
-    
+
     // Remove the tab from all sessionTabs entries (it could be in any of them)
     layout.closeSessionTab(sessionTab)
 

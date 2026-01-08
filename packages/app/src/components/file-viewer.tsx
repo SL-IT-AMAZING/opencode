@@ -1,12 +1,4 @@
-import {
-  createEffect,
-  createMemo,
-  createSignal,
-  Show,
-  Suspense,
-  ErrorBoundary,
-  lazy,
-} from "solid-js"
+import { createEffect, createMemo, createSignal, Show, Suspense, ErrorBoundary, lazy } from "solid-js"
 import { Portal } from "solid-js/web"
 import { useFile } from "@/context/file"
 import { Markdown } from "@anyon/ui/markdown"
@@ -105,11 +97,7 @@ export function FileViewer(props: FileViewerProps) {
                 }
               >
                 <div class="flex-1 min-h-0 flex flex-col">
-                  <MonacoEditor
-                    path={normalizedPath() ?? ""}
-                    content={content()}
-                    onSelect={handleSelect}
-                  />
+                  <MonacoEditor path={normalizedPath() ?? ""} content={content()} onSelect={handleSelect} />
                 </div>
               </Suspense>
             </ErrorBoundary>
@@ -118,10 +106,7 @@ export function FileViewer(props: FileViewerProps) {
           {/* Markdown */}
           <div class="flex-1 overflow-auto">
             <div class="max-w-4xl mx-auto p-6">
-              <Markdown
-                text={content()}
-                class="prose prose-invert prose-zinc max-w-none"
-              />
+              <Markdown text={content()} class="prose prose-invert prose-zinc max-w-none" />
             </div>
           </div>
         </Show>
@@ -137,9 +122,7 @@ export function FileViewer(props: FileViewerProps) {
       {/* Ask AI button */}
       <Show when={selection()}>
         <Portal>
-          <div
-            class="fixed z-[9999] bottom-20 left-1/2 -translate-x-1/2 animate-in fade-in slide-in-from-bottom-2"
-          >
+          <div class="fixed z-[9999] bottom-20 left-1/2 -translate-x-1/2 animate-in fade-in slide-in-from-bottom-2">
             <Button variant="primary" size="small" onClick={handleAskAI}>
               Ask AI about selection
             </Button>

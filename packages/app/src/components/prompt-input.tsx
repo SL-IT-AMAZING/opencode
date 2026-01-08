@@ -62,7 +62,7 @@ interface PromptInputProps {
   newSessionWorktree?: string
   onNewSessionWorktreeReset?: () => void
   onMessageSent?: () => void
-  activeSessionId?: string  // Active session from tabs (for multi-tab support)
+  activeSessionId?: string // Active session from tabs (for multi-tab support)
 }
 
 const PLACEHOLDERS = [
