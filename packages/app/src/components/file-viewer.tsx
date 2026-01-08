@@ -9,8 +9,8 @@ import {
 } from "solid-js"
 import { Portal } from "solid-js/web"
 import { useFile } from "@/context/file"
-import { Markdown } from "@opencode-ai/ui/markdown"
-import { Button } from "@opencode-ai/ui/button"
+import { Markdown } from "@anyon/ui/markdown"
+import { Button } from "@anyon/ui/button"
 
 // Lazy load Monaco - won't crash app if it fails
 const MonacoEditor = lazy(() => import("./monaco-editor"))

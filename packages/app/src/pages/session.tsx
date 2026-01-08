@@ -7,18 +7,18 @@ import { selectionFromLines, useFile, type SelectedLineRange } from "@/context/f
 import { createStore } from "solid-js/store"
 import { PromptInput } from "@/components/prompt-input"
 import { SessionContextUsage } from "@/components/session-context-usage"
-import { IconButton } from "@opencode-ai/ui/icon-button"
-import { Button } from "@opencode-ai/ui/button"
-import { Icon } from "@opencode-ai/ui/icon"
-import { Tooltip, TooltipKeybind } from "@opencode-ai/ui/tooltip"
-import { DiffChanges } from "@opencode-ai/ui/diff-changes"
-import { ResizeHandle } from "@opencode-ai/ui/resize-handle"
-import { Tabs } from "@opencode-ai/ui/tabs"
-import { useCodeComponent } from "@opencode-ai/ui/context/code"
-import { SessionTurn } from "@opencode-ai/ui/session-turn"
-import { createAutoScroll } from "@opencode-ai/ui/hooks"
-import { SessionReview } from "@opencode-ai/ui/session-review"
-import { SessionMessageRail } from "@opencode-ai/ui/session-message-rail"
+import { IconButton } from "@anyon/ui/icon-button"
+import { Button } from "@anyon/ui/button"
+import { Icon } from "@anyon/ui/icon"
+import { Tooltip, TooltipKeybind } from "@anyon/ui/tooltip"
+import { DiffChanges } from "@anyon/ui/diff-changes"
+import { ResizeHandle } from "@anyon/ui/resize-handle"
+import { Tabs } from "@anyon/ui/tabs"
+import { useCodeComponent } from "@anyon/ui/context/code"
+import { SessionTurn } from "@anyon/ui/session-turn"
+import { createAutoScroll } from "@anyon/ui/hooks"
+import { SessionReview } from "@anyon/ui/session-review"
+import { SessionMessageRail } from "@anyon/ui/session-message-rail"
 
 import { DragDropProvider, DragDropSensors, DragOverlay, SortableProvider, closestCenter } from "@thisbeyond/solid-dnd"
 import type { DragEvent } from "@thisbeyond/solid-dnd"
@@ -28,21 +28,21 @@ import { useLayout } from "@/context/layout"
 import { Terminal } from "@/components/terminal"
 import { FileExplorerPanel } from "@/components/file-explorer-panel"
 import { FileViewer } from "@/components/file-viewer"
-import { checksum, base64Encode, base64Decode } from "@opencode-ai/util/encode"
-import { useDialog } from "@opencode-ai/ui/context/dialog"
+import { checksum, base64Encode, base64Decode } from "@anyon/util/encode"
+import { useDialog } from "@anyon/ui/context/dialog"
 import { DialogSelectFile } from "@/components/dialog-select-file"
 import { DialogSelectModel } from "@/components/dialog-select-model"
 import { DialogSelectMcp } from "@/components/dialog-select-mcp"
 import { useCommand } from "@/context/command"
 import { useNavigate, useParams } from "@solidjs/router"
-import { UserMessage } from "@opencode-ai/sdk/v2"
-import type { FileDiff } from "@opencode-ai/sdk/v2/client"
+import { UserMessage } from "@anyon/sdk/v2"
+import type { FileDiff } from "@anyon/sdk/v2/client"
 import { useSDK } from "@/context/sdk"
 import { usePrompt } from "@/context/prompt"
 import { extractPromptFromParts } from "@/utils/prompt"
 import { ConstrainDragYAxis, getDraggableId } from "@/utils/solid-dnd"
 import { usePermission } from "@/context/permission"
-import { showToast } from "@opencode-ai/ui/toast"
+import { showToast } from "@anyon/ui/toast"
 import {
   SessionContextTab,
   SortableTab,
@@ -125,7 +125,7 @@ function SessionReviewTab(props: SessionReviewTabProps) {
 
   return (
     <SessionReview
-      scrollRef={(el) => {
+      scrollRef={(el: HTMLDivElement | undefined) => {
         scroll = el
         restoreScroll()
       }}
@@ -507,7 +507,10 @@ export default function Page() {
     },
     {
       id: "permissions.autoaccept",
-      title: activeSessionId() && permission.isAutoAccepting(activeSessionId()!) ? "Stop auto-accepting edits" : "Auto-accept edits",
+      title:
+        activeSessionId() && permission.isAutoAccepting(activeSessionId()!)
+          ? "Stop auto-accepting edits"
+          : "Auto-accept edits",
       category: "Permissions",
       keybind: "mod+shift+a",
       disabled: !activeSessionId() || !permission.permissionsEnabled(),
@@ -683,7 +686,9 @@ export default function Page() {
   // All tabs unified: sessions + files in single ordered list (Chrome-style)
   // New tabs (sessions or files) appear at the end (right side)
   const allTabs = createMemo(() =>
-    tabs().all().filter((tab) => tab.startsWith("session-") || tab.startsWith("file://"))
+    tabs()
+      .all()
+      .filter((tab) => tab.startsWith("session-") || tab.startsWith("file://")),
   )
 
   // Helper: check if there are any file tabs open
@@ -932,7 +937,11 @@ export default function Page() {
                 >
                   <div class="relative flex items-center justify-center size-4 [&>*]:absolute [&>*]:inset-0">
                     <Icon name="layout-left" size="small" class="group-hover/panel-toggle:hidden" />
-                    <Icon name="layout-left-partial" size="small" class="hidden group-hover/panel-toggle:inline-block" />
+                    <Icon
+                      name="layout-left-partial"
+                      size="small"
+                      class="hidden group-hover/panel-toggle:inline-block"
+                    />
                     <Icon name="layout-left-full" size="small" class="hidden group-active/panel-toggle:inline-block" />
                   </div>
                 </Button>
@@ -951,10 +960,12 @@ export default function Page() {
               <DragDropSensors />
               <ConstrainDragYAxis />
               <Tabs value={tabs().active() ?? "session"} onChange={openTab} class="shrink-0 !h-auto">
-                <Tabs.List classList={{
+                <Tabs.List
+                  classList={{
                     "h-12 shrink-0 border-b border-border-weak-base bg-background-base overflow-hidden": true,
                     "pr-10": !layout.rightPanel.opened(),
-                  }}>
+                  }}
+                >
                   {/* Unified tabs: sessions + files mixed together */}
                   <SortableProvider ids={allTabs()}>
                     <For each={allTabs()}>
@@ -1015,9 +1026,7 @@ export default function Page() {
                       <div class="relative p-1 h-12 flex items-center bg-background-stronger text-14-regular">
                         <Show
                           when={isSession()}
-                          fallback={
-                            <Show when={path()}>{(p) => <FileVisual path={p()} />}</Show>
-                          }
+                          fallback={<Show when={path()}>{(p) => <FileVisual path={p()} />}</Show>}
                         >
                           <Icon name="bubble-5" />
                           <span class="ml-1 truncate">{getSessionTitle(sessionId())}</span>
@@ -1031,10 +1040,12 @@ export default function Page() {
           </Show>
 
           {/* Content area */}
-          <div classList={{
-            "flex-1 min-h-0 overflow-hidden relative": true,
-            "py-6 md:py-3": !activeSessionId() && !hasFileTabs(),
-          }}>
+          <div
+            classList={{
+              "flex-1 min-h-0 overflow-hidden relative": true,
+              "py-6 md:py-3": !activeSessionId() && !hasFileTabs(),
+            }}
+          >
             {/* File Viewer */}
             <Show when={activeFileTab()}>
               {(path) => (
@@ -1045,118 +1056,118 @@ export default function Page() {
             </Show>
 
             <Show when={!activeFileTab()}>
-            <Switch>
-              <Match when={activeSessionId()}>
-                <Show when={activeMessage()}>
-                  <Show
-                    when={!mobileReview()}
-                    fallback={
-                      <div class="relative h-full overflow-hidden">
-                        <SessionReviewTab
-                          diffs={diffs}
-                          view={view}
-                          diffStyle="unified"
-                          classes={{
-                            root: "pb-[calc(var(--prompt-height,8rem)+32px)]",
-                            header: "px-4",
-                            container: "px-4",
-                          }}
-                        />
-                      </div>
-                    }
-                  >
-                    <div class="relative w-full h-full min-w-0">
-                      <Show when={isDesktop()}>
-                        <div class="absolute inset-0 pointer-events-none z-10">
-                          <SessionMessageRail
-                            messages={visibleUserMessages()}
-                            current={activeMessage()}
-                            onMessageSelect={scrollToMessage}
-                            wide={!showTabs()}
-                            class="pointer-events-auto"
+              <Switch>
+                <Match when={activeSessionId()}>
+                  <Show when={activeMessage()}>
+                    <Show
+                      when={!mobileReview()}
+                      fallback={
+                        <div class="relative h-full overflow-hidden">
+                          <SessionReviewTab
+                            diffs={diffs}
+                            view={view}
+                            diffStyle="unified"
+                            classes={{
+                              root: "pb-[calc(var(--prompt-height,8rem)+32px)]",
+                              header: "px-4",
+                              container: "px-4",
+                            }}
                           />
                         </div>
-                      </Show>
-                      <div
-                        ref={setScrollRef}
-                        onScroll={(e) => {
-                          autoScroll.handleScroll()
-                          if (isDesktop()) scheduleScrollSpy(e.currentTarget)
-                        }}
-                        onClick={autoScroll.handleInteraction}
-                        class="relative min-w-0 w-full h-full overflow-y-auto no-scrollbar"
-                      >
+                      }
+                    >
+                      <div class="relative w-full h-full min-w-0">
+                        <Show when={isDesktop()}>
+                          <div class="absolute inset-0 pointer-events-none z-10">
+                            <SessionMessageRail
+                              messages={visibleUserMessages()}
+                              current={activeMessage()}
+                              onMessageSelect={scrollToMessage}
+                              wide={!showTabs()}
+                              class="pointer-events-auto"
+                            />
+                          </div>
+                        </Show>
                         <div
-                          ref={autoScroll.contentRef}
-                          class="flex flex-col gap-32 items-start justify-start pb-[calc(var(--prompt-height,8rem)+64px)] md:pb-[calc(var(--prompt-height,10rem)+64px)] transition-[margin]"
-                          classList={{
-                            "mt-0.5": !showTabs(),
-                            "mt-0": showTabs(),
+                          ref={setScrollRef}
+                          onScroll={(e) => {
+                            autoScroll.handleScroll()
+                            if (isDesktop()) scheduleScrollSpy(e.currentTarget)
                           }}
+                          onClick={autoScroll.handleInteraction}
+                          class="relative min-w-0 w-full h-full overflow-y-auto no-scrollbar"
                         >
-                          <For each={visibleUserMessages()}>
-                            {(message) => (
-                              <div
-                                id={anchor(message.id)}
-                                data-message-id={message.id}
-                                classList={{
-                                  "min-w-0 w-full max-w-full": true,
-                                  "last:min-h-[calc(100vh-5.5rem-var(--prompt-height,8rem)-64px)] md:last:min-h-[calc(100vh-4.5rem-var(--prompt-height,10rem)-64px)]":
-                                    platform.platform !== "desktop",
-                                  "last:min-h-[calc(100vh-7rem-var(--prompt-height,8rem)-64px)] md:last:min-h-[calc(100vh-6rem-var(--prompt-height,10rem)-64px)]":
-                                    platform.platform === "desktop",
-                                }}
-                              >
-                                <SessionTurn
-                                  sessionID={activeSessionId()!}
-                                  messageID={message.id}
-                                  lastUserMessageID={lastUserMessage()?.id}
-                                  stepsExpanded={store.expanded[message.id] ?? false}
-                                  onStepsExpandedToggle={() =>
-                                    setStore("expanded", message.id, (open: boolean | undefined) => !open)
-                                  }
-                                  classes={{
-                                    root: "min-w-0 w-full relative",
-                                    content:
-                                      "flex flex-col justify-between !overflow-visible [&_[data-slot=session-turn-message-header]]:top-[-32px]",
-                                    container:
-                                      "px-4 md:px-6 " +
-                                      (!showTabs()
-                                        ? "md:max-w-200 md:mx-auto"
-                                        : visibleUserMessages().length > 1
-                                          ? "md:pr-6 md:pl-18"
-                                          : ""),
+                          <div
+                            ref={autoScroll.contentRef}
+                            class="flex flex-col gap-32 items-start justify-start pb-[calc(var(--prompt-height,8rem)+64px)] md:pb-[calc(var(--prompt-height,10rem)+64px)] transition-[margin]"
+                            classList={{
+                              "mt-0.5": !showTabs(),
+                              "mt-0": showTabs(),
+                            }}
+                          >
+                            <For each={visibleUserMessages()}>
+                              {(message) => (
+                                <div
+                                  id={anchor(message.id)}
+                                  data-message-id={message.id}
+                                  classList={{
+                                    "min-w-0 w-full max-w-full": true,
+                                    "last:min-h-[calc(100vh-5.5rem-var(--prompt-height,8rem)-64px)] md:last:min-h-[calc(100vh-4.5rem-var(--prompt-height,10rem)-64px)]":
+                                      platform.platform !== "desktop",
+                                    "last:min-h-[calc(100vh-7rem-var(--prompt-height,8rem)-64px)] md:last:min-h-[calc(100vh-6rem-var(--prompt-height,10rem)-64px)]":
+                                      platform.platform === "desktop",
                                   }}
-                                />
-                              </div>
-                            )}
-                          </For>
+                                >
+                                  <SessionTurn
+                                    sessionID={activeSessionId()!}
+                                    messageID={message.id}
+                                    lastUserMessageID={lastUserMessage()?.id}
+                                    stepsExpanded={store.expanded[message.id] ?? false}
+                                    onStepsExpandedToggle={() =>
+                                      setStore("expanded", message.id, (open: boolean | undefined) => !open)
+                                    }
+                                    classes={{
+                                      root: "min-w-0 w-full relative",
+                                      content:
+                                        "flex flex-col justify-between !overflow-visible [&_[data-slot=session-turn-message-header]]:top-[-32px]",
+                                      container:
+                                        "px-4 md:px-6 " +
+                                        (!showTabs()
+                                          ? "md:max-w-200 md:mx-auto"
+                                          : visibleUserMessages().length > 1
+                                            ? "md:pr-6 md:pl-18"
+                                            : ""),
+                                    }}
+                                  />
+                                </div>
+                              )}
+                            </For>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    </Show>
                   </Show>
-                </Show>
-              </Match>
-              <Match when={true}>
-                <NewSessionView
-                  worktree={newSessionWorktree()}
-                  onWorktreeChange={(value) => {
-                    if (value === "create") {
-                      setStore("newSessionWorktree", value)
-                      return
-                    }
+                </Match>
+                <Match when={true}>
+                  <NewSessionView
+                    worktree={newSessionWorktree()}
+                    onWorktreeChange={(value) => {
+                      if (value === "create") {
+                        setStore("newSessionWorktree", value)
+                        return
+                      }
 
-                    setStore("newSessionWorktree", "main")
+                      setStore("newSessionWorktree", "main")
 
-                    const target = value === "main" ? sync.project?.worktree : value
-                    if (!target) return
-                    if (target === sync.data.path.directory) return
-                    layout.projects.open(target)
-                    navigate(`/${base64Encode(target)}/session`)
-                  }}
-                />
-              </Match>
-            </Switch>
+                      const target = value === "main" ? sync.project?.worktree : value
+                      if (!target) return
+                      if (target === sync.data.path.directory) return
+                      layout.projects.open(target)
+                      navigate(`/${base64Encode(target)}/session`)
+                    }}
+                  />
+                </Match>
+              </Switch>
             </Show>
           </div>
 
@@ -1218,10 +1229,7 @@ export default function Page() {
             />
 
             {/* File Explorer - Top */}
-            <div
-              class="relative shrink-0 overflow-hidden"
-              style={{ height: `${layout.fileExplorer.height()}px` }}
-            >
+            <div class="relative shrink-0 overflow-hidden" style={{ height: `${layout.fileExplorer.height()}px` }}>
               <FileExplorerPanel onFileOpen={openTab} activeFile={activeFileTab() ?? undefined} />
             </div>
 
@@ -1267,7 +1275,11 @@ export default function Page() {
                     <For each={terminal.all()}>
                       {(pty) => (
                         <Tabs.Content value={pty.id}>
-                          <Terminal pty={pty} onCleanup={terminal.update} onConnectError={() => terminal.clone(pty.id)} />
+                          <Terminal
+                            pty={pty}
+                            onCleanup={terminal.update}
+                            onConnectError={() => terminal.clone(pty.id)}
+                          />
                         </Tabs.Content>
                       )}
                     </For>

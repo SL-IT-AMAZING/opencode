@@ -2,9 +2,9 @@ import { onMount, onCleanup } from "solid-js"
 import { useLocal } from "@/context/local"
 import { useLayout } from "@/context/layout"
 import { useCommand } from "@/context/command"
-import { Button } from "@opencode-ai/ui/button"
-import { Icon } from "@opencode-ai/ui/icon"
-import { TooltipKeybind } from "@opencode-ai/ui/tooltip"
+import { Button } from "@anyon/ui/button"
+import { Icon } from "@anyon/ui/icon"
+import { TooltipKeybind } from "@anyon/ui/tooltip"
 import FileTree from "./file-tree"
 
 export function FileExplorerPanel(props: {
