@@ -107,7 +107,7 @@ export namespace FileWatcher {
   )
 
   export function init() {
-    if (Flag.OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER) {
+    if (Flag.ANYON_EXPERIMENTAL_DISABLE_FILEWATCHER) {
       return
     }
     state()
