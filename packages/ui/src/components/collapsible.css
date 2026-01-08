@@ -44,6 +44,14 @@
       display: flex;
       align-items: center;
       justify-content: center;
+
+      svg {
+        transition: transform 0.15s ease;
+      }
+    }
+
+    &[data-expanded] [data-slot="collapsible-arrow"] svg {
+      transform: rotate(90deg);
     }
   }
 

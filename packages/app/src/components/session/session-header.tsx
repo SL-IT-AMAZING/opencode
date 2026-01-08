@@ -217,6 +217,31 @@ export function SessionHeader() {
                 </div>
               </Button>
             </TooltipKeybind>
+            <TooltipKeybind
+              class="hidden md:block shrink-0"
+              title="Toggle right panel"
+              keybind={command.keybind("rightPanel.toggle")}
+            >
+              <Button variant="ghost" class="group/panel-toggle size-6 p-0" onClick={layout.rightPanel.toggle}>
+                <div class="relative flex items-center justify-center size-4 [&>*]:absolute [&>*]:inset-0">
+                  <Icon
+                    name={layout.rightPanel.opened() ? "layout-right" : "layout-left"}
+                    size="small"
+                    class="group-hover/panel-toggle:hidden"
+                  />
+                  <Icon
+                    name={layout.rightPanel.opened() ? "layout-right-partial" : "layout-left-partial"}
+                    size="small"
+                    class="hidden group-hover/panel-toggle:inline-block"
+                  />
+                  <Icon
+                    name={layout.rightPanel.opened() ? "layout-right-full" : "layout-left-full"}
+                    size="small"
+                    class="hidden group-active/panel-toggle:inline-block"
+                  />
+                </div>
+              </Button>
+            </TooltipKeybind>
           </div>
           <Show when={shareEnabled() && currentSession()}>
             <Popover
