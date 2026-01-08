@@ -54,7 +54,7 @@ export default function Home() {
 
   return (
     <div class="mx-auto mt-55 w-full md:w-auto px-4">
-      <AnyonLogo class="md:w-xl opacity-12" />
+      <AnyonLogo />
       <Button
         size="large"
         variant="ghost"
