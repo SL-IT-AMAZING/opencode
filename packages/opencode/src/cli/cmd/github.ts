@@ -354,9 +354,7 @@ export const GithubInstallCommand = cmd({
             s.stop("Installed GitHub app")
 
             async function getInstallation() {
-              return await fetch(
-                `https://api.anyon.cc/get_github_app_installation?owner=${app.owner}&repo=${app.repo}`,
-              )
+              return await fetch(`https://api.anyon.cc/get_github_app_installation?owner=${app.owner}&repo=${app.repo}`)
                 .then((res) => res.json())
                 .then((data) => data.installation)
             }

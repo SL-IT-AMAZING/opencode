@@ -9,6 +9,7 @@ For complex multi-step tasks, use the **planning-with-files** skill to maintain 
 3. **[deliverable].md** - Final output or project result
 
 Use this approach when:
+
 - Working on tasks with multiple phases
 - Needing to track progress across sessions
 - Building features that require research and planning
