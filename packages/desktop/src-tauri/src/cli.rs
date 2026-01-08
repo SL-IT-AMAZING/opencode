@@ -1,5 +1,5 @@
-const CLI_INSTALL_DIR: &str = ".opencode/bin";
-const CLI_BINARY_NAME: &str = "opencode";
+const CLI_INSTALL_DIR: &str = ".anyon/bin";
+const CLI_BINARY_NAME: &str = "anyon";
 
 fn get_cli_install_path() -> Option<std::path::PathBuf> {
     std::env::var("HOME").ok().map(|home| {
@@ -14,7 +14,7 @@ pub fn get_sidecar_path() -> std::path::PathBuf {
         .expect("Failed to get current exe")
         .parent()
         .expect("Failed to get parent dir")
-        .join("opencode-cli")
+        .join("anyon-cli")
 }
 
 fn is_cli_installed() -> bool {
@@ -22,8 +22,6 @@ fn is_cli_installed() -> bool {
         .map(|path| path.exists())
         .unwrap_or(false)
 }
-
-const INSTALL_SCRIPT: &str = include_str!("../../../../install");
 
 #[tauri::command]
 pub fn install_cli() -> Result<String, String> {
@@ -36,32 +34,26 @@ pub fn install_cli() -> Result<String, String> {
         return Err("Sidecar binary not found".to_string());
     }
 
-    let temp_script = std::env::temp_dir().join("opencode-install.sh");
-    std::fs::write(&temp_script, INSTALL_SCRIPT)
-        .map_err(|e| format!("Failed to write install script: {}", e))?;
+    let install_path =
+        get_cli_install_path().ok_or_else(|| "Could not determine install path".to_string())?;
 
+    // Create install directory
+    if let Some(parent) = install_path.parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create install directory: {}", e))?;
+    }
+
+    // Copy sidecar binary to install path
+    std::fs::copy(&sidecar, &install_path)
+        .map_err(|e| format!("Failed to copy binary: {}", e))?;
+
+    // Set executable permissions
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        std::fs::set_permissions(&temp_script, std::fs::Permissions::from_mode(0o755))
-            .map_err(|e| format!("Failed to set script permissions: {}", e))?;
+        std::fs::set_permissions(&install_path, std::fs::Permissions::from_mode(0o755))
+            .map_err(|e| format!("Failed to set binary permissions: {}", e))?;
     }
-
-    let output = std::process::Command::new(&temp_script)
-        .arg("--binary")
-        .arg(&sidecar)
-        .output()
-        .map_err(|e| format!("Failed to run install script: {}", e))?;
-
-    let _ = std::fs::remove_file(&temp_script);
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(format!("Install script failed: {}", stderr));
-    }
-
-    let install_path =
-        get_cli_install_path().ok_or_else(|| "Could not determine install path".to_string())?;
 
     Ok(install_path.to_string_lossy().to_string())
 }

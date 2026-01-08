@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 import { $ } from "bun"
-import { Script } from "@opencode-ai/script"
+import { Script } from "@anyon/script"
 import { buildNotes, getLatestRelease } from "./changelog"
 
 let notes: string[] = []
@@ -26,23 +26,16 @@ for (const file of pkgjsons) {
   await Bun.file(file).write(pkg)
 }
 
-const extensionToml = new URL("../packages/extensions/zed/extension.toml", import.meta.url).pathname
-let toml = await Bun.file(extensionToml).text()
-toml = toml.replace(/^version = "[^"]+"/m, `version = "${Script.version}"`)
-toml = toml.replaceAll(/releases\/download\/v[^/]+\//g, `releases/download/v${Script.version}/`)
-console.log("updated:", extensionToml)
-await Bun.file(extensionToml).write(toml)
-
 await $`bun install`
 
-console.log("\n=== opencode ===\n")
-await import(`../packages/opencode/script/publish.ts`)
+console.log("\n=== building CLI (no npm publish) ===\n")
+// npm publish disabled - Desktop app only
+// await import(`../packages/opencode/script/publish.ts`)
+// await import(`../packages/sdk/js/script/publish.ts`)
+// await import(`../packages/plugin/script/publish.ts`)
 
-console.log("\n=== sdk ===\n")
-await import(`../packages/sdk/js/script/publish.ts`)
-
-console.log("\n=== plugin ===\n")
-await import(`../packages/plugin/script/publish.ts`)
+// Build CLI binaries for Desktop sidecar
+await $`bun run build`.cwd("./packages/opencode")
 
 const dir = new URL("..", import.meta.url).pathname
 process.chdir(dir)

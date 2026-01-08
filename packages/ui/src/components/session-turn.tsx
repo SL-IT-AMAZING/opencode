@@ -5,12 +5,12 @@ import {
   type PermissionRequest,
   TextPart,
   ToolPart,
-} from "@opencode-ai/sdk/v2/client"
+} from "@anyon/sdk/v2/client"
 import { useData } from "../context"
 import { useDiffComponent } from "../context/diff"
-import { getDirectory, getFilename } from "@opencode-ai/util/path"
+import { getDirectory, getFilename } from "@anyon/util/path"
 
-import { Binary } from "@opencode-ai/util/binary"
+import { Binary } from "@anyon/util/binary"
 import { createEffect, createMemo, For, Match, on, onCleanup, ParentProps, Show, Switch } from "solid-js"
 import { createResizeObserver } from "@solid-primitives/resize-observer"
 import { DiffChanges } from "./diff-changes"
