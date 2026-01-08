@@ -33,6 +33,8 @@
     "@anyon/sdk": "workspace:*",
     "@anyon/ui": "workspace:*",
     "@anyon/util": "workspace:*",
+    "@monaco-editor/loader": "1.7.0",
+    "monaco-editor": "0.55.1",
     "@shikijs/transformers": "3.9.2",
     "@solid-primitives/active-element": "2.1.3",
     "@solid-primitives/audio": "1.4.2",

@@ -165,6 +165,7 @@ export const { use: usePrompt, provider: PromptProvider } = createSimpleContext(
         batch(() => {
           setStore("prompt", clonePrompt(DEFAULT_PROMPT))
           setStore("cursor", 0)
+          setStore("context", "items", [])
         })
       },
     }

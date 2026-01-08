@@ -329,6 +329,16 @@ export default function Layout(props: ParentProps) {
     const index = sessions.findIndex((s) => s.id === session.id)
     const nextSession = sessions[index + 1] ?? sessions[index - 1]
 
+    // Close the session tab from openSessions and sessionTabs
+    const directoryKey = base64Encode(session.directory)
+    const sessionTab = `session-${session.id}`
+
+    // Remove from openSessions (sidebar tracking)
+    layout.sessions(directoryKey).close(session.id)
+
+    // Remove the tab from all sessionTabs entries (it could be in any of them)
+    layout.closeSessionTab(sessionTab)
+
     await globalSDK.client.session.update({
       directory: session.directory,
       sessionID: session.id,
@@ -357,6 +367,13 @@ export default function Layout(props: ParentProps) {
         category: "View",
         keybind: "mod+b",
         onSelect: () => layout.sidebar.toggle(),
+      },
+      {
+        id: "rightPanel.toggle",
+        title: "Toggle right panel",
+        category: "View",
+        keybind: "mod+shift+b",
+        onSelect: () => layout.rightPanel.toggle(),
       },
       {
         id: "project.open",
