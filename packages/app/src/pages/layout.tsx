@@ -1074,6 +1074,7 @@ export default function Layout(props: ParentProps) {
           classList={{
             "hidden xl:block": true,
             "relative shrink-0": true,
+            "transition-[width] duration-200 ease-out overflow-hidden": true,
           }}
           style={{ width: layout.sidebar.opened() ? `${layout.sidebar.width()}px` : "48px" }}
         >
@@ -1095,6 +1096,11 @@ export default function Layout(props: ParentProps) {
               collapseThreshold={80}
               onResize={layout.sidebar.resize}
               onCollapse={layout.sidebar.close}
+              style={{
+                "inset-inline-start": "auto",
+                "inset-inline-end": "0",
+                transform: "translateX(50%)",
+              }}
             />
           </Show>
         </div>
