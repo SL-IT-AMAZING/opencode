@@ -2,7 +2,7 @@ import { Ghostty, Terminal as Term, FitAddon } from "ghostty-web"
 import { ComponentProps, createEffect, createSignal, onCleanup, onMount, splitProps } from "solid-js"
 import { useSDK } from "@/context/sdk"
 import { SerializeAddon } from "@/addons/serialize"
-import { LocalPTY } from "@/context/terminal"
+import { LocalPTY, TerminalRef } from "@/context/terminal"
 import { resolveThemeVariant, useTheme } from "@anyon/ui/theme"
 
 export interface TerminalProps extends ComponentProps<"div"> {
@@ -10,6 +10,7 @@ export interface TerminalProps extends ComponentProps<"div"> {
   onSubmit?: () => void
   onCleanup?: (pty: LocalPTY) => void
   onConnectError?: (error: unknown) => void
+  onRef?: (ref: TerminalRef | null) => void
 }
 
 type TerminalColors = {
@@ -18,24 +19,17 @@ type TerminalColors = {
   cursor: string
 }
 
-const DEFAULT_TERMINAL_COLORS: Record<"light" | "dark", TerminalColors> = {
-  light: {
-    background: "#fcfcfc",
-    foreground: "#211e1e",
-    cursor: "#211e1e",
-  },
-  dark: {
-    background: "#191515",
-    foreground: "#d4d4d4",
-    cursor: "#d4d4d4",
-  },
+const DEFAULT_TERMINAL_COLORS: TerminalColors = {
+  background: "#191515",
+  foreground: "#d4d4d4",
+  cursor: "#d4d4d4",
 }
 
 export const Terminal = (props: TerminalProps) => {
   const sdk = useSDK()
   const theme = useTheme()
   let container!: HTMLDivElement
-  const [local, others] = splitProps(props, ["pty", "class", "classList", "onConnectError"])
+  const [local, others] = splitProps(props, ["pty", "class", "classList", "onConnectError", "onRef"])
   let ws: WebSocket | undefined
   let term: Term | undefined
   let ghostty: Ghostty
@@ -46,15 +40,13 @@ export const Terminal = (props: TerminalProps) => {
   let disposed = false
 
   const getTerminalColors = (): TerminalColors => {
-    const mode = theme.mode()
-    const fallback = DEFAULT_TERMINAL_COLORS[mode]
     const currentTheme = theme.themes()[theme.themeId()]
-    if (!currentTheme) return fallback
-    const variant = mode === "dark" ? currentTheme.dark : currentTheme.light
-    if (!variant?.seeds) return fallback
-    const resolved = resolveThemeVariant(variant, mode === "dark")
-    const text = resolved["text-base"] ?? fallback.foreground
-    const background = resolved["background-stronger"] ?? fallback.background
+    if (!currentTheme) return DEFAULT_TERMINAL_COLORS
+    const variant = currentTheme.dark
+    if (!variant?.seeds) return DEFAULT_TERMINAL_COLORS
+    const resolved = resolveThemeVariant(variant, true)
+    const text = resolved["text-base"] ?? DEFAULT_TERMINAL_COLORS.foreground
+    const background = resolved["background-stronger"] ?? DEFAULT_TERMINAL_COLORS.background
     return {
       background,
       foreground: text,
@@ -204,6 +196,14 @@ export const Terminal = (props: TerminalProps) => {
           },
         })
         .catch(() => {})
+      // Expose write method via ref
+      local.onRef?.({
+        write: (data: string) => {
+          if (socket.readyState === WebSocket.OPEN) {
+            socket.send(data)
+          }
+        },
+      })
     })
     socket.addEventListener("message", (event) => {
       t.write(event.data)
@@ -234,6 +234,9 @@ export const Terminal = (props: TerminalProps) => {
         scrollY: t.getViewportY(),
       })
     }
+
+    // Clean up ref
+    local.onRef?.(null)
 
     ws?.close()
     t?.dispose()

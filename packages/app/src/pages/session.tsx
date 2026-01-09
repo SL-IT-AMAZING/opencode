@@ -26,6 +26,7 @@ import { useSync } from "@/context/sync"
 import { useTerminal, type LocalPTY } from "@/context/terminal"
 import { useLayout } from "@/context/layout"
 import { Terminal } from "@/components/terminal"
+import { QuickActionBar } from "@/components/quick-action-bar"
 import { FileExplorerPanel } from "@/components/file-explorer-panel"
 import { FileViewer } from "@/components/file-viewer"
 import { checksum, base64Encode, base64Decode } from "@anyon/util/encode"
@@ -33,6 +34,8 @@ import { useDialog } from "@anyon/ui/context/dialog"
 import { DialogSelectFile } from "@/components/dialog-select-file"
 import { DialogSelectModel } from "@/components/dialog-select-model"
 import { DialogSelectMcp } from "@/components/dialog-select-mcp"
+import { DialogGitInit } from "@/components/dialog-git-init"
+import { DialogGitHubConnect } from "@/components/dialog-github-connect"
 import { useCommand } from "@/context/command"
 import { useNavigate, useParams } from "@solidjs/router"
 import { UserMessage } from "@anyon/sdk/v2"
@@ -249,6 +252,93 @@ export default function Page() {
       // Also track in sessions for sidebar
       sessions().open(sessionId)
     }
+  })
+
+  // Auto git init dialog when opening a folder without .git
+  // Use localStorage to persist "already asked" state across page reloads
+  const GIT_INIT_ASKED_KEY = "git-init-asked"
+  const getAskedFolders = (): string[] => {
+    try {
+      return JSON.parse(localStorage.getItem(GIT_INIT_ASKED_KEY) || "[]")
+    } catch {
+      return []
+    }
+  }
+  const markAsked = (dir: string) => {
+    const asked = getAskedFolders()
+    if (!asked.includes(dir)) {
+      localStorage.setItem(GIT_INIT_ASKED_KEY, JSON.stringify([...asked, dir]))
+    }
+  }
+  const isUserFolder = (path: string) => path.startsWith("/Users/") || path.startsWith("/home/")
+
+  createEffect(() => {
+    // Use sync.directory (from URL) instead of sync.project?.worktree
+    // because new folders aren't registered as projects yet
+    const directory = sync.directory
+    if (!directory) return
+    if (!isUserFolder(directory)) return
+
+    // Check localStorage to see if we already asked about this folder
+    if (getAskedFolders().includes(directory)) return
+
+    // Ensure terminal panel is open
+    if (!layout.terminal.opened()) {
+      layout.terminal.open()
+    }
+
+    // Delay to wait for terminal WebSocket connection
+    setTimeout(() => {
+      sdk.client.file
+        .list({ path: "." })
+        .then((res) => {
+          const hasGit = res.data?.some((f) => f.name === ".git")
+          if (!hasGit) {
+            // Show dialog to choose git init or clone
+            dialog.show(() => (
+              <DialogGitInit
+                onInit={() => {
+                  const ref = terminal.activeRef?.()
+                  if (ref?.write) {
+                    // Clear line (Ctrl+U) before command to avoid leftover chars
+                    ref.write("\x15git init && git branch -M main\n")
+                  }
+                }}
+                onClone={(url) => {
+                  const ref = terminal.activeRef?.()
+                  if (ref?.write) {
+                    // Clear line (Ctrl+U) before command to avoid leftover chars
+                    ref.write(`\x15git clone ${url} . && npm install\n`)
+                  }
+                }}
+                onShowGitHubConnect={() => {
+                  // Show GitHub connect dialog to create remote repo
+                  dialog.show(() => (
+                    <DialogGitHubConnect
+                      onConnect={(repoUrl) => {
+                        const ref = terminal.activeRef?.()
+                        if (ref?.write) {
+                          // Add remote and push
+                          ref.write(`\x15git remote add origin ${repoUrl} && git add -A && git commit -m "Initial commit" && git push -u origin main\n`)
+                        }
+                      }}
+                      onSkip={() => {
+                        // User skipped, no action needed
+                      }}
+                    />
+                  ))
+                }}
+              />
+            ))
+          }
+          // Mark this folder as asked (regardless of choice) to prevent repeated popups
+          markAsked(directory)
+        })
+        .catch(() => {
+          // If file.list fails, still mark as asked to avoid repeated attempts
+          markAsked(directory)
+        })
+    }, 500)
   })
 
   const info = createMemo(() => (activeSessionId() ? sync.session.get(activeSessionId()!) : undefined))
@@ -1294,7 +1384,7 @@ export default function Page() {
 
             {/* Terminal - Bottom */}
             <Show when={layout.terminal.opened()}>
-              <div class="flex-1 min-h-0 flex flex-col border-t border-border-weak-base">
+              <div class="flex-1 min-h-0 flex flex-col border-t border-border-weak-base" data-prevent-autofocus>
                 <DragDropProvider
                   onDragStart={handleTerminalDragStart}
                   onDragEnd={handleTerminalDragEnd}
@@ -1318,6 +1408,7 @@ export default function Page() {
                         </TooltipKeybind>
                       </div>
                     </Tabs.List>
+                    <QuickActionBar />
                     <For each={terminal.all()}>
                       {(pty) => (
                         <Tabs.Content value={pty.id}>
@@ -1325,6 +1416,11 @@ export default function Page() {
                             pty={pty}
                             onCleanup={terminal.update}
                             onConnectError={() => terminal.clone(pty.id)}
+                            onRef={(ref) => {
+                              if (terminal.active() === pty.id) {
+                                terminal.setActiveRef(ref)
+                              }
+                            }}
                           />
                         </Tabs.Content>
                       )}

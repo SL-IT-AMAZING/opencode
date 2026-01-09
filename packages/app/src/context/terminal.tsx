@@ -1,6 +1,6 @@
 import { createStore, produce } from "solid-js/store"
 import { createSimpleContext } from "@anyon/ui/context"
-import { batch, createMemo } from "solid-js"
+import { batch, createMemo, createSignal, Accessor } from "solid-js"
 import { useParams } from "@solidjs/router"
 import { useSDK } from "./sdk"
 import { persisted } from "@/utils/persist"
@@ -12,6 +12,10 @@ export type LocalPTY = {
   cols?: number
   buffer?: string
   scrollY?: number
+}
+
+export type TerminalRef = {
+  write: (data: string) => void
 }
 
 export const { use: useTerminal, provider: TerminalProvider } = createSimpleContext({
@@ -31,10 +35,14 @@ export const { use: useTerminal, provider: TerminalProvider } = createSimpleCont
       }),
     )
 
+    const [activeRef, setActiveRef] = createSignal<TerminalRef | null>(null)
+
     return {
       ready,
       all: createMemo(() => Object.values(store.all)),
       active: createMemo(() => store.active),
+      activeRef: activeRef as Accessor<TerminalRef | null>,
+      setActiveRef,
       new() {
         sdk.client.pty
           .create({ title: `Terminal ${store.all.length + 1}` })
