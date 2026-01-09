@@ -43,6 +43,9 @@ export async function copyBinaryToSidecarFolder(source: string, target = RUST_TA
   await $`mkdir -p src-tauri/sidecars`
   const dest = `src-tauri/sidecars/anyon-cli-${target}${process.platform === "win32" ? ".exe" : ""}`
   await $`cp ${source} ${dest}`
+  if (process.platform !== "win32") {
+    await $`chmod +x ${dest}`
+  }
 
   console.log(`Copied ${source} to ${dest}`)
 }

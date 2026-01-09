@@ -677,6 +677,8 @@ export default function Page() {
   }
 
   const contextOpen = createMemo(() => tabs().active() === "context" || tabs().all().includes("context"))
+  const contextActive = createMemo(() => tabs().active() === "context")
+
   const openedTabs = createMemo(() =>
     tabs()
       .all()
@@ -994,6 +996,30 @@ export default function Page() {
                     </For>
                   </SortableProvider>
 
+                  {/* Context tab - shown when context is open */}
+                  <Show when={contextOpen()}>
+                    <div class="h-full flex-shrink min-w-0">
+                      <div class="relative h-full">
+                        <Tabs.Trigger
+                          value="context"
+                          closeButton={
+                            <IconButton
+                              icon="close"
+                              variant="ghost"
+                              onClick={(e: MouseEvent) => {
+                                e.stopPropagation()
+                                tabs().close("context")
+                              }}
+                            />
+                          }
+                        >
+                          <Icon name="brain" />
+                          <span class="ml-1">Context</span>
+                        </Tabs.Trigger>
+                      </div>
+                    </div>
+                  </Show>
+
                   {/* New session button */}
                   <Tooltip value="New session">
                     <IconButton
@@ -1057,6 +1083,16 @@ export default function Page() {
 
             <Show when={!activeFileTab()}>
               <Switch>
+                <Match when={contextActive()}>
+                  <div class="relative h-full overflow-hidden">
+                    <SessionContextTab
+                      messages={messages}
+                      visibleUserMessages={() => visibleUserMessages()}
+                      view={() => view()}
+                      info={() => info()}
+                    />
+                  </div>
+                </Match>
                 <Match when={activeSessionId()}>
                   <Show when={activeMessage()}>
                     <Show
@@ -1212,21 +1248,31 @@ export default function Page() {
         </div>
 
         {/* Right panel - File Explorer + Terminal */}
-        <Show when={isDesktop() && layout.rightPanel.opened()}>
+        <Show when={isDesktop()}>
           <div
-            class="relative flex flex-col h-full border-l border-border-weak-base ml-auto"
-            style={{ width: `${layout.rightPanel.width()}px` }}
+            classList={{
+              "relative flex flex-col h-full ml-auto": true,
+              "border-l border-border-weak-base": layout.rightPanel.opened(),
+              "transition-[width] duration-200 ease-out overflow-y-hidden": true,
+            }}
+            style={{ width: layout.rightPanel.opened() ? `${layout.rightPanel.width()}px` : "0px" }}
           >
             {/* Horizontal resize handle for panel width */}
-            <ResizeHandle
-              direction="horizontal"
-              size={layout.rightPanel.width()}
-              min={150}
-              max={window.innerWidth * 0.5}
-              onResize={layout.rightPanel.resize}
-              invert
-              class="!inset-inline-start-0 !inset-inline-end-auto !-translate-x-1/2"
-            />
+            <Show when={layout.rightPanel.opened()}>
+              <ResizeHandle
+                direction="horizontal"
+                size={layout.rightPanel.width()}
+                min={150}
+                max={window.innerWidth * 0.5}
+                onResize={layout.rightPanel.resize}
+                invert
+                style={{
+                  "inset-inline-start": "0",
+                  "inset-inline-end": "auto",
+                  transform: "translateX(-50%)",
+                }}
+              />
+            </Show>
 
             {/* File Explorer - Top */}
             <div class="relative shrink-0 overflow-hidden" style={{ height: `${layout.fileExplorer.height()}px` }}>
