@@ -234,10 +234,13 @@ export namespace GitHubAuth {
       pendingReject = reject
 
       // 5 minute timeout
-      pendingTimeout = setTimeout(() => {
-        clearPendingState()
-        reject(new Error("OAuth callback timeout"))
-      }, 5 * 60 * 1000)
+      pendingTimeout = setTimeout(
+        () => {
+          clearPendingState()
+          reject(new Error("OAuth callback timeout"))
+        },
+        5 * 60 * 1000,
+      )
     })
   }
 

@@ -319,7 +319,9 @@ export default function Page() {
                         const ref = terminal.activeRef?.()
                         if (ref?.write) {
                           // Add remote and push
-                          ref.write(`\x15git remote add origin ${repoUrl} && git add -A && git commit -m "Initial commit" && git push -u origin main\n`)
+                          ref.write(
+                            `\x15git remote add origin ${repoUrl} && git add -A && git commit -m "Initial commit" && git push -u origin main\n`,
+                          )
                         }
                       }}
                       onSkip={() => {

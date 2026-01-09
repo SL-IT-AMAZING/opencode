@@ -15,22 +15,27 @@
     <meta property="twitter:image" content="/social-share.png" />
     <style>
       /* Prevent scrollIntoView effects in Tauri webview */
-      * { scroll-behavior: auto !important; }
-      body, html { overflow-anchor: none; }
+      * {
+        scroll-behavior: auto !important;
+      }
+      body,
+      html {
+        overflow-anchor: none;
+      }
     </style>
     <script>
       // Override scrollIntoView to prevent frame shift in Tauri
-      (function() {
-        var origScrollIntoView = Element.prototype.scrollIntoView;
-        Element.prototype.scrollIntoView = function(options) {
-          var scrollY = window.scrollY;
-          var scrollX = window.scrollX;
-          origScrollIntoView.call(this, options);
-          requestAnimationFrame(function() {
-            window.scrollTo(scrollX, scrollY);
-          });
-        };
-      })();
+      ;(function () {
+        var origScrollIntoView = Element.prototype.scrollIntoView
+        Element.prototype.scrollIntoView = function (options) {
+          var scrollY = window.scrollY
+          var scrollX = window.scrollX
+          origScrollIntoView.call(this, options)
+          requestAnimationFrame(function () {
+            window.scrollTo(scrollX, scrollY)
+          })
+        }
+      })()
     </script>
     <script id="oc-theme-preload-script">
       ;(function () {
