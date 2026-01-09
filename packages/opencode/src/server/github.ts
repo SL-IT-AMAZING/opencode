@@ -1,7 +1,5 @@
 import { Hono } from "hono"
-import { describeRoute, validator, resolver } from "hono-openapi"
-import z from "zod"
-import { GitHubAuth, GITHUB_OAUTH_CALLBACK_PATH } from "../github/auth"
+import { GitHubAuth } from "../github/auth"
 import { GitHubRepo } from "../github/repo"
 import { Log } from "../util/log"
 
@@ -50,39 +48,20 @@ const HTML_ERROR = (error: string) => `<!DOCTYPE html>
 
 export const GitHubRoute = new Hono()
   // Start OAuth flow - returns authorization URL
-  .get(
-    "/auth/start",
-    describeRoute({
-      summary: "Start GitHub OAuth",
-      description: "Get the GitHub OAuth authorization URL to start the authentication flow.",
-      operationId: "github.auth.start",
-      responses: {
-        200: {
-          description: "Authorization URL",
-          content: {
-            "application/json": {
-              schema: resolver(
-                z.object({
-                  url: z.string().describe("GitHub authorization URL to open in browser"),
-                  state: z.string().describe("State parameter for CSRF protection"),
-                }),
-              ),
-            },
-          },
-        },
-      },
-    }),
-    async (c) => {
+  .get("/auth/start", async (c) => {
+    try {
       const { url, state } = GitHubAuth.getAuthorizationUrl()
       log.info("oauth start", { state })
       return c.json({ url, state })
-    },
-  )
+    } catch (err) {
+      log.error("auth start error", { error: String(err) })
+      return c.json({ error: String(err) }, 500)
+    }
+  })
 
   // OAuth callback - browser redirects here after GitHub auth
-  .get(
-    "/oauth/callback",
-    async (c) => {
+  .get("/oauth/callback", async (c) => {
+    try {
       const code = c.req.query("code")
       const state = c.req.query("state")
       const error = c.req.query("error")
@@ -104,44 +83,21 @@ export const GitHubRoute = new Hono()
         return c.html(HTML_ERROR("Invalid state parameter - potential CSRF attack"), 400)
       }
 
-      try {
-        // Exchange code for token
-        await GitHubAuth.exchangeCode(code)
-        GitHubAuth.resolveCallback(code)
-        return c.html(HTML_SUCCESS)
-      } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : "Unknown error"
-        GitHubAuth.rejectCallback(new Error(errorMsg))
-        return c.html(HTML_ERROR(errorMsg))
-      }
-    },
-  )
+      // Exchange code for token
+      await GitHubAuth.exchangeCode(code)
+      GitHubAuth.resolveCallback(code)
+      return c.html(HTML_SUCCESS)
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : "Unknown error"
+      log.error("oauth callback error", { error: errorMsg })
+      GitHubAuth.rejectCallback(new Error(errorMsg))
+      return c.html(HTML_ERROR(errorMsg))
+    }
+  })
 
   // Check auth status
-  .get(
-    "/auth/status",
-    describeRoute({
-      summary: "Check GitHub auth status",
-      description: "Check if the user is authenticated with GitHub.",
-      operationId: "github.auth.status",
-      responses: {
-        200: {
-          description: "Authentication status",
-          content: {
-            "application/json": {
-              schema: resolver(
-                z.object({
-                  authenticated: z.boolean(),
-                  username: z.string().optional(),
-                  email: z.string().optional(),
-                }),
-              ),
-            },
-          },
-        },
-      },
-    }),
-    async (c) => {
+  .get("/auth/status", async (c) => {
+    try {
       const info = await GitHubAuth.get()
       if (!info) {
         return c.json({ authenticated: false })
@@ -159,78 +115,27 @@ export const GitHubRoute = new Hono()
         username: info.username,
         email: info.email,
       })
-    },
-  )
+    } catch (err) {
+      log.error("auth status error", { error: String(err) })
+      return c.json({ authenticated: false, error: String(err) })
+    }
+  })
 
   // Logout - remove stored token
-  .post(
-    "/auth/logout",
-    describeRoute({
-      summary: "Logout from GitHub",
-      description: "Remove the stored GitHub OAuth token.",
-      operationId: "github.auth.logout",
-      responses: {
-        200: {
-          description: "Logout successful",
-          content: {
-            "application/json": {
-              schema: resolver(z.object({ success: z.boolean() })),
-            },
-          },
-        },
-      },
-    }),
-    async (c) => {
+  .post("/auth/logout", async (c) => {
+    try {
       await GitHubAuth.remove()
       return c.json({ success: true })
-    },
-  )
+    } catch (err) {
+      log.error("auth logout error", { error: String(err) })
+      return c.json({ error: String(err) }, 500)
+    }
+  })
 
   // Create repository
-  .post(
-    "/repo/create",
-    describeRoute({
-      summary: "Create GitHub repository",
-      description: "Create a new GitHub repository for the authenticated user.",
-      operationId: "github.repo.create",
-      responses: {
-        200: {
-          description: "Repository created",
-          content: {
-            "application/json": {
-              schema: resolver(
-                z.object({
-                  id: z.number(),
-                  name: z.string(),
-                  fullName: z.string(),
-                  htmlUrl: z.string(),
-                  cloneUrl: z.string(),
-                  sshUrl: z.string(),
-                  private: z.boolean(),
-                  defaultBranch: z.string(),
-                }),
-              ),
-            },
-          },
-        },
-        401: {
-          description: "Not authenticated",
-        },
-        422: {
-          description: "Repository name already exists",
-        },
-      },
-    }),
-    validator(
-      "json",
-      z.object({
-        name: z.string().min(1).max(100),
-        description: z.string().optional(),
-        private: z.boolean().optional().default(true),
-      }),
-    ),
-    async (c) => {
-      const body = c.req.valid("json")
+  .post("/repo/create", async (c) => {
+    try {
+      const body = await c.req.json()
 
       const isAuth = await GitHubAuth.isAuthenticated()
       if (!isAuth) {
@@ -240,34 +145,23 @@ export const GitHubRoute = new Hono()
       const repo = await GitHubRepo.create({
         name: body.name,
         description: body.description,
-        private: body.private,
+        private: body.private ?? true,
       })
 
       return c.json(repo)
-    },
-  )
+    } catch (err) {
+      log.error("repo create error", { error: String(err) })
+      return c.json({ error: String(err) }, 500)
+    }
+  })
 
   // Check if repo name is available
-  .get(
-    "/repo/check-name",
-    describeRoute({
-      summary: "Check repository name availability",
-      description: "Check if a repository name is available for the authenticated user.",
-      operationId: "github.repo.checkName",
-      responses: {
-        200: {
-          description: "Name availability",
-          content: {
-            "application/json": {
-              schema: resolver(z.object({ available: z.boolean() })),
-            },
-          },
-        },
-      },
-    }),
-    validator("query", z.object({ name: z.string() })),
-    async (c) => {
-      const { name } = c.req.valid("query")
+  .get("/repo/check-name", async (c) => {
+    try {
+      const name = c.req.query("name")
+      if (!name) {
+        return c.json({ error: "Name parameter required" }, 400)
+      }
 
       const isAuth = await GitHubAuth.isAuthenticated()
       if (!isAuth) {
@@ -276,5 +170,8 @@ export const GitHubRoute = new Hono()
 
       const available = await GitHubRepo.checkNameAvailable(name)
       return c.json({ available })
-    },
-  )
+    } catch (err) {
+      log.error("check name error", { error: String(err) })
+      return c.json({ error: String(err) }, 500)
+    }
+  })

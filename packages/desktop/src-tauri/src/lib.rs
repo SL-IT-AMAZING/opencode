@@ -4,7 +4,7 @@ mod window_customizer;
 use cli::{get_sidecar_path, install_cli, sync_cli};
 use std::{
     collections::VecDeque,
-    net::{SocketAddr, TcpListener},
+    net::SocketAddr,
     sync::{Arc, Mutex},
     time::{Duration, Instant},
 };
@@ -84,13 +84,7 @@ fn get_sidecar_port() -> u32 {
         .map(|s| s.to_string())
         .or_else(|| std::env::var("ANYON_PORT").ok())
         .and_then(|port_str| port_str.parse().ok())
-        .unwrap_or_else(|| {
-            TcpListener::bind("127.0.0.1:0")
-                .expect("Failed to bind to find free port")
-                .local_addr()
-                .expect("Failed to get local address")
-                .port()
-        }) as u32
+        .unwrap_or(19876)  // Fixed port for OAuth callback
 }
 
 fn get_user_shell() -> String {

@@ -11,7 +11,7 @@ const log = Log.create({ service: "github.auth" })
 const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID || "Ov23liEaf4E1crqXHc8l"
 const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET || "bad6da9af89f199c5598d0a15760d11931f313cd"
 
-export const GITHUB_OAUTH_CALLBACK_PORT = 4096
+export const GITHUB_OAUTH_CALLBACK_PORT = 19876
 export const GITHUB_OAUTH_CALLBACK_PATH = "/github/oauth/callback"
 export const GITHUB_OAUTH_REDIRECT_URI = `http://127.0.0.1:${GITHUB_OAUTH_CALLBACK_PORT}${GITHUB_OAUTH_CALLBACK_PATH}`
 
@@ -62,29 +62,44 @@ export namespace GitHubAuth {
    * Exchange authorization code for access token
    */
   export async function exchangeCode(code: string): Promise<Info> {
-    log.info("exchanging code for token")
-
-    const response = await fetch("https://github.com/login/oauth/access_token", {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        client_id: GITHUB_CLIENT_ID,
-        client_secret: GITHUB_CLIENT_SECRET,
-        code,
-        redirect_uri: GITHUB_OAUTH_REDIRECT_URI,
-      }),
+    log.info("exchanging code for token", {
+      clientId: GITHUB_CLIENT_ID.slice(0, 8) + "...",
+      redirectUri: GITHUB_OAUTH_REDIRECT_URI,
     })
 
+    let response: Response
+    try {
+      response = await fetch("https://github.com/login/oauth/access_token", {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          client_id: GITHUB_CLIENT_ID,
+          client_secret: GITHUB_CLIENT_SECRET,
+          code,
+          redirect_uri: GITHUB_OAUTH_REDIRECT_URI,
+        }),
+      })
+    } catch (err) {
+      log.error("fetch to GitHub failed", {
+        error: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
+      })
+      throw new Error(`GitHub API 연결 실패: ${err instanceof Error ? err.message : "Unknown error"}`)
+    }
+
     if (!response.ok) {
-      throw new Error(`Failed to exchange code: ${response.status}`)
+      const text = await response.text().catch(() => "")
+      log.error("GitHub API error response", { status: response.status, body: text })
+      throw new Error(`GitHub API 오류: ${response.status}`)
     }
 
     const data = await response.json()
 
     if (data.error) {
+      log.error("GitHub OAuth error", { error: data.error, description: data.error_description })
       throw new Error(data.error_description || data.error)
     }
 
