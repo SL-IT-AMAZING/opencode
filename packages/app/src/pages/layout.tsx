@@ -49,7 +49,7 @@ import { usePermission } from "@/context/permission"
 import { Binary } from "@anyon/util/binary"
 
 import { useDialog } from "@anyon/ui/context/dialog"
-import { useTheme, type ColorScheme } from "@anyon/ui/theme"
+import { useTheme } from "@anyon/ui/theme"
 import { DialogSelectProvider } from "@/components/dialog-select-provider"
 import { DialogEditProject } from "@/components/dialog-edit-project"
 import { DialogSelectServer } from "@/components/dialog-select-server"
@@ -92,12 +92,6 @@ export default function Layout(props: ParentProps) {
   const command = useCommand()
   const theme = useTheme()
   const availableThemeEntries = createMemo(() => Object.entries(theme.themes()))
-  const colorSchemeOrder: ColorScheme[] = ["system", "light", "dark"]
-  const colorSchemeLabel: Record<ColorScheme, string> = {
-    system: "System",
-    light: "Light",
-    dark: "Dark",
-  }
 
   function cycleTheme(direction = 1) {
     const ids = availableThemeEntries().map(([id]) => id)
@@ -110,19 +104,6 @@ export default function Layout(props: ParentProps) {
     showToast({
       title: "Theme switched",
       description: nextTheme?.name ?? nextThemeId,
-    })
-  }
-
-  function cycleColorScheme(direction = 1) {
-    const current = theme.colorScheme()
-    const currentIndex = colorSchemeOrder.indexOf(current)
-    const nextIndex =
-      currentIndex === -1 ? 0 : (currentIndex + direction + colorSchemeOrder.length) % colorSchemeOrder.length
-    const next = colorSchemeOrder[nextIndex]
-    theme.setColorScheme(next)
-    showToast({
-      title: "Color scheme",
-      description: colorSchemeLabel[next],
     })
   }
 
@@ -436,27 +417,6 @@ export default function Layout(props: ParentProps) {
         onSelect: () => theme.commitPreview(),
         onHighlight: () => {
           theme.previewTheme(id)
-          return () => theme.cancelPreview()
-        },
-      })
-    }
-
-    commands.push({
-      id: "theme.scheme.cycle",
-      title: "Cycle color scheme",
-      category: "Theme",
-      keybind: "mod+shift+s",
-      onSelect: () => cycleColorScheme(1),
-    })
-
-    for (const scheme of colorSchemeOrder) {
-      commands.push({
-        id: `theme.scheme.${scheme}`,
-        title: `Use color scheme: ${colorSchemeLabel[scheme]}`,
-        category: "Theme",
-        onSelect: () => theme.commitPreview(),
-        onHighlight: () => {
-          theme.previewColorScheme(scheme)
           return () => theme.cancelPreview()
         },
       })

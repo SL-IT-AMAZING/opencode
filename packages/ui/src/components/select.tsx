@@ -47,6 +47,7 @@ export function Select<T>(props: SelectProps<T> & ButtonProps) {
       {...others}
       data-component="select"
       placement="bottom-start"
+      preventScroll={true}
       value={local.current}
       options={grouped()}
       optionValue={(x) => (local.value ? local.value(x) : (x as string))}
