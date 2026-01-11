@@ -15,7 +15,7 @@ export function SortableTerminalTab(props: { terminal: LocalPTY }): JSX.Element 
           value={props.terminal.id}
           closeButton={
             terminal.all().length > 1 && (
-              <IconButton icon="close" variant="ghost" onClick={() => terminal.close(props.terminal.id)} />
+              <IconButton icon="close" variant="ghost" onClick={() => terminal.close(props.terminal.id)} tabIndex={-1} />
             )
           }
         >

@@ -65,7 +65,16 @@ export const Terminal = (props: TerminalProps) => {
     setOption("theme", colors)
   })
 
-  const focusTerminal = () => term?.focus()
+  const focusTerminal = () => {
+    if (!term) return
+    // Focus the underlying textarea with preventScroll to avoid page shift
+    const textarea = container.querySelector("textarea")
+    if (textarea) {
+      textarea.focus({ preventScroll: true })
+    } else {
+      term.focus()
+    }
+  }
   const copySelection = () => {
     if (!term || !term.hasSelection()) return false
     const selection = term.getSelection()

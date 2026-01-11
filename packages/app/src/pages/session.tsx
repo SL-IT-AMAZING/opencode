@@ -1343,7 +1343,7 @@ export default function Page() {
             classList={{
               "relative flex flex-col h-full ml-auto": true,
               "border-l border-border-weak-base": layout.rightPanel.opened(),
-              "transition-[width] duration-200 ease-out overflow-y-hidden": true,
+              "transition-[width] duration-200 ease-out overflow-y-clip": true,
             }}
             style={{ width: layout.rightPanel.opened() ? `${layout.rightPanel.width()}px` : "0px" }}
           >
@@ -1369,45 +1369,89 @@ export default function Page() {
               <FileExplorerPanel onFileOpen={openTab} activeFile={activeFileTab() ?? undefined} />
             </div>
 
-            {/* Vertical resize handle between explorer and terminal */}
-            <ResizeHandle
-              direction="vertical"
-              size={layout.fileExplorer.height()}
-              min={50}
-              max={window.innerHeight * 0.7}
-              collapseThreshold={40}
-              invert
-              onResize={layout.fileExplorer.resize}
-              onCollapse={layout.fileExplorer.close}
-              class="!relative !transform-none h-1 shrink-0 cursor-ns-resize hover:bg-border-strong-base transition-colors"
-            />
-
             {/* Terminal - Bottom */}
-            <Show when={layout.terminal.opened()}>
-              <div class="flex-1 min-h-0 flex flex-col border-t border-border-weak-base" data-prevent-autofocus>
-                <DragDropProvider
-                  onDragStart={handleTerminalDragStart}
-                  onDragEnd={handleTerminalDragEnd}
-                  onDragOver={handleTerminalDragOver}
-                  collisionDetector={closestCenter}
+            <div class="flex-1 flex flex-col" data-prevent-autofocus>
+              {/* Full panel - animated (slides to 0px when closed) */}
+              <div
+                class="overflow-hidden transition-[height] duration-200 ease-out"
+                style={{ height: layout.terminal.opened() ? `${layout.terminal.height()}px` : "0px" }}
+              >
+                <div
+                  class="flex flex-col transition-transform duration-200 ease-out border-t border-border-weak-base"
+                  style={{
+                    height: `${layout.terminal.height()}px`,
+                    transform: layout.terminal.opened() ? "translateY(0)" : "translateY(100%)"
+                  }}
                 >
-                  <DragDropSensors />
-                  <ConstrainDragYAxis />
-                  <Tabs variant="alt" value={terminal.active()} onChange={terminal.open}>
-                    <Tabs.List class="h-10">
-                      <SortableProvider ids={terminal.all().map((t: LocalPTY) => t.id)}>
-                        <For each={terminal.all()}>{(pty) => <SortableTerminalTab terminal={pty} />}</For>
-                      </SortableProvider>
-                      <div class="h-full flex items-center justify-center">
-                        <TooltipKeybind
-                          title="New terminal"
-                          keybind={command.keybind("terminal.new")}
-                          class="flex items-center"
+                  {/* Resize handle - INSIDE animated container, moves with terminal */}
+                  <ResizeHandle
+                    direction="vertical"
+                    size={layout.fileExplorer.height()}
+                    min={50}
+                    max={window.innerHeight * 0.7}
+                    collapseThreshold={40}
+                    invert
+                    onResize={layout.fileExplorer.resize}
+                    onCollapse={layout.fileExplorer.close}
+                    class="!relative !transform-none h-1 shrink-0 cursor-ns-resize hover:bg-border-strong-base transition-colors"
+                  />
+                <DragDropProvider
+                onDragStart={handleTerminalDragStart}
+                onDragEnd={handleTerminalDragEnd}
+                onDragOver={handleTerminalDragOver}
+                collisionDetector={closestCenter}
+              >
+                <DragDropSensors />
+                <ConstrainDragYAxis />
+                <Tabs variant="alt" value={terminal.active()} onChange={terminal.open}>
+                  {/* Tab bar - fixed h-10 (40px), always visible */}
+                  <Tabs.List class="h-10 shrink-0 overflow-y-clip">
+                    <SortableProvider ids={terminal.all().map((t: LocalPTY) => t.id)}>
+                      <For each={terminal.all()}>{(pty) => <SortableTerminalTab terminal={pty} />}</For>
+                    </SortableProvider>
+                    <div class="h-full flex items-center justify-center">
+                      <TooltipKeybind
+                        title="New terminal"
+                        keybind={command.keybind("terminal.new")}
+                        class="flex items-center"
+                      >
+                        <IconButton icon="plus-small" variant="ghost" iconSize="large" onClick={terminal.new} tabIndex={-1} />
+                      </TooltipKeybind>
+                    </div>
+                    <div class="ml-auto h-full flex items-center justify-center pr-2">
+                      <TooltipKeybind
+                        title={layout.terminal.opened() ? "Close terminal" : "Open terminal"}
+                        keybind={command.keybind("terminal.toggle")}
+                        class="flex items-center"
+                      >
+                        <Button
+                          variant="ghost"
+                          class="group/terminal-toggle size-6 p-0"
+                          onClick={layout.terminal.toggle}
                         >
-                          <IconButton icon="plus-small" variant="ghost" iconSize="large" onClick={terminal.new} />
-                        </TooltipKeybind>
-                      </div>
-                    </Tabs.List>
+                          <div class="relative flex items-center justify-center size-4 [&>*]:absolute [&>*]:inset-0">
+                            <Icon
+                              size="small"
+                              name={layout.terminal.opened() ? "layout-bottom-full" : "layout-bottom"}
+                              class="group-hover/terminal-toggle:hidden"
+                            />
+                            <Icon
+                              size="small"
+                              name="layout-bottom-partial"
+                              class="hidden group-hover/terminal-toggle:inline-block"
+                            />
+                            <Icon
+                              size="small"
+                              name={layout.terminal.opened() ? "layout-bottom" : "layout-bottom-full"}
+                              class="hidden group-active/terminal-toggle:inline-block"
+                            />
+                          </div>
+                        </Button>
+                      </TooltipKeybind>
+                    </div>
+                  </Tabs.List>
+                  {/* Content area - fills remaining space */}
+                  <div class="flex-1 min-h-0">
                     <QuickActionBar />
                     <For each={terminal.all()}>
                       {(pty) => (
@@ -1425,26 +1469,42 @@ export default function Page() {
                         </Tabs.Content>
                       )}
                     </For>
-                  </Tabs>
-                  <DragOverlay>
-                    <Show when={store.activeTerminalDraggable}>
-                      {(draggedId) => {
-                        const pty = createMemo(() => terminal.all().find((t: LocalPTY) => t.id === draggedId()))
-                        return (
-                          <Show when={pty()}>
-                            {(t) => (
-                              <div class="relative p-1 h-10 flex items-center bg-background-stronger text-14-regular">
-                                {t().title}
-                              </div>
-                            )}
-                          </Show>
-                        )
-                      }}
-                    </Show>
-                  </DragOverlay>
-                </DragDropProvider>
+                  </div>
+                </Tabs>
+                <DragOverlay>
+                  <Show when={store.activeTerminalDraggable}>
+                    {(draggedId) => {
+                      const pty = createMemo(() => terminal.all().find((t: LocalPTY) => t.id === draggedId()))
+                      return (
+                        <Show when={pty()}>
+                          {(t) => (
+                            <div class="relative p-1 h-10 flex items-center bg-background-stronger text-14-regular">
+                              {t().title}
+                            </div>
+                          )}
+                        </Show>
+                      )
+                    }}
+                  </Show>
+                </DragOverlay>
+              </DragDropProvider>
+                </div>
               </div>
-            </Show>
+
+              {/* Spacer - pushes collapsed bar to bottom */}
+              <div class="flex-1" />
+
+              {/* Collapsed bar - shown when terminal is closed, AT BOTTOM */}
+              <Show when={!layout.terminal.opened()}>
+                <button
+                  onClick={layout.terminal.open}
+                  class="h-8 flex items-center px-3 gap-2 text-text-subtle hover:text-text-base hover:bg-surface-subtle transition-colors cursor-pointer"
+                >
+                  <Icon name="chevron-right" size="small" class="-rotate-90" />
+                  <span class="text-13-regular">Terminal</span>
+                </button>
+              </Show>
+            </div>
           </div>
         </Show>
       </div>

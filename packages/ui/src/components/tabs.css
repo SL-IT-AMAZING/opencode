@@ -192,6 +192,7 @@
         color: var(--text-strong);
         background-color: transparent;
         border-bottom-color: var(--icon-strong-base);
+        margin-bottom: -1px;
       }
 
       &:hover:not(:disabled):not([data-selected]) {
