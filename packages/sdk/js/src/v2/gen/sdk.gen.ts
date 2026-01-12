@@ -10,6 +10,22 @@ import type {
   Auth as Auth2,
   AuthSetErrors,
   AuthSetResponses,
+  CollabConflictAbortResponses,
+  CollabConflictContinueResponses,
+  CollabConflictResolveResponses,
+  CollabConflictsResponses,
+  CollabHistoryFilesResponses,
+  CollabHistoryResponses,
+  CollabRevertBrowseResponses,
+  CollabRevertExitBrowseResponses,
+  CollabRevertFreshResponses,
+  CollabRevertReplaceResponses,
+  CollabSaveResponses,
+  CollabStatusResponses,
+  CollabSyncResponses,
+  CollabTeamRefreshResponses,
+  CollabTeamResponses,
+  CollabTeamUpdateResponses,
   CommandListResponses,
   Config as Config2,
   ConfigGetResponses,
@@ -317,6 +333,460 @@ export class Project extends HeyApiClient {
         ...options?.headers,
         ...params.headers,
       },
+    })
+  }
+}
+
+export class Collab extends HeyApiClient {
+  /**
+   * Get collab status
+   *
+   * Get the current collaboration status including branch, dirty state, and online status.
+   */
+  public status<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "directory" }] }])
+    return (options?.client ?? this.client).get<CollabStatusResponses, unknown, ThrowOnError>({
+      url: "/collab/status",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Save changes (add + commit + push)
+   *
+   * Stage all changes, create a commit, and push to remote if available.
+   */
+  public save<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      message?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "body", key: "message" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<CollabSaveResponses, unknown, ThrowOnError>({
+      url: "/collab/save",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Sync with remote (fetch + merge)
+   *
+   * Fetch changes from remote and merge them into the current branch.
+   */
+  public sync<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "directory" }] }])
+    return (options?.client ?? this.client).post<CollabSyncResponses, unknown, ThrowOnError>({
+      url: "/collab/sync",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Get commit history
+   *
+   * Get paginated commit history for the current branch.
+   */
+  public history<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      limit?: number
+      offset?: number
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "limit" },
+            { in: "query", key: "offset" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<CollabHistoryResponses, unknown, ThrowOnError>({
+      url: "/collab/history",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Get changed files for a commit
+   *
+   * Get the list of files changed in a specific commit.
+   */
+  public historyFiles<ThrowOnError extends boolean = false>(
+    parameters: {
+      hash: string
+      directory?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "hash" },
+            { in: "query", key: "directory" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<CollabHistoryFilesResponses, unknown, ThrowOnError>({
+      url: "/collab/history/{hash}/files",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Browse specific commit (detached HEAD)
+   *
+   * Enter read-only mode at a specific commit. Stashes any uncommitted changes.
+   */
+  public revertBrowse<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      commitHash?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "body", key: "commitHash" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<CollabRevertBrowseResponses, unknown, ThrowOnError>({
+      url: "/collab/revert/browse",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Exit browse mode
+   *
+   * Return to original branch and restore stashed changes.
+   */
+  public revertExitBrowse<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      originalBranch?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "body", key: "originalBranch" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<CollabRevertExitBrowseResponses, unknown, ThrowOnError>({
+      url: "/collab/revert/exit-browse",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Create new branch from commit
+   *
+   * Start fresh by creating a new branch at a specific commit.
+   */
+  public revertFresh<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      commitHash?: string
+      branchName?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "body", key: "commitHash" },
+            { in: "body", key: "branchName" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<CollabRevertFreshResponses, unknown, ThrowOnError>({
+      url: "/collab/revert/fresh",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Hard reset to commit (DANGEROUS)
+   *
+   * Replace current branch with a specific commit. This is destructive!
+   */
+  public revertReplace<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      commitHash?: string
+      forcePush?: boolean
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "body", key: "commitHash" },
+            { in: "body", key: "forcePush" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<CollabRevertReplaceResponses, unknown, ThrowOnError>({
+      url: "/collab/revert/replace",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Get team members
+   *
+   * Get team members detected from git history.
+   */
+  public team<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "directory" }] }])
+    return (options?.client ?? this.client).get<CollabTeamResponses, unknown, ThrowOnError>({
+      url: "/collab/team",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Refresh team from git
+   *
+   * Re-detect team members from git history.
+   */
+  public teamRefresh<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "directory" }] }])
+    return (options?.client ?? this.client).post<CollabTeamRefreshResponses, unknown, ThrowOnError>({
+      url: "/collab/team/refresh",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Update team member
+   *
+   * Update a specific team member's info.
+   */
+  public teamUpdate<ThrowOnError extends boolean = false>(
+    parameters: {
+      email: string
+      directory?: string
+      github?: string
+      avatar?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "email" },
+            { in: "query", key: "directory" },
+            { in: "body", key: "github" },
+            { in: "body", key: "avatar" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).patch<CollabTeamUpdateResponses, unknown, ThrowOnError>({
+      url: "/collab/team/{email}",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Get all conflicts
+   *
+   * Get list of conflicted files with parsed conflict sections.
+   */
+  public conflicts<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "directory" }] }])
+    return (options?.client ?? this.client).get<CollabConflictsResponses, unknown, ThrowOnError>({
+      url: "/collab/conflicts",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Resolve a conflict
+   *
+   * Resolve a single file conflict.
+   */
+  public conflictResolve<ThrowOnError extends boolean = false>(
+    parameters: {
+      file: string
+      directory?: string
+      resolution?: "ours" | "theirs" | "custom"
+      customContent?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "file" },
+            { in: "query", key: "directory" },
+            { in: "body", key: "resolution" },
+            { in: "body", key: "customContent" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<CollabConflictResolveResponses, unknown, ThrowOnError>({
+      url: "/collab/conflicts/{file}/resolve",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Abort merge
+   *
+   * Abort the current merge and return to pre-merge state.
+   */
+  public conflictAbort<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "directory" }] }])
+    return (options?.client ?? this.client).post<CollabConflictAbortResponses, unknown, ThrowOnError>({
+      url: "/collab/conflicts/abort",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Continue merge
+   *
+   * Finalize merge after all conflicts are resolved.
+   */
+  public conflictContinue<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "directory" }] }])
+    return (options?.client ?? this.client).post<CollabConflictContinueResponses, unknown, ThrowOnError>({
+      url: "/collab/conflicts/continue",
+      ...options,
+      ...params,
     })
   }
 }
@@ -2891,6 +3361,8 @@ export class OpencodeClient extends HeyApiClient {
   global = new Global({ client: this.client })
 
   project = new Project({ client: this.client })
+
+  collab = new Collab({ client: this.client })
 
   pty = new Pty({ client: this.client })
 

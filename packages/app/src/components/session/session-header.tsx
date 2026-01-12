@@ -19,6 +19,7 @@ import { TextField } from "@anyon/ui/text-field"
 import { DialogSelectServer } from "@/components/dialog-select-server"
 import { SessionLspIndicator } from "@/components/session-lsp-indicator"
 import { SessionMcpIndicator } from "@/components/session-mcp-indicator"
+import { SessionCollabStatus } from "@/components/session-collab-status"
 import type { Session } from "@anyon/sdk/v2/client"
 import { same } from "@/utils/same"
 
@@ -161,6 +162,7 @@ export function SessionHeader() {
               <Icon name="server" size="small" class="text-icon-weak" />
               <span class="text-12-regular text-text-weak truncate max-w-[200px]">{server.name}</span>
             </Button>
+            <SessionCollabStatus />
             <SessionLspIndicator />
             <SessionMcpIndicator />
           </div>
@@ -223,23 +225,7 @@ export function SessionHeader() {
               keybind={command.keybind("rightPanel.toggle")}
             >
               <Button variant="ghost" class="group/panel-toggle size-6 p-0" onClick={layout.rightPanel.toggle}>
-                <div class="relative flex items-center justify-center size-4 [&>*]:absolute [&>*]:inset-0">
-                  <Icon
-                    name={layout.rightPanel.opened() ? "layout-right" : "layout-left"}
-                    size="small"
-                    class="group-hover/panel-toggle:hidden"
-                  />
-                  <Icon
-                    name={layout.rightPanel.opened() ? "layout-right-partial" : "layout-left-partial"}
-                    size="small"
-                    class="hidden group-hover/panel-toggle:inline-block"
-                  />
-                  <Icon
-                    name={layout.rightPanel.opened() ? "layout-right-full" : "layout-left-full"}
-                    size="small"
-                    class="hidden group-active/panel-toggle:inline-block"
-                  />
-                </div>
+                <Icon name="layout-right-partial" size="small" />
               </Button>
             </TooltipKeybind>
           </div>

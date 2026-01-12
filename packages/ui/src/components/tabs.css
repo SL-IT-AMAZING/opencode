@@ -138,7 +138,7 @@
     [data-slot="tabs-list"] {
       padding-left: 24px;
       padding-right: 24px;
-      gap: 12px;
+      gap: 24px;
       border-bottom: 1px solid var(--border-weak-base);
       background-color: transparent;
 
@@ -155,9 +155,6 @@
       border: none;
       color: var(--text-base);
       background-color: transparent;
-      border-bottom-width: 2px;
-      border-bottom-style: solid;
-      border-bottom-color: transparent;
       gap: 4px;
 
       /* text-14-regular */
@@ -172,8 +169,24 @@
         height: 100%;
         padding: 4px;
         background-color: transparent;
-        border-bottom-width: 2px;
-        border-bottom-color: transparent;
+        position: relative;
+
+        /* Centered underline indicator */
+        &::after {
+          content: "";
+          position: absolute;
+          bottom: 0;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 100%;
+          height: 2px;
+          background-color: transparent;
+          transition: background-color 0.15s ease;
+        }
+
+        &[data-selected]::after {
+          background-color: var(--icon-strong-base);
+        }
       }
 
       [data-slot="tabs-trigger-close-button"] {
@@ -191,7 +204,6 @@
       &:has([data-selected]) {
         color: var(--text-strong);
         background-color: transparent;
-        border-bottom-color: var(--icon-strong-base);
       }
 
       &:hover:not(:disabled):not([data-selected]) {
@@ -208,6 +220,26 @@
 
     /* [data-slot="tabs-content"] { */
     /* } */
+  }
+
+  /* Right panel tabs - left-aligned to match terminal tabs below */
+  &[data-panel="right"] {
+    [data-slot="tabs-list"] {
+      justify-content: flex-start;
+      padding-left: 24px;
+      padding-right: 24px;
+      gap: 24px;
+
+      &::after {
+        display: none;
+      }
+
+      /* Equalize gaps around Timeline tab for visual balance */
+      [data-slot="tabs-trigger-wrapper"]:nth-child(2) {
+        margin-left: -11px;
+        margin-right: 11px;
+      }
+    }
   }
 
   &[data-orientation="vertical"] {
@@ -261,16 +293,17 @@
 
       [data-slot="tabs-trigger-wrapper"] {
         border-bottom: none;
-        border-right-width: 2px;
-        border-right-style: solid;
-        border-right-color: transparent;
 
         [data-slot="tabs-trigger"] {
-          border-bottom: none;
-        }
-
-        &:has([data-selected]) {
-          border-right-color: var(--icon-strong-base);
+          /* Vertical: right-side indicator */
+          &::after {
+            bottom: 50%;
+            left: auto;
+            right: 0;
+            transform: translateY(50%);
+            width: 2px;
+            height: 100%;
+          }
         }
       }
     }
