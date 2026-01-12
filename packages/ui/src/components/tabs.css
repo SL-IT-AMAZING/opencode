@@ -138,7 +138,7 @@
     [data-slot="tabs-list"] {
       padding-left: 24px;
       padding-right: 24px;
-      gap: 12px;
+      gap: 24px;
       border-bottom: 1px solid var(--border-weak-base);
       background-color: transparent;
 
@@ -220,6 +220,26 @@
 
     /* [data-slot="tabs-content"] { */
     /* } */
+  }
+
+  /* Right panel tabs - left-aligned to match terminal tabs below */
+  &[data-panel="right"] {
+    [data-slot="tabs-list"] {
+      justify-content: flex-start;
+      padding-left: 24px;
+      padding-right: 24px;
+      gap: 24px;
+
+      &::after {
+        display: none;
+      }
+
+      /* Equalize gaps around Timeline tab for visual balance */
+      [data-slot="tabs-trigger-wrapper"]:nth-child(2) {
+        margin-left: -11px;
+        margin-right: 11px;
+      }
+    }
   }
 
   &[data-orientation="vertical"] {

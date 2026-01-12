@@ -1,6 +1,12 @@
 <!doctype html>
 <html lang="en" style="background-color: var(--background-base)">
   <head>
+    <script type="module">
+      if (import.meta.env.DEV) {
+        import("react-grab");
+        import("@react-grab/claude-code/client");
+      }
+    </script>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>OpenCode</title>

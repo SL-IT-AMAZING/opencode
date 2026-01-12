@@ -705,21 +705,6 @@ export type EventSessionError = {
   }
 }
 
-export type EventFileWatcherUpdated = {
-  type: "file.watcher.updated"
-  properties: {
-    file: string
-    event: "add" | "change" | "unlink"
-  }
-}
-
-export type EventVcsBranchUpdated = {
-  type: "vcs.branch.updated"
-  properties: {
-    branch?: string
-  }
-}
-
 export type CollabStatus = {
   branch: string
   isDirty: boolean
@@ -790,6 +775,28 @@ export type EventCollabConflictResolved = {
   type: "collab.conflict.resolved"
   properties: {
     file: string
+  }
+}
+
+export type EventCollabGitChanged = {
+  type: "collab.git.changed"
+  properties: {
+    [key: string]: unknown
+  }
+}
+
+export type EventFileWatcherUpdated = {
+  type: "file.watcher.updated"
+  properties: {
+    file: string
+    event: "add" | "change" | "unlink"
+  }
+}
+
+export type EventVcsBranchUpdated = {
+  type: "vcs.branch.updated"
+  properties: {
+    branch?: string
   }
 }
 
@@ -875,8 +882,6 @@ export type Event =
   | EventSessionDeleted
   | EventSessionDiff
   | EventSessionError
-  | EventFileWatcherUpdated
-  | EventVcsBranchUpdated
   | EventCollabStatusChanged
   | EventCollabSaveStarted
   | EventCollabSaveCompleted
@@ -885,6 +890,9 @@ export type Event =
   | EventCollabTeamUpdated
   | EventCollabConflictDetected
   | EventCollabConflictResolved
+  | EventCollabGitChanged
+  | EventFileWatcherUpdated
+  | EventVcsBranchUpdated
   | EventPtyCreated
   | EventPtyUpdated
   | EventPtyExited

@@ -1031,15 +1031,7 @@ export default function Page() {
                   class="group/panel-toggle shrink-0 size-8 p-0 rounded-lg"
                   onClick={layout.rightPanel.toggle}
                 >
-                  <div class="relative flex items-center justify-center size-4 [&>*]:absolute [&>*]:inset-0">
-                    <Icon name="layout-left" size="small" class="group-hover/panel-toggle:hidden" />
-                    <Icon
-                      name="layout-left-partial"
-                      size="small"
-                      class="hidden group-hover/panel-toggle:inline-block"
-                    />
-                    <Icon name="layout-left-full" size="small" class="hidden group-active/panel-toggle:inline-block" />
-                  </div>
+                  <Icon name="layout-right-partial" size="small" />
                 </Button>
               </TooltipKeybind>
             </div>
@@ -1368,9 +1360,29 @@ export default function Page() {
               />
             </Show>
 
+            {/* Toggle button - shows when panel is open */}
+            <Show when={layout.rightPanel.opened()}>
+              <div class="absolute top-0 right-0 z-10 h-10 flex items-center pr-2">
+                <TooltipKeybind
+                  placement="left"
+                  title="Toggle right panel"
+                  keybind={command.keybind("rightPanel.toggle")}
+                >
+                  <Button
+                    variant="ghost"
+                    class="group/panel-toggle shrink-0 size-8 p-0 rounded-lg"
+                    onClick={layout.rightPanel.toggle}
+                  >
+                    <Icon name="layout-right-partial" size="small" />
+                  </Button>
+                </TooltipKeybind>
+              </div>
+            </Show>
+
             {/* Panel Tabs - Files, Timeline, Team */}
             <Tabs
               variant="alt"
+              data-panel="right"
               value={layout.rightPanel.activeTab()}
               onChange={(tab) => layout.rightPanel.setActiveTab(tab as "files" | "timeline" | "team")}
               classList={{
@@ -1441,104 +1453,104 @@ export default function Page() {
                       onDragOver={handleTerminalDragOver}
                       collisionDetector={closestCenter}
                     >
-                    <DragDropSensors />
-                    <ConstrainDragYAxis />
-                    <Tabs
-                      variant="alt"
-                      value={terminal.active()}
-                      onChange={terminal.open}
-                      class="flex-1 flex flex-col min-h-0"
-                    >
-                      {/* Tab bar - fixed h-10 (40px), always visible */}
-                      <Tabs.List class="h-10 shrink-0 overflow-y-clip">
-                        <SortableProvider ids={terminal.all().map((t: LocalPTY) => t.id)}>
-                          <For each={terminal.all()}>{(pty) => <SortableTerminalTab terminal={pty} />}</For>
-                        </SortableProvider>
-                        <div class="h-full flex items-center justify-center">
-                          <TooltipKeybind
-                            title="New terminal"
-                            keybind={command.keybind("terminal.new")}
-                            class="flex items-center"
-                          >
-                            <IconButton
-                              icon="plus-small"
-                              variant="ghost"
-                              iconSize="large"
-                              onClick={terminal.new}
-                              tabIndex={-1}
-                            />
-                          </TooltipKeybind>
-                        </div>
-                        <div class="ml-auto h-full flex items-center justify-center pr-2">
-                          <TooltipKeybind
-                            title={layout.terminal.opened() ? "Close terminal" : "Open terminal"}
-                            keybind={command.keybind("terminal.toggle")}
-                            class="flex items-center"
-                          >
-                            <Button
-                              variant="ghost"
-                              class="group/terminal-toggle size-6 p-0"
-                              onClick={layout.terminal.toggle}
+                      <DragDropSensors />
+                      <ConstrainDragYAxis />
+                      <Tabs
+                        variant="alt"
+                        value={terminal.active()}
+                        onChange={terminal.open}
+                        class="flex-1 flex flex-col min-h-0"
+                      >
+                        {/* Tab bar - fixed h-10 (40px), always visible */}
+                        <Tabs.List class="h-10 shrink-0 overflow-y-clip">
+                          <SortableProvider ids={terminal.all().map((t: LocalPTY) => t.id)}>
+                            <For each={terminal.all()}>{(pty) => <SortableTerminalTab terminal={pty} />}</For>
+                          </SortableProvider>
+                          <div class="h-full flex items-center justify-center">
+                            <TooltipKeybind
+                              title="New terminal"
+                              keybind={command.keybind("terminal.new")}
+                              class="flex items-center"
                             >
-                              <div class="relative flex items-center justify-center size-4 [&>*]:absolute [&>*]:inset-0">
-                                <Icon
-                                  size="small"
-                                  name={layout.terminal.opened() ? "layout-bottom-full" : "layout-bottom"}
-                                  class="group-hover/terminal-toggle:hidden"
-                                />
-                                <Icon
-                                  size="small"
-                                  name="layout-bottom-partial"
-                                  class="hidden group-hover/terminal-toggle:inline-block"
-                                />
-                                <Icon
-                                  size="small"
-                                  name={layout.terminal.opened() ? "layout-bottom" : "layout-bottom-full"}
-                                  class="hidden group-active/terminal-toggle:inline-block"
-                                />
-                              </div>
-                            </Button>
-                          </TooltipKeybind>
-                        </div>
-                      </Tabs.List>
-                      {/* Content area - fills remaining space */}
-                      <div class="flex-1 min-h-0 flex flex-col">
-                        <QuickActionBar />
-                        <For each={terminal.all()}>
-                          {(pty) => (
-                            <Tabs.Content value={pty.id} class="flex-1 min-h-0 flex flex-col">
-                              <Terminal
-                                class="flex-1 !h-auto min-h-0"
-                                pty={pty}
-                                onCleanup={terminal.update}
-                                onConnectError={() => terminal.clone(pty.id)}
-                                onRef={(ref) => {
-                                  if (terminal.active() === pty.id) {
-                                    terminal.setActiveRef(ref)
-                                  }
-                                }}
+                              <IconButton
+                                icon="plus-small"
+                                variant="ghost"
+                                iconSize="large"
+                                onClick={terminal.new}
+                                tabIndex={-1}
                               />
-                            </Tabs.Content>
-                          )}
-                        </For>
-                      </div>
-                    </Tabs>
-                    <DragOverlay>
-                      <Show when={store.activeTerminalDraggable}>
-                        {(draggedId) => {
-                          const pty = createMemo(() => terminal.all().find((t: LocalPTY) => t.id === draggedId()))
-                          return (
-                            <Show when={pty()}>
-                              {(t) => (
-                                <div class="relative p-1 h-10 flex items-center bg-background-stronger text-14-regular">
-                                  {t().title}
+                            </TooltipKeybind>
+                          </div>
+                          <div class="absolute right-0 h-full flex items-center pr-2">
+                            <TooltipKeybind
+                              title={layout.terminal.opened() ? "Close terminal" : "Open terminal"}
+                              keybind={command.keybind("terminal.toggle")}
+                              class="flex items-center"
+                            >
+                              <Button
+                                variant="ghost"
+                                class="group/terminal-toggle size-6 p-0"
+                                onClick={layout.terminal.toggle}
+                              >
+                                <div class="relative flex items-center justify-center size-4 [&>*]:absolute [&>*]:inset-0">
+                                  <Icon
+                                    size="small"
+                                    name={layout.terminal.opened() ? "layout-bottom-full" : "layout-bottom"}
+                                    class="group-hover/terminal-toggle:hidden"
+                                  />
+                                  <Icon
+                                    size="small"
+                                    name="layout-bottom-partial"
+                                    class="hidden group-hover/terminal-toggle:inline-block"
+                                  />
+                                  <Icon
+                                    size="small"
+                                    name={layout.terminal.opened() ? "layout-bottom" : "layout-bottom-full"}
+                                    class="hidden group-active/terminal-toggle:inline-block"
+                                  />
                                 </div>
-                              )}
-                            </Show>
-                          )
-                        }}
-                      </Show>
-                    </DragOverlay>
+                              </Button>
+                            </TooltipKeybind>
+                          </div>
+                        </Tabs.List>
+                        {/* Content area - fills remaining space */}
+                        <div class="flex-1 min-h-0 flex flex-col">
+                          <QuickActionBar />
+                          <For each={terminal.all()}>
+                            {(pty) => (
+                              <Tabs.Content value={pty.id} class="flex-1 min-h-0 flex flex-col">
+                                <Terminal
+                                  class="flex-1 !h-auto min-h-0"
+                                  pty={pty}
+                                  onCleanup={terminal.update}
+                                  onConnectError={() => terminal.clone(pty.id)}
+                                  onRef={(ref) => {
+                                    if (terminal.active() === pty.id) {
+                                      terminal.setActiveRef(ref)
+                                    }
+                                  }}
+                                />
+                              </Tabs.Content>
+                            )}
+                          </For>
+                        </div>
+                      </Tabs>
+                      <DragOverlay>
+                        <Show when={store.activeTerminalDraggable}>
+                          {(draggedId) => {
+                            const pty = createMemo(() => terminal.all().find((t: LocalPTY) => t.id === draggedId()))
+                            return (
+                              <Show when={pty()}>
+                                {(t) => (
+                                  <div class="relative p-1 h-10 flex items-center bg-background-stronger text-14-regular">
+                                    {t().title}
+                                  </div>
+                                )}
+                              </Show>
+                            )
+                          }}
+                        </Show>
+                      </DragOverlay>
                     </DragDropProvider>
                   </div>
                 </div>

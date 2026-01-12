@@ -184,7 +184,7 @@ function createGlobalSync() {
             .then((x) => setStore("collab", x.data))
             .catch(() => {}),
           sdk.collab
-            .history({ limit: 20, offset: 0 })
+            .history({ limit: 1000, offset: 0 })
             .then((x) => setStore("collabHistory", x.data ?? []))
             .catch(() => {}),
           sdk.permission.list().then((x) => {
@@ -433,7 +433,7 @@ function createGlobalSync() {
           .then((x) => setStore("collab", x.data))
           .catch(() => {})
         sdk.collab
-          .history({ limit: 20, offset: 0 })
+          .history({ limit: 1000, offset: 0 })
           .then((x) => setStore("collabHistory", x.data ?? []))
           .catch(() => {})
         // Show toast (skip if no actual commit was made)
@@ -462,7 +462,7 @@ function createGlobalSync() {
         })
         // Refresh history
         sdk.collab
-          .history({ limit: 20, offset: 0 })
+          .history({ limit: 1000, offset: 0 })
           .then((x) => setStore("collabHistory", x.data ?? []))
           .catch(() => {})
         // Show toast only if there were changes or conflicts
@@ -477,6 +477,23 @@ function createGlobalSync() {
             description: `${props.changes}개의 변경사항을 받았습니다.`,
           })
         }
+        break
+      }
+      case "collab.git.changed": {
+        // External git changes detected - refresh all collab data
+        const sdk = createOpencodeClient({
+          baseUrl: globalSDK.url,
+          directory,
+          throwOnError: true,
+        })
+        sdk.collab
+          .status()
+          .then((x) => setStore("collab", x.data))
+          .catch(() => {})
+        sdk.collab
+          .history({ limit: 1000, offset: 0 })
+          .then((x) => setStore("collabHistory", x.data ?? []))
+          .catch(() => {})
         break
       }
     }

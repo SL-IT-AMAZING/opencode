@@ -153,5 +153,6 @@ export namespace Collab {
     TeamUpdated: BusEvent.define("collab.team.updated", z.object({ members: z.number() })),
     ConflictDetected: BusEvent.define("collab.conflict.detected", z.object({ files: z.array(z.string()) })),
     ConflictResolved: BusEvent.define("collab.conflict.resolved", z.object({ file: z.string() })),
+    GitChanged: BusEvent.define("collab.git.changed", z.object({})),
   }
 }

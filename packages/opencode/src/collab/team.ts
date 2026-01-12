@@ -85,7 +85,12 @@ export namespace CollabTeam {
     // The | character in template literals gets interpreted as a shell pipe
     const format = "%ae%x00%an"
     const result = await $`git log --format=${format} --all`.quiet().nothrow().cwd(Instance.worktree).text()
-    console.log("[CollabTeam.detectFromGit] git log result length:", result.length, "first 100 chars:", result.slice(0, 100))
+    console.log(
+      "[CollabTeam.detectFromGit] git log result length:",
+      result.length,
+      "first 100 chars:",
+      result.slice(0, 100),
+    )
 
     if (!result.trim()) {
       console.log("[CollabTeam.detectFromGit] EARLY EXIT - empty git log result")
