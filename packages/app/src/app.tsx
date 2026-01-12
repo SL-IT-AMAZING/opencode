@@ -38,7 +38,7 @@ const defaultServerUrl = iife(() => {
   if (param) return param
 
   if (location.hostname.includes("anyon.cc")) return "http://localhost:4096"
-  if (window.__ANYON__) return `http://127.0.0.1:${window.__ANYON__.port}`
+  if (window.__ANYON__?.port) return `http://127.0.0.1:${window.__ANYON__.port}`
   if (import.meta.env.DEV)
     return `http://${import.meta.env.VITE_ANYON_SERVER_HOST ?? "localhost"}:${import.meta.env.VITE_ANYON_SERVER_PORT ?? "4096"}`
 

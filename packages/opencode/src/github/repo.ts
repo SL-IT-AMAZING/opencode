@@ -94,7 +94,10 @@ export namespace GitHubRepo {
   /**
    * List repositories for the authenticated user
    */
-  export async function list(options?: { sort?: "created" | "updated" | "pushed" | "full_name"; perPage?: number }): Promise<RepoInfo[]> {
+  export async function list(options?: {
+    sort?: "created" | "updated" | "pushed" | "full_name"
+    perPage?: number
+  }): Promise<RepoInfo[]> {
     const token = await GitHubAuth.getToken()
     if (!token) {
       throw new Error("Not authenticated with GitHub")

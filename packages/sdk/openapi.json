@@ -249,6 +249,746 @@
         ]
       }
     },
+    "/collab/status": {
+      "get": {
+        "operationId": "collab.status",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Get collab status",
+        "description": "Get the current collaboration status including branch, dirty state, and online status.",
+        "responses": {
+          "200": {
+            "description": "Collaboration status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollabStatus"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.collab.status({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/collab/save": {
+      "post": {
+        "operationId": "collab.save",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Save changes (add + commit + push)",
+        "description": "Stage all changes, create a commit, and push to remote if available.",
+        "responses": {
+          "200": {
+            "description": "Save result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollabSaveResult"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "message": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.collab.save({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/collab/sync": {
+      "post": {
+        "operationId": "collab.sync",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Sync with remote (fetch + merge)",
+        "description": "Fetch changes from remote and merge them into the current branch.",
+        "responses": {
+          "200": {
+            "description": "Sync result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollabSyncResult"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.collab.sync({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/collab/history": {
+      "get": {
+        "operationId": "collab.history",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "type": "number"
+            }
+          }
+        ],
+        "summary": "Get commit history",
+        "description": "Get paginated commit history for the current branch.",
+        "responses": {
+          "200": {
+            "description": "Commit history",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CollabCommitInfo"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.collab.history({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/collab/history/{hash}/files": {
+      "get": {
+        "operationId": "collab.historyFiles",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "hash",
+            "required": true
+          }
+        ],
+        "summary": "Get changed files for a commit",
+        "description": "Get the list of files changed in a specific commit.",
+        "responses": {
+          "200": {
+            "description": "Changed files",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.collab.historyFiles({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/collab/revert/browse": {
+      "post": {
+        "operationId": "collab.revertBrowse",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Browse specific commit (detached HEAD)",
+        "description": "Enter read-only mode at a specific commit. Stashes any uncommitted changes.",
+        "responses": {
+          "200": {
+            "description": "Browse result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollabBrowseResult"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "commitHash": {
+                    "type": "string"
+                  }
+                },
+                "required": ["commitHash"]
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.collab.revertBrowse({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/collab/revert/exit-browse": {
+      "post": {
+        "operationId": "collab.revertExitBrowse",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Exit browse mode",
+        "description": "Return to original branch and restore stashed changes.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["success"]
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "originalBranch": {
+                    "type": "string"
+                  }
+                },
+                "required": ["originalBranch"]
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.collab.revertExitBrowse({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/collab/revert/fresh": {
+      "post": {
+        "operationId": "collab.revertFresh",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Create new branch from commit",
+        "description": "Start fresh by creating a new branch at a specific commit.",
+        "responses": {
+          "200": {
+            "description": "Fresh result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollabFreshResult"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "commitHash": {
+                    "type": "string"
+                  },
+                  "branchName": {
+                    "type": "string"
+                  }
+                },
+                "required": ["commitHash", "branchName"]
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.collab.revertFresh({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/collab/revert/replace": {
+      "post": {
+        "operationId": "collab.revertReplace",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Hard reset to commit (DANGEROUS)",
+        "description": "Replace current branch with a specific commit. This is destructive!",
+        "responses": {
+          "200": {
+            "description": "Replace result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollabReplaceResult"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "commitHash": {
+                    "type": "string"
+                  },
+                  "forcePush": {
+                    "default": false,
+                    "type": "boolean"
+                  }
+                },
+                "required": ["commitHash"]
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.collab.revertReplace({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/collab/team": {
+      "get": {
+        "operationId": "collab.team",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Get team members",
+        "description": "Get team members detected from git history.",
+        "responses": {
+          "200": {
+            "description": "Team data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollabTeamData"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.collab.team({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/collab/team/refresh": {
+      "post": {
+        "operationId": "collab.teamRefresh",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Refresh team from git",
+        "description": "Re-detect team members from git history.",
+        "responses": {
+          "200": {
+            "description": "Refreshed team data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollabTeamData"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.collab.teamRefresh({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/collab/team/{email}": {
+      "patch": {
+        "operationId": "collab.teamUpdate",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "email",
+            "required": true
+          }
+        ],
+        "summary": "Update team member",
+        "description": "Update a specific team member's info.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["success"]
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "github": {
+                    "type": "string"
+                  },
+                  "avatar": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.collab.teamUpdate({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/collab/conflicts": {
+      "get": {
+        "operationId": "collab.conflicts",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Get all conflicts",
+        "description": "Get list of conflicted files with parsed conflict sections.",
+        "responses": {
+          "200": {
+            "description": "Conflict files",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CollabConflictFile"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.collab.conflicts({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/collab/conflicts/{file}/resolve": {
+      "post": {
+        "operationId": "collab.conflictResolve",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "file",
+            "required": true
+          }
+        ],
+        "summary": "Resolve a conflict",
+        "description": "Resolve a single file conflict.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["success"]
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "resolution": {
+                    "type": "string",
+                    "enum": ["ours", "theirs", "custom"]
+                  },
+                  "customContent": {
+                    "type": "string"
+                  }
+                },
+                "required": ["resolution"]
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.collab.conflictResolve({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/collab/conflicts/abort": {
+      "post": {
+        "operationId": "collab.conflictAbort",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Abort merge",
+        "description": "Abort the current merge and return to pre-merge state.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["success"]
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.collab.conflictAbort({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/collab/conflicts/continue": {
+      "post": {
+        "operationId": "collab.conflictContinue",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Continue merge",
+        "description": "Finalize merge after all conflicts are resolved.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["success"]
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.collab.conflictContinue({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/pty": {
       "get": {
         "operationId": "pty.list",
@@ -7445,6 +8185,201 @@
         },
         "required": ["type", "properties"]
       },
+      "CollabStatus": {
+        "type": "object",
+        "properties": {
+          "branch": {
+            "type": "string"
+          },
+          "isDirty": {
+            "type": "boolean"
+          },
+          "hasUnpushed": {
+            "type": "boolean"
+          },
+          "isOnline": {
+            "type": "boolean"
+          },
+          "isDetached": {
+            "type": "boolean"
+          },
+          "originalBranch": {
+            "type": "string"
+          },
+          "hasConflicts": {
+            "type": "boolean"
+          },
+          "conflictCount": {
+            "type": "number"
+          }
+        },
+        "required": ["branch", "isDirty", "hasUnpushed", "isOnline"]
+      },
+      "Event.collab.status.changed": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "collab.status.changed"
+          },
+          "properties": {
+            "$ref": "#/components/schemas/CollabStatus"
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "Event.collab.save.started": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "collab.save.started"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {}
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "Event.collab.save.completed": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "collab.save.completed"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "commitHash": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "pushed": {
+                "type": "boolean"
+              },
+              "skipped": {
+                "type": "boolean"
+              }
+            },
+            "required": ["commitHash", "message", "pushed", "skipped"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "Event.collab.save.failed": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "collab.save.failed"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "error": {
+                "type": "string"
+              },
+              "offline": {
+                "type": "boolean"
+              }
+            },
+            "required": ["error", "offline"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "CollabSyncResult": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "changes": {
+            "type": "number"
+          },
+          "conflicts": {
+            "type": "boolean"
+          }
+        },
+        "required": ["success", "changes", "conflicts"]
+      },
+      "Event.collab.sync.completed": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "collab.sync.completed"
+          },
+          "properties": {
+            "$ref": "#/components/schemas/CollabSyncResult"
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "Event.collab.team.updated": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "collab.team.updated"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "members": {
+                "type": "number"
+              }
+            },
+            "required": ["members"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "Event.collab.conflict.detected": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "collab.conflict.detected"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "files": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": ["files"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "Event.collab.conflict.resolved": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "collab.conflict.resolved"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "file": {
+                "type": "string"
+              }
+            },
+            "required": ["file"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
       "Pty": {
         "type": "object",
         "properties": {
@@ -7679,6 +8614,30 @@
             "$ref": "#/components/schemas/Event.vcs.branch.updated"
           },
           {
+            "$ref": "#/components/schemas/Event.collab.status.changed"
+          },
+          {
+            "$ref": "#/components/schemas/Event.collab.save.started"
+          },
+          {
+            "$ref": "#/components/schemas/Event.collab.save.completed"
+          },
+          {
+            "$ref": "#/components/schemas/Event.collab.save.failed"
+          },
+          {
+            "$ref": "#/components/schemas/Event.collab.sync.completed"
+          },
+          {
+            "$ref": "#/components/schemas/Event.collab.team.updated"
+          },
+          {
+            "$ref": "#/components/schemas/Event.collab.conflict.detected"
+          },
+          {
+            "$ref": "#/components/schemas/Event.collab.conflict.resolved"
+          },
+          {
             "$ref": "#/components/schemas/Event.pty.created"
           },
           {
@@ -7749,6 +8708,193 @@
           }
         },
         "required": ["name", "data"]
+      },
+      "CollabSaveResult": {
+        "type": "object",
+        "properties": {
+          "commitHash": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "pushed": {
+            "type": "boolean"
+          },
+          "skipped": {
+            "type": "boolean"
+          }
+        },
+        "required": ["commitHash", "message", "pushed", "skipped"]
+      },
+      "CollabAuthor": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          }
+        },
+        "required": ["name", "email"]
+      },
+      "CollabCommitInfo": {
+        "type": "object",
+        "properties": {
+          "hash": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "author": {
+            "$ref": "#/components/schemas/CollabAuthor"
+          },
+          "timestamp": {
+            "type": "number"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["hash", "message", "author", "timestamp"]
+      },
+      "CollabBrowseResult": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "originalBranch": {
+            "type": "string"
+          },
+          "isDetached": {
+            "type": "boolean"
+          }
+        },
+        "required": ["success", "originalBranch", "isDetached"]
+      },
+      "CollabFreshResult": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "newBranch": {
+            "type": "string"
+          },
+          "fromCommit": {
+            "type": "string"
+          }
+        },
+        "required": ["success", "newBranch", "fromCommit"]
+      },
+      "CollabReplaceResult": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "lostCommits": {
+            "type": "number"
+          },
+          "pushed": {
+            "type": "boolean"
+          }
+        },
+        "required": ["success", "lostCommits", "pushed"]
+      },
+      "CollabTeamMember": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "github": {
+            "type": "string"
+          },
+          "avatar": {
+            "type": "string"
+          },
+          "firstCommit": {
+            "type": "number"
+          },
+          "lastCommit": {
+            "type": "number"
+          },
+          "commitCount": {
+            "type": "number"
+          }
+        },
+        "required": ["id", "name", "email"]
+      },
+      "CollabTeamData": {
+        "type": "object",
+        "properties": {
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CollabTeamMember"
+            }
+          },
+          "lastUpdated": {
+            "type": "number"
+          },
+          "source": {
+            "type": "string",
+            "enum": ["git", "github", "manual"]
+          },
+          "currentUserEmail": {
+            "type": "string"
+          }
+        },
+        "required": ["members", "lastUpdated", "source"]
+      },
+      "CollabConflictSection": {
+        "type": "object",
+        "properties": {
+          "startLine": {
+            "type": "number"
+          },
+          "endLine": {
+            "type": "number"
+          },
+          "ours": {
+            "type": "string"
+          },
+          "theirs": {
+            "type": "string"
+          },
+          "base": {
+            "type": "string"
+          }
+        },
+        "required": ["startLine", "endLine", "ours", "theirs"]
+      },
+      "CollabConflictFile": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "conflicts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CollabConflictSection"
+            }
+          }
+        },
+        "required": ["path", "conflicts"]
       },
       "KeybindsConfig": {
         "description": "Custom keybind configurations",

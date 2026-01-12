@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
+import { useEffect } from "react"
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext"
 import {
   $getNodeByKey,
   $setSelection,
@@ -14,7 +14,7 @@ import {
   NodeKey,
   COMMAND_PRIORITY_LOW,
   KEY_ENTER_COMMAND,
-} from 'lexical';
+} from "lexical"
 
 /**
  * BlockClickPlugin - Enables clicking to the right of blocks to place cursor
@@ -24,75 +24,75 @@ import {
  * pressing Enter will then create a new paragraph below.
  */
 export function BlockClickPlugin() {
-  const [editor] = useLexicalComposerContext();
+  const [editor] = useLexicalComposerContext()
 
   useEffect(() => {
-    const rootElement = editor.getRootElement();
-    if (!rootElement) return;
+    const rootElement = editor.getRootElement()
+    if (!rootElement) return
 
     const handleClick = (event: MouseEvent) => {
       // Only handle left clicks
-      if (event.button !== 0) return;
+      if (event.button !== 0) return
 
-      const clickX = event.clientX;
-      const clickY = event.clientY;
+      const clickX = event.clientX
+      const clickY = event.clientY
 
       // Get the content editable bounds
-      const rootRect = rootElement.getBoundingClientRect();
+      const rootRect = rootElement.getBoundingClientRect()
 
       // Must be within editor bounds
-      if (clickY < rootRect.top || clickY > rootRect.bottom) return;
-      if (clickX < rootRect.left || clickX > rootRect.right) return;
+      if (clickY < rootRect.top || clickY > rootRect.bottom) return
+      if (clickX < rootRect.left || clickX > rootRect.right) return
 
       // Find which block element the click Y coordinate corresponds to
-      const targetBlock = findBlockAtY(rootElement, clickY);
+      const targetBlock = findBlockAtY(rootElement, clickY)
       if (!targetBlock) {
-        return;
+        return
       }
 
-      const blockRect = targetBlock.getBoundingClientRect();
+      const blockRect = targetBlock.getBoundingClientRect()
 
       // Check if click is to the RIGHT of the block's actual content
       // (not inside the block itself)
       if (clickX <= blockRect.right) {
-        return;
+        return
       }
 
       // We clicked in the empty space to the right of the block
-      event.preventDefault();
-      event.stopPropagation();
+      event.preventDefault()
+      event.stopPropagation()
 
       // Use Lexical's method to find the node from DOM element
       editor.update(() => {
-        const node = $getNearestNodeFromDOMNode(targetBlock);
+        const node = $getNearestNodeFromDOMNode(targetBlock)
         if (!node) {
-          return;
+          return
         }
 
         // Get the top-level block (direct child of root)
-        let topLevelNode: LexicalNode | null = node;
-        const root = $getRoot();
+        let topLevelNode: LexicalNode | null = node
+        const root = $getRoot()
 
         while (topLevelNode && topLevelNode.getParent() !== root) {
-          topLevelNode = topLevelNode.getParent();
+          topLevelNode = topLevelNode.getParent()
         }
 
         if (topLevelNode) {
-          selectAfterNode(topLevelNode);
+          selectAfterNode(topLevelNode)
         }
-      });
+      })
 
       // Focus the editor
-      editor.focus();
-    };
+      editor.focus()
+    }
 
     // Use mousedown instead of click to capture before other handlers
-    rootElement.addEventListener('mousedown', handleClick);
+    rootElement.addEventListener("mousedown", handleClick)
 
     return () => {
-      rootElement.removeEventListener('mousedown', handleClick);
-    };
-  }, [editor]);
+      rootElement.removeEventListener("mousedown", handleClick)
+    }
+  }, [editor])
 
   // Handle Enter key when a decorator node is selected to insert paragraph after
   useEffect(() => {
@@ -100,63 +100,63 @@ export function BlockClickPlugin() {
       KEY_ENTER_COMMAND,
       (event) => {
         const selection = editor.getEditorState().read(() => {
-          const sel = editor.getEditorState()._selection;
-          return sel;
-        });
+          const sel = editor.getEditorState()._selection
+          return sel
+        })
 
         // Check if we have an element selection on a decorator node
         return editor.getEditorState().read(() => {
-          const sel = editor.getEditorState()._selection;
-          if (!sel || sel.getNodes().length !== 1) return false;
+          const sel = editor.getEditorState()._selection
+          if (!sel || sel.getNodes().length !== 1) return false
 
-          const node = sel.getNodes()[0];
-          if (!$isDecoratorNode(node)) return false;
+          const node = sel.getNodes()[0]
+          if (!$isDecoratorNode(node)) return false
 
           // Insert a new paragraph after the decorator node
           editor.update(() => {
-            const decoratorNode = $getNodeByKey(node.getKey());
-            if (!decoratorNode) return;
+            const decoratorNode = $getNodeByKey(node.getKey())
+            if (!decoratorNode) return
 
-            const paragraph = $createParagraphNode();
-            decoratorNode.insertAfter(paragraph);
-            paragraph.select();
-          });
+            const paragraph = $createParagraphNode()
+            decoratorNode.insertAfter(paragraph)
+            paragraph.select()
+          })
 
-          event?.preventDefault();
-          return true;
-        });
+          event?.preventDefault()
+          return true
+        })
       },
-      COMMAND_PRIORITY_LOW
-    );
-  }, [editor]);
+      COMMAND_PRIORITY_LOW,
+    )
+  }, [editor])
 
-  return null;
+  return null
 }
 
 /**
  * Find the top-level block element at a given Y coordinate
  */
 function findBlockAtY(rootElement: HTMLElement, y: number): HTMLElement | null {
-  const children = Array.from(rootElement.children) as HTMLElement[];
+  const children = Array.from(rootElement.children) as HTMLElement[]
 
   for (const child of children) {
-    const rect = child.getBoundingClientRect();
+    const rect = child.getBoundingClientRect()
 
     if (y >= rect.top && y <= rect.bottom) {
-      return child;
+      return child
     }
   }
 
   // If click is below all blocks, return the last block
   if (children.length > 0) {
-    const lastChild = children[children.length - 1];
-    const lastRect = lastChild.getBoundingClientRect();
+    const lastChild = children[children.length - 1]
+    const lastRect = lastChild.getBoundingClientRect()
     if (y > lastRect.bottom) {
-      return lastChild;
+      return lastChild
     }
   }
 
-  return null;
+  return null
 }
 
 /**
@@ -164,32 +164,32 @@ function findBlockAtY(rootElement: HTMLElement, y: number): HTMLElement | null {
  */
 function getNodeKeyFromElement(element: HTMLElement): NodeKey | null {
   // Check the element itself
-  let key = element.getAttribute('data-lexical-node-key');
-  if (key) return key;
+  let key = element.getAttribute("data-lexical-node-key")
+  if (key) return key
 
   // Walk up the tree to find a node with a key (for nested structures)
-  let current: HTMLElement | null = element;
+  let current: HTMLElement | null = element
   while (current) {
-    key = current.getAttribute('data-lexical-node-key');
-    if (key) return key;
-    current = current.parentElement;
+    key = current.getAttribute("data-lexical-node-key")
+    if (key) return key
+    current = current.parentElement
   }
 
   // For decorator nodes wrapped in a span
-  const decoratorSpan = element.querySelector('[data-lexical-decorator]');
+  const decoratorSpan = element.querySelector("[data-lexical-decorator]")
   if (decoratorSpan) {
-    key = decoratorSpan.getAttribute('data-lexical-node-key');
-    if (key) return key;
+    key = decoratorSpan.getAttribute("data-lexical-node-key")
+    if (key) return key
   }
 
   // Check any child with a node key
-  const childWithKey = element.querySelector('[data-lexical-node-key]');
+  const childWithKey = element.querySelector("[data-lexical-node-key]")
   if (childWithKey) {
-    key = childWithKey.getAttribute('data-lexical-node-key');
-    if (key) return key;
+    key = childWithKey.getAttribute("data-lexical-node-key")
+    if (key) return key
   }
 
-  return null;
+  return null
 }
 
 /**
@@ -198,7 +198,7 @@ function getNodeKeyFromElement(element: HTMLElement): NodeKey | null {
 function selectAfterNode(node: LexicalNode): void {
   // For all block-level nodes, insert a new paragraph after and select it
   // This gives the user a clear place to type
-  const paragraph = $createParagraphNode();
-  node.insertAfter(paragraph);
-  paragraph.select();
+  const paragraph = $createParagraphNode()
+  node.insertAfter(paragraph)
+  paragraph.select()
 }

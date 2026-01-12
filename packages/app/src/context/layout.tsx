@@ -77,6 +77,7 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
         rightPanel: {
           opened: true,
           width: 400,
+          activeTab: "files" as "files" | "timeline" | "team",
         },
         sessionTabs: {} as Record<string, SessionTabs>,
         sessionView: {} as Record<string, SessionView>,
@@ -283,10 +284,18 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
         width: createMemo(() => store.rightPanel?.width ?? 400),
         resize(width: number) {
           if (!store.rightPanel) {
-            setStore("rightPanel", { opened: true, width })
+            setStore("rightPanel", { opened: true, width, activeTab: "files" })
             return
           }
           setStore("rightPanel", "width", width)
+        },
+        activeTab: createMemo(() => store.rightPanel?.activeTab ?? "files"),
+        setActiveTab(tab: "files" | "timeline" | "team") {
+          if (!store.rightPanel) {
+            setStore("rightPanel", { opened: true, width: 400, activeTab: tab })
+            return
+          }
+          setStore("rightPanel", "activeTab", tab)
         },
       },
       mobileSidebar: {

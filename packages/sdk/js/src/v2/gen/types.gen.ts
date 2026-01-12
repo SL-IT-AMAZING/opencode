@@ -720,6 +720,79 @@ export type EventVcsBranchUpdated = {
   }
 }
 
+export type CollabStatus = {
+  branch: string
+  isDirty: boolean
+  hasUnpushed: boolean
+  isOnline: boolean
+  isDetached?: boolean
+  originalBranch?: string
+  hasConflicts?: boolean
+  conflictCount?: number
+}
+
+export type EventCollabStatusChanged = {
+  type: "collab.status.changed"
+  properties: CollabStatus
+}
+
+export type EventCollabSaveStarted = {
+  type: "collab.save.started"
+  properties: {
+    [key: string]: unknown
+  }
+}
+
+export type EventCollabSaveCompleted = {
+  type: "collab.save.completed"
+  properties: {
+    commitHash: string
+    message: string
+    pushed: boolean
+    skipped: boolean
+  }
+}
+
+export type EventCollabSaveFailed = {
+  type: "collab.save.failed"
+  properties: {
+    error: string
+    offline: boolean
+  }
+}
+
+export type CollabSyncResult = {
+  success: boolean
+  changes: number
+  conflicts: boolean
+}
+
+export type EventCollabSyncCompleted = {
+  type: "collab.sync.completed"
+  properties: CollabSyncResult
+}
+
+export type EventCollabTeamUpdated = {
+  type: "collab.team.updated"
+  properties: {
+    members: number
+  }
+}
+
+export type EventCollabConflictDetected = {
+  type: "collab.conflict.detected"
+  properties: {
+    files: Array<string>
+  }
+}
+
+export type EventCollabConflictResolved = {
+  type: "collab.conflict.resolved"
+  properties: {
+    file: string
+  }
+}
+
 export type Pty = {
   id: string
   title: string
@@ -804,6 +877,14 @@ export type Event =
   | EventSessionError
   | EventFileWatcherUpdated
   | EventVcsBranchUpdated
+  | EventCollabStatusChanged
+  | EventCollabSaveStarted
+  | EventCollabSaveCompleted
+  | EventCollabSaveFailed
+  | EventCollabSyncCompleted
+  | EventCollabTeamUpdated
+  | EventCollabConflictDetected
+  | EventCollabConflictResolved
   | EventPtyCreated
   | EventPtyUpdated
   | EventPtyExited
@@ -829,6 +910,75 @@ export type NotFoundError = {
   data: {
     message: string
   }
+}
+
+export type CollabSaveResult = {
+  commitHash: string
+  message: string
+  pushed: boolean
+  skipped: boolean
+}
+
+export type CollabAuthor = {
+  name: string
+  email: string
+}
+
+export type CollabCommitInfo = {
+  hash: string
+  message: string
+  author: CollabAuthor
+  timestamp: number
+  files?: Array<string>
+}
+
+export type CollabBrowseResult = {
+  success: boolean
+  originalBranch: string
+  isDetached: boolean
+}
+
+export type CollabFreshResult = {
+  success: boolean
+  newBranch: string
+  fromCommit: string
+}
+
+export type CollabReplaceResult = {
+  success: boolean
+  lostCommits: number
+  pushed: boolean
+}
+
+export type CollabTeamMember = {
+  id: string
+  name: string
+  email: string
+  github?: string
+  avatar?: string
+  firstCommit?: number
+  lastCommit?: number
+  commitCount?: number
+}
+
+export type CollabTeamData = {
+  members: Array<CollabTeamMember>
+  lastUpdated: number
+  source: "git" | "github" | "manual"
+  currentUserEmail?: string
+}
+
+export type CollabConflictSection = {
+  startLine: number
+  endLine: number
+  ours: string
+  theirs: string
+  base?: string
+}
+
+export type CollabConflictFile = {
+  path: string
+  conflicts: Array<CollabConflictSection>
 }
 
 /**
@@ -2128,6 +2278,330 @@ export type ProjectUpdateResponses = {
 }
 
 export type ProjectUpdateResponse = ProjectUpdateResponses[keyof ProjectUpdateResponses]
+
+export type CollabStatusData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/collab/status"
+}
+
+export type CollabStatusResponses = {
+  /**
+   * Collaboration status
+   */
+  200: CollabStatus
+}
+
+export type CollabStatusResponse = CollabStatusResponses[keyof CollabStatusResponses]
+
+export type CollabSaveData = {
+  body?: {
+    message?: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/collab/save"
+}
+
+export type CollabSaveResponses = {
+  /**
+   * Save result
+   */
+  200: CollabSaveResult
+}
+
+export type CollabSaveResponse = CollabSaveResponses[keyof CollabSaveResponses]
+
+export type CollabSyncData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/collab/sync"
+}
+
+export type CollabSyncResponses = {
+  /**
+   * Sync result
+   */
+  200: CollabSyncResult
+}
+
+export type CollabSyncResponse = CollabSyncResponses[keyof CollabSyncResponses]
+
+export type CollabHistoryData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    limit?: number
+    offset?: number
+  }
+  url: "/collab/history"
+}
+
+export type CollabHistoryResponses = {
+  /**
+   * Commit history
+   */
+  200: Array<CollabCommitInfo>
+}
+
+export type CollabHistoryResponse = CollabHistoryResponses[keyof CollabHistoryResponses]
+
+export type CollabHistoryFilesData = {
+  body?: never
+  path: {
+    hash: string
+  }
+  query?: {
+    directory?: string
+  }
+  url: "/collab/history/{hash}/files"
+}
+
+export type CollabHistoryFilesResponses = {
+  /**
+   * Changed files
+   */
+  200: Array<string>
+}
+
+export type CollabHistoryFilesResponse = CollabHistoryFilesResponses[keyof CollabHistoryFilesResponses]
+
+export type CollabRevertBrowseData = {
+  body?: {
+    commitHash: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/collab/revert/browse"
+}
+
+export type CollabRevertBrowseResponses = {
+  /**
+   * Browse result
+   */
+  200: CollabBrowseResult
+}
+
+export type CollabRevertBrowseResponse = CollabRevertBrowseResponses[keyof CollabRevertBrowseResponses]
+
+export type CollabRevertExitBrowseData = {
+  body?: {
+    originalBranch: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/collab/revert/exit-browse"
+}
+
+export type CollabRevertExitBrowseResponses = {
+  /**
+   * Success
+   */
+  200: {
+    success: boolean
+  }
+}
+
+export type CollabRevertExitBrowseResponse = CollabRevertExitBrowseResponses[keyof CollabRevertExitBrowseResponses]
+
+export type CollabRevertFreshData = {
+  body?: {
+    commitHash: string
+    branchName: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/collab/revert/fresh"
+}
+
+export type CollabRevertFreshResponses = {
+  /**
+   * Fresh result
+   */
+  200: CollabFreshResult
+}
+
+export type CollabRevertFreshResponse = CollabRevertFreshResponses[keyof CollabRevertFreshResponses]
+
+export type CollabRevertReplaceData = {
+  body?: {
+    commitHash: string
+    forcePush?: boolean
+  }
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/collab/revert/replace"
+}
+
+export type CollabRevertReplaceResponses = {
+  /**
+   * Replace result
+   */
+  200: CollabReplaceResult
+}
+
+export type CollabRevertReplaceResponse = CollabRevertReplaceResponses[keyof CollabRevertReplaceResponses]
+
+export type CollabTeamData2 = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/collab/team"
+}
+
+export type CollabTeamResponses = {
+  /**
+   * Team data
+   */
+  200: CollabTeamData
+}
+
+export type CollabTeamResponse = CollabTeamResponses[keyof CollabTeamResponses]
+
+export type CollabTeamRefreshData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/collab/team/refresh"
+}
+
+export type CollabTeamRefreshResponses = {
+  /**
+   * Refreshed team data
+   */
+  200: CollabTeamData
+}
+
+export type CollabTeamRefreshResponse = CollabTeamRefreshResponses[keyof CollabTeamRefreshResponses]
+
+export type CollabTeamUpdateData = {
+  body?: {
+    github?: string
+    avatar?: string
+  }
+  path: {
+    email: string
+  }
+  query?: {
+    directory?: string
+  }
+  url: "/collab/team/{email}"
+}
+
+export type CollabTeamUpdateResponses = {
+  /**
+   * Success
+   */
+  200: {
+    success: boolean
+  }
+}
+
+export type CollabTeamUpdateResponse = CollabTeamUpdateResponses[keyof CollabTeamUpdateResponses]
+
+export type CollabConflictsData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/collab/conflicts"
+}
+
+export type CollabConflictsResponses = {
+  /**
+   * Conflict files
+   */
+  200: Array<CollabConflictFile>
+}
+
+export type CollabConflictsResponse = CollabConflictsResponses[keyof CollabConflictsResponses]
+
+export type CollabConflictResolveData = {
+  body?: {
+    resolution: "ours" | "theirs" | "custom"
+    customContent?: string
+  }
+  path: {
+    file: string
+  }
+  query?: {
+    directory?: string
+  }
+  url: "/collab/conflicts/{file}/resolve"
+}
+
+export type CollabConflictResolveResponses = {
+  /**
+   * Success
+   */
+  200: {
+    success: boolean
+  }
+}
+
+export type CollabConflictResolveResponse = CollabConflictResolveResponses[keyof CollabConflictResolveResponses]
+
+export type CollabConflictAbortData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/collab/conflicts/abort"
+}
+
+export type CollabConflictAbortResponses = {
+  /**
+   * Success
+   */
+  200: {
+    success: boolean
+  }
+}
+
+export type CollabConflictAbortResponse = CollabConflictAbortResponses[keyof CollabConflictAbortResponses]
+
+export type CollabConflictContinueData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/collab/conflicts/continue"
+}
+
+export type CollabConflictContinueResponses = {
+  /**
+   * Success
+   */
+  200: {
+    success: boolean
+  }
+}
+
+export type CollabConflictContinueResponse = CollabConflictContinueResponses[keyof CollabConflictContinueResponses]
 
 export type PtyListData = {
   body?: never

@@ -58,9 +58,7 @@ export function DialogGitInit(props: DialogGitInitProps) {
                 label="Repository URL"
                 placeholder="https://github.com/user/repo"
                 value={url()}
-                onInput={(e: InputEvent & { currentTarget: HTMLInputElement }) =>
-                  setUrl(e.currentTarget.value)
-                }
+                onInput={(e: InputEvent & { currentTarget: HTMLInputElement }) => setUrl(e.currentTarget.value)}
                 onKeyDown={(e: KeyboardEvent) => e.key === "Enter" && handleClone()}
                 autofocus
               />
@@ -68,21 +66,14 @@ export function DialogGitInit(props: DialogGitInitProps) {
                 <Button variant="ghost" size="large" onClick={() => dialog.close()}>
                   취소
                 </Button>
-                <Button
-                  variant="primary"
-                  size="large"
-                  onClick={handleClone}
-                  disabled={!url().trim()}
-                >
+                <Button variant="primary" size="large" onClick={handleClone} disabled={!url().trim()}>
                   Clone
                 </Button>
               </div>
             </>
           }
         >
-          <p class="text-14-regular text-text-subtle">
-            이 폴더에 Git 저장소가 없습니다. 어떻게 시작할까요?
-          </p>
+          <p class="text-14-regular text-text-subtle">이 폴더에 Git 저장소가 없습니다. 어떻게 시작할까요?</p>
           <div class="grid grid-cols-2 gap-3">
             <button
               class="flex flex-col items-center gap-3 p-5 rounded-lg border border-border-base hover:bg-surface-raised-base transition-colors cursor-pointer"

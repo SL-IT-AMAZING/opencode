@@ -30,6 +30,7 @@ import { ProviderAuth } from "../provider/auth"
 import { Global } from "../global"
 import { ProjectRoute } from "./project"
 import { GitHubRoute } from "./github"
+import { CollabRoute } from "../collab/server"
 import { ToolRegistry } from "../tool/registry"
 import { zodToJsonSchema } from "zod-to-json-schema"
 import { SessionPrompt } from "../session/prompt"
@@ -273,6 +274,7 @@ export namespace Server {
 
       .route("/project", ProjectRoute)
       .route("/github", GitHubRoute)
+      .route("/collab", CollabRoute)
 
       .get(
         "/pty",

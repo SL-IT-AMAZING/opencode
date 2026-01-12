@@ -16,6 +16,8 @@ import {
   type LspStatus,
   type VcsInfo,
   type PermissionRequest,
+  type CollabStatus,
+  type CollabCommitInfo,
   createOpencodeClient,
 } from "@anyon/sdk/v2/client"
 import { createStore, produce, reconcile } from "solid-js/store"
@@ -53,6 +55,8 @@ type State = {
   }
   lsp: LspStatus[]
   vcs: VcsInfo | undefined
+  collab: CollabStatus | undefined
+  collabHistory: CollabCommitInfo[] | undefined
   limit: number
   message: {
     [sessionID: string]: Message[]
@@ -99,6 +103,8 @@ function createGlobalSync() {
         mcp: {},
         lsp: [],
         vcs: undefined,
+        collab: undefined,
+        collabHistory: undefined,
         limit: 5,
         message: {},
         part: {},
@@ -173,6 +179,14 @@ function createGlobalSync() {
           sdk.mcp.status().then((x) => setStore("mcp", x.data!)),
           sdk.lsp.status().then((x) => setStore("lsp", x.data!)),
           sdk.vcs.get().then((x) => setStore("vcs", x.data)),
+          sdk.collab
+            .status()
+            .then((x) => setStore("collab", x.data))
+            .catch(() => {}),
+          sdk.collab
+            .history({ limit: 20, offset: 0 })
+            .then((x) => setStore("collabHistory", x.data ?? []))
+            .catch(() => {}),
           sdk.permission.list().then((x) => {
             const grouped: Record<string, PermissionRequest[]> = {}
             for (const perm of x.data ?? []) {
@@ -400,6 +414,69 @@ function createGlobalSync() {
           throwOnError: true,
         })
         sdk.lsp.status().then((x) => setStore("lsp", x.data ?? []))
+        break
+      }
+      case "collab.status.changed": {
+        setStore("collab", event.properties)
+        break
+      }
+      case "collab.save.completed": {
+        const props = event.properties as { message: string; pushed: boolean; commitHash: string }
+        const sdk = createOpencodeClient({
+          baseUrl: globalSDK.url,
+          directory,
+          throwOnError: true,
+        })
+        // Refresh status and history
+        sdk.collab
+          .status()
+          .then((x) => setStore("collab", x.data))
+          .catch(() => {})
+        sdk.collab
+          .history({ limit: 20, offset: 0 })
+          .then((x) => setStore("collabHistory", x.data ?? []))
+          .catch(() => {})
+        // Show toast (skip if no actual commit was made)
+        if (props.commitHash) {
+          showToast({
+            title: "저장 완료",
+            description: props.pushed ? "원격에 업로드됨" : props.message || "로컬에 저장됨",
+          })
+        }
+        break
+      }
+      case "collab.save.failed": {
+        const props = event.properties as { error: string; offline: boolean }
+        showToast({
+          title: props.offline ? "오프라인" : "저장 실패",
+          description: props.error,
+        })
+        break
+      }
+      case "collab.sync.completed": {
+        const props = event.properties as { success: boolean; changes: number; conflicts: boolean }
+        const sdk = createOpencodeClient({
+          baseUrl: globalSDK.url,
+          directory,
+          throwOnError: true,
+        })
+        // Refresh history
+        sdk.collab
+          .history({ limit: 20, offset: 0 })
+          .then((x) => setStore("collabHistory", x.data ?? []))
+          .catch(() => {})
+        // Show toast only if there were changes or conflicts
+        if (props.conflicts) {
+          showToast({
+            title: "충돌 발생",
+            description: "파일 충돌이 있습니다. 확인해주세요.",
+          })
+        } else if (props.changes > 0) {
+          showToast({
+            title: "동기화 완료",
+            description: `${props.changes}개의 변경사항을 받았습니다.`,
+          })
+        }
         break
       }
     }

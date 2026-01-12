@@ -1,366 +1,370 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext';
-import { $getRoot, $isTextNode, TextNode, LexicalNode } from 'lexical';
+import { useCallback, useEffect, useRef, useState } from "react"
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext"
+import { $getRoot, $isTextNode, TextNode, LexicalNode } from "lexical"
 
 interface SearchMatch {
-  node: TextNode;
-  startOffset: number;
-  endOffset: number;
-  index: number;
+  node: TextNode
+  startOffset: number
+  endOffset: number
+  index: number
 }
 
 // Debounce delay in ms
-const SEARCH_DEBOUNCE_MS = 150;
+const SEARCH_DEBOUNCE_MS = 150
 
 export function SearchPlugin() {
-  const [editor] = useLexicalComposerContext();
-  const [isOpen, setIsOpen] = useState(false);
-  const [query, setQuery] = useState('');
-  const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [matches, setMatches] = useState<SearchMatch[]>([]);
-  const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const highlightLayerRef = useRef<HTMLDivElement | null>(null);
-  const debounceTimerRef = useRef<number | null>(null);
+  const [editor] = useLexicalComposerContext()
+  const [isOpen, setIsOpen] = useState(false)
+  const [query, setQuery] = useState("")
+  const [debouncedQuery, setDebouncedQuery] = useState("")
+  const [matches, setMatches] = useState<SearchMatch[]>([])
+  const [currentMatchIndex, setCurrentMatchIndex] = useState(0)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const highlightLayerRef = useRef<HTMLDivElement | null>(null)
+  const debounceTimerRef = useRef<number | null>(null)
 
   // Debounce the query
   useEffect(() => {
     if (debounceTimerRef.current !== null) {
-      clearTimeout(debounceTimerRef.current);
+      clearTimeout(debounceTimerRef.current)
     }
 
     debounceTimerRef.current = window.setTimeout(() => {
-      setDebouncedQuery(query);
-      debounceTimerRef.current = null;
-    }, SEARCH_DEBOUNCE_MS);
+      setDebouncedQuery(query)
+      debounceTimerRef.current = null
+    }, SEARCH_DEBOUNCE_MS)
 
     return () => {
       if (debounceTimerRef.current !== null) {
-        clearTimeout(debounceTimerRef.current);
+        clearTimeout(debounceTimerRef.current)
       }
-    };
-  }, [query]);
+    }
+  }, [query])
 
   // Get all text nodes recursively
   const getAllTextNodes = useCallback((node: LexicalNode): TextNode[] => {
-    const textNodes: TextNode[] = [];
+    const textNodes: TextNode[] = []
 
     if ($isTextNode(node)) {
-      textNodes.push(node);
+      textNodes.push(node)
     }
 
-    if ('getChildren' in node && typeof node.getChildren === 'function') {
-      const children = (node as { getChildren: () => LexicalNode[] }).getChildren();
+    if ("getChildren" in node && typeof node.getChildren === "function") {
+      const children = (node as { getChildren: () => LexicalNode[] }).getChildren()
       children.forEach((child: LexicalNode) => {
-        textNodes.push(...getAllTextNodes(child));
-      });
+        textNodes.push(...getAllTextNodes(child))
+      })
     }
 
-    return textNodes;
-  }, []);
+    return textNodes
+  }, [])
 
   // Find all text matches in the editor
-  const findMatches = useCallback((searchQuery: string): SearchMatch[] => {
-    if (!searchQuery.trim()) return [];
+  const findMatches = useCallback(
+    (searchQuery: string): SearchMatch[] => {
+      if (!searchQuery.trim()) return []
 
-    const foundMatches: SearchMatch[] = [];
-    const lowerQuery = searchQuery.toLowerCase();
+      const foundMatches: SearchMatch[] = []
+      const lowerQuery = searchQuery.toLowerCase()
 
-    editor.getEditorState().read(() => {
-      const root = $getRoot();
-      const textNodes = getAllTextNodes(root);
+      editor.getEditorState().read(() => {
+        const root = $getRoot()
+        const textNodes = getAllTextNodes(root)
 
-      textNodes.forEach((node) => {
-        const text = node.getTextContent().toLowerCase();
-        let startIndex = 0;
+        textNodes.forEach((node) => {
+          const text = node.getTextContent().toLowerCase()
+          let startIndex = 0
 
-        while (true) {
-          const matchIndex = text.indexOf(lowerQuery, startIndex);
-          if (matchIndex === -1) break;
+          while (true) {
+            const matchIndex = text.indexOf(lowerQuery, startIndex)
+            if (matchIndex === -1) break
 
-          foundMatches.push({
-            node,
-            startOffset: matchIndex,
-            endOffset: matchIndex + searchQuery.length,
-            index: foundMatches.length,
-          });
+            foundMatches.push({
+              node,
+              startOffset: matchIndex,
+              endOffset: matchIndex + searchQuery.length,
+              index: foundMatches.length,
+            })
 
-          startIndex = matchIndex + 1;
-        }
-      });
-    });
+            startIndex = matchIndex + 1
+          }
+        })
+      })
 
-    return foundMatches;
-  }, [editor, getAllTextNodes]);
+      return foundMatches
+    },
+    [editor, getAllTextNodes],
+  )
 
   // Run search when debounced query changes
   useEffect(() => {
-    const found = findMatches(debouncedQuery);
-    setMatches(found);
-    setCurrentMatchIndex(found.length > 0 ? 0 : -1);
-  }, [debouncedQuery, findMatches]);
+    const found = findMatches(debouncedQuery)
+    setMatches(found)
+    setCurrentMatchIndex(found.length > 0 ? 0 : -1)
+  }, [debouncedQuery, findMatches])
 
   // Find the actual text node in the DOM
   const findTextNodeWithContent = useCallback((element: Element, content: string): Node | null => {
-    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
-    let node: Node | null;
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT)
+    let node: Node | null
 
     while ((node = walker.nextNode())) {
       if (node.textContent && node.textContent.includes(content.substring(0, Math.min(content.length, 10)))) {
-        return node;
+        return node
       }
     }
 
     // Fallback: just return the first text node
-    const textWalker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
-    return textWalker.nextNode();
-  }, []);
+    const textWalker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT)
+    return textWalker.nextNode()
+  }, [])
 
   // Create highlight overlay for matches
   const updateHighlights = useCallback(() => {
     // Remove existing highlights
     if (highlightLayerRef.current) {
-      highlightLayerRef.current.remove();
-      highlightLayerRef.current = null;
+      highlightLayerRef.current.remove()
+      highlightLayerRef.current = null
     }
 
-    if (matches.length === 0 || !debouncedQuery.trim()) return;
+    if (matches.length === 0 || !debouncedQuery.trim()) return
 
     // Create highlight layer
-    const editorElement = editor.getRootElement();
-    if (!editorElement) return;
+    const editorElement = editor.getRootElement()
+    if (!editorElement) return
 
-    const editorContainer = editorElement.closest('.editor-container');
-    if (!editorContainer) return;
+    const editorContainer = editorElement.closest(".editor-container")
+    if (!editorContainer) return
 
     // Create highlight container
-    const highlightLayer = document.createElement('div');
-    highlightLayer.className = 'search-highlight-layer';
-    editorContainer.appendChild(highlightLayer);
-    highlightLayerRef.current = highlightLayer;
+    const highlightLayer = document.createElement("div")
+    highlightLayer.className = "search-highlight-layer"
+    editorContainer.appendChild(highlightLayer)
+    highlightLayerRef.current = highlightLayer
 
     // Get container bounds for positioning (use container, not editor element)
-    const containerRect = editorContainer.getBoundingClientRect();
+    const containerRect = editorContainer.getBoundingClientRect()
 
     matches.forEach((match, idx) => {
       editor.getEditorState().read(() => {
-        const key = match.node.getKey();
-        const domElement = editor.getElementByKey(key);
+        const key = match.node.getKey()
+        const domElement = editor.getElementByKey(key)
 
-        if (!domElement) return;
+        if (!domElement) return
 
         // Find the text node within the DOM element
-        const textNode = findTextNodeWithContent(domElement, match.node.getTextContent());
-        if (!textNode) return;
+        const textNode = findTextNodeWithContent(domElement, match.node.getTextContent())
+        if (!textNode) return
 
         // Create a range for the match
-        const range = document.createRange();
+        const range = document.createRange()
         try {
-          range.setStart(textNode, match.startOffset);
-          range.setEnd(textNode, match.endOffset);
+          range.setStart(textNode, match.startOffset)
+          range.setEnd(textNode, match.endOffset)
         } catch {
-          return;
+          return
         }
 
         // Get the bounding rectangles for the range
-        const rects = Array.from(range.getClientRects());
+        const rects = Array.from(range.getClientRects())
 
         for (const rect of rects) {
-          const highlight = document.createElement('div');
-          highlight.className = `search-highlight ${idx === currentMatchIndex ? 'current' : ''}`;
+          const highlight = document.createElement("div")
+          highlight.className = `search-highlight ${idx === currentMatchIndex ? "current" : ""}`
           // Position relative to the container, accounting for scroll
-          highlight.style.left = `${rect.left - containerRect.left + editorContainer.scrollLeft}px`;
-          highlight.style.top = `${rect.top - containerRect.top + editorContainer.scrollTop}px`;
-          highlight.style.width = `${rect.width}px`;
-          highlight.style.height = `${rect.height}px`;
-          highlightLayer.appendChild(highlight);
+          highlight.style.left = `${rect.left - containerRect.left + editorContainer.scrollLeft}px`
+          highlight.style.top = `${rect.top - containerRect.top + editorContainer.scrollTop}px`
+          highlight.style.width = `${rect.width}px`
+          highlight.style.height = `${rect.height}px`
+          highlightLayer.appendChild(highlight)
         }
-      });
-    });
-  }, [editor, matches, currentMatchIndex, debouncedQuery, findTextNodeWithContent]);
+      })
+    })
+  }, [editor, matches, currentMatchIndex, debouncedQuery, findTextNodeWithContent])
 
   // Scroll to current match
-  const scrollToMatch = useCallback((matchIndex: number) => {
-    if (matches.length === 0 || matchIndex < 0 || matchIndex >= matches.length) return;
+  const scrollToMatch = useCallback(
+    (matchIndex: number) => {
+      if (matches.length === 0 || matchIndex < 0 || matchIndex >= matches.length) return
 
-    const match = matches[matchIndex];
+      const match = matches[matchIndex]
 
-    editor.getEditorState().read(() => {
-      const key = match.node.getKey();
-      const domElement = editor.getElementByKey(key);
+      editor.getEditorState().read(() => {
+        const key = match.node.getKey()
+        const domElement = editor.getElementByKey(key)
 
-      if (domElement) {
-        domElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    });
-  }, [editor, matches]);
+        if (domElement) {
+          domElement.scrollIntoView({ behavior: "smooth", block: "center" })
+        }
+      })
+    },
+    [editor, matches],
+  )
 
   // Navigate to next match
   const goToNextMatch = useCallback(() => {
-    if (matches.length === 0) return;
-    const nextIndex = (currentMatchIndex + 1) % matches.length;
-    setCurrentMatchIndex(nextIndex);
-    scrollToMatch(nextIndex);
-  }, [matches, currentMatchIndex, scrollToMatch]);
+    if (matches.length === 0) return
+    const nextIndex = (currentMatchIndex + 1) % matches.length
+    setCurrentMatchIndex(nextIndex)
+    scrollToMatch(nextIndex)
+  }, [matches, currentMatchIndex, scrollToMatch])
 
   // Navigate to previous match
   const goToPrevMatch = useCallback(() => {
-    if (matches.length === 0) return;
-    const prevIndex = currentMatchIndex <= 0 ? matches.length - 1 : currentMatchIndex - 1;
-    setCurrentMatchIndex(prevIndex);
-    scrollToMatch(prevIndex);
-  }, [matches, currentMatchIndex, scrollToMatch]);
+    if (matches.length === 0) return
+    const prevIndex = currentMatchIndex <= 0 ? matches.length - 1 : currentMatchIndex - 1
+    setCurrentMatchIndex(prevIndex)
+    scrollToMatch(prevIndex)
+  }, [matches, currentMatchIndex, scrollToMatch])
 
   // Close search
   const closeSearch = useCallback(() => {
     // Save scroll position before any DOM changes
-    const scrollY = window.scrollY;
-    const scrollX = window.scrollX;
+    const scrollY = window.scrollY
+    const scrollX = window.scrollX
 
-    setIsOpen(false);
-    setQuery('');
-    setDebouncedQuery('');
-    setMatches([]);
-    setCurrentMatchIndex(-1);
+    setIsOpen(false)
+    setQuery("")
+    setDebouncedQuery("")
+    setMatches([])
+    setCurrentMatchIndex(-1)
 
     // Remove highlights
     if (highlightLayerRef.current) {
-      highlightLayerRef.current.remove();
-      highlightLayerRef.current = null;
+      highlightLayerRef.current.remove()
+      highlightLayerRef.current = null
     }
 
     // Return focus to editor without scrolling
-    const editorElement = editor.getRootElement();
+    const editorElement = editor.getRootElement()
     if (editorElement) {
       // Use preventScroll to avoid jumping
-      editorElement.focus({ preventScroll: true });
+      editorElement.focus({ preventScroll: true })
     }
 
     // Restore scroll position in case it shifted
     requestAnimationFrame(() => {
-      window.scrollTo(scrollX, scrollY);
-    });
-  }, [editor]);
+      window.scrollTo(scrollX, scrollY)
+    })
+  }, [editor])
 
   // Update highlights when matches or current index changes
   useEffect(() => {
     if (isOpen) {
-      updateHighlights();
+      updateHighlights()
     }
-  }, [isOpen, matches, currentMatchIndex, updateHighlights]);
+  }, [isOpen, matches, currentMatchIndex, updateHighlights])
 
   // Update highlights on scroll
   useEffect(() => {
-    if (!isOpen || matches.length === 0) return;
+    if (!isOpen || matches.length === 0) return
 
-    const editorElement = editor.getRootElement();
-    if (!editorElement) return;
+    const editorElement = editor.getRootElement()
+    if (!editorElement) return
 
     const handleScroll = () => {
-      requestAnimationFrame(updateHighlights);
-    };
+      requestAnimationFrame(updateHighlights)
+    }
 
     // Listen on window and editor container for scroll events
-    window.addEventListener('scroll', handleScroll, true);
+    window.addEventListener("scroll", handleScroll, true)
 
     return () => {
-      window.removeEventListener('scroll', handleScroll, true);
-    };
-  }, [isOpen, matches.length, editor, updateHighlights]);
+      window.removeEventListener("scroll", handleScroll, true)
+    }
+  }, [isOpen, matches.length, editor, updateHighlights])
 
   // Cleanup highlights on unmount or when closing
   useEffect(() => {
     return () => {
       if (highlightLayerRef.current) {
-        highlightLayerRef.current.remove();
-        highlightLayerRef.current = null;
+        highlightLayerRef.current.remove()
+        highlightLayerRef.current = null
       }
-    };
-  }, []);
+    }
+  }, [])
 
   // Re-update highlights when editor content changes
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) return
 
     const unregister = editor.registerUpdateListener(() => {
       if (debouncedQuery) {
-        const found = findMatches(debouncedQuery);
-        setMatches(found);
+        const found = findMatches(debouncedQuery)
+        setMatches(found)
         // Keep current index in bounds
-        setCurrentMatchIndex(prev =>
-          found.length === 0 ? -1 : Math.min(prev, found.length - 1)
-        );
+        setCurrentMatchIndex((prev) => (found.length === 0 ? -1 : Math.min(prev, found.length - 1)))
       }
-    });
+    })
 
-    return unregister;
-  }, [editor, isOpen, debouncedQuery, findMatches]);
+    return unregister
+  }, [editor, isOpen, debouncedQuery, findMatches])
 
   // Handle keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Cmd+F or Ctrl+F to open search
-      if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsOpen(true);
+      if ((e.metaKey || e.ctrlKey) && e.key === "f") {
+        e.preventDefault()
+        e.stopPropagation()
+        setIsOpen(true)
         // Focus input after render
         setTimeout(() => {
-          inputRef.current?.focus();
-          inputRef.current?.select();
-        }, 0);
-        return;
+          inputRef.current?.focus()
+          inputRef.current?.select()
+        }, 0)
+        return
       }
 
       // Only handle these if search is open
-      if (!isOpen) return;
+      if (!isOpen) return
 
       // Escape to close
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        closeSearch();
-        return;
+      if (e.key === "Escape") {
+        e.preventDefault()
+        closeSearch()
+        return
       }
 
       // Enter to go to next, Shift+Enter to go to previous
-      if (e.key === 'Enter' && document.activeElement === inputRef.current) {
-        e.preventDefault();
+      if (e.key === "Enter" && document.activeElement === inputRef.current) {
+        e.preventDefault()
         if (e.shiftKey) {
-          goToPrevMatch();
+          goToPrevMatch()
         } else {
-          goToNextMatch();
+          goToNextMatch()
         }
-        return;
+        return
       }
 
       // Cmd+G or Ctrl+G for next match (even when not focused on input)
-      if ((e.metaKey || e.ctrlKey) && e.key === 'g') {
-        e.preventDefault();
+      if ((e.metaKey || e.ctrlKey) && e.key === "g") {
+        e.preventDefault()
         if (e.shiftKey) {
-          goToPrevMatch();
+          goToPrevMatch()
         } else {
-          goToNextMatch();
+          goToNextMatch()
         }
-        return;
+        return
       }
-    };
+    }
 
     // Use capture phase to intercept before browser default
-    document.addEventListener('keydown', handleKeyDown, true);
+    document.addEventListener("keydown", handleKeyDown, true)
 
     return () => {
-      document.removeEventListener('keydown', handleKeyDown, true);
-    };
-  }, [isOpen, closeSearch, goToNextMatch, goToPrevMatch]);
+      document.removeEventListener("keydown", handleKeyDown, true)
+    }
+  }, [isOpen, closeSearch, goToNextMatch, goToPrevMatch])
 
   // Scroll to first match when search results appear
   useEffect(() => {
     if (matches.length > 0 && currentMatchIndex === 0) {
-      scrollToMatch(0);
+      scrollToMatch(0)
     }
-  }, [matches, currentMatchIndex, scrollToMatch]);
+  }, [matches, currentMatchIndex, scrollToMatch])
 
-  if (!isOpen) return null;
+  if (!isOpen) return null
 
   return (
     <div className="search-bar">
@@ -384,7 +388,9 @@ export function SearchPlugin() {
           <span className="search-count">
             {matches.length > 0
               ? `${currentMatchIndex + 1} of ${matches.length}`
-              : debouncedQuery !== query ? '...' : 'No results'}
+              : debouncedQuery !== query
+                ? "..."
+                : "No results"}
           </span>
         )}
       </div>
@@ -429,5 +435,5 @@ export function SearchPlugin() {
         </button>
       </div>
     </div>
-  );
+  )
 }

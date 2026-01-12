@@ -117,12 +117,8 @@ export function DialogGitHubConnect(props: DialogGitHubConnectProps) {
               <div class="flex flex-col items-center gap-4 py-4">
                 <Icon name="github" size="large" class="text-text-subtle" />
                 <div class="text-center">
-                  <p class="text-14-regular text-text-base">
-                    GitHub 계정으로 로그인하면
-                  </p>
-                  <p class="text-14-regular text-text-base">
-                    저장소를 자동으로 생성할 수 있습니다.
-                  </p>
+                  <p class="text-14-regular text-text-base">GitHub 계정으로 로그인하면</p>
+                  <p class="text-14-regular text-text-base">저장소를 자동으로 생성할 수 있습니다.</p>
                 </div>
               </div>
               <div class="flex justify-center gap-3">
@@ -147,9 +143,7 @@ export function DialogGitHubConnect(props: DialogGitHubConnectProps) {
             label="Repository 이름"
             placeholder="my-awesome-project"
             value={repoName()}
-            onInput={(e: InputEvent & { currentTarget: HTMLInputElement }) =>
-              setRepoName(e.currentTarget.value)
-            }
+            onInput={(e: InputEvent & { currentTarget: HTMLInputElement }) => setRepoName(e.currentTarget.value)}
             onKeyDown={(e: KeyboardEvent) => e.key === "Enter" && handleCreate()}
             autofocus
           />
@@ -185,12 +179,7 @@ export function DialogGitHubConnect(props: DialogGitHubConnectProps) {
             <Button variant="ghost" size="large" onClick={handleSkip}>
               건너뛰기
             </Button>
-            <Button
-              variant="primary"
-              size="large"
-              onClick={handleCreate}
-              disabled={!repoName().trim() || isCreating()}
-            >
+            <Button variant="primary" size="large" onClick={handleCreate} disabled={!repoName().trim() || isCreating()}>
               {isCreating() ? "생성 중..." : "생성"}
             </Button>
           </div>
