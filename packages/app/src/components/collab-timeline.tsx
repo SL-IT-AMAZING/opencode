@@ -90,10 +90,7 @@ export function CollabTimeline() {
         <div class="flex-1 overflow-auto">
           <div class="relative py-3 pr-3" style={{ "padding-left": `${TIMELINE_OFFSET + NODE_SIZE}px` }}>
             {/* Vertical timeline line */}
-            <div
-              class="absolute top-0 bottom-0 w-px bg-border-weak-base"
-              style={{ left: `${TIMELINE_OFFSET}px` }}
-            />
+            <div class="absolute top-0 bottom-0 w-px bg-border-weak-base" style={{ left: `${TIMELINE_OFFSET}px` }} />
 
             {/* Current state indicator - visual anchor, not a commit */}
             <div class="relative flex items-center gap-3 mb-3">
@@ -149,8 +146,7 @@ export function CollabTimeline() {
                         {/* Commit dot */}
                         <div
                           classList={{
-                            "absolute rounded-full border-2 border-background-base z-10 transition-all duration-150":
-                              true,
+                            "absolute rounded-full border-2 border-background-base z-10 transition-all duration-150": true,
                             "bg-border-strong-base": state() === "default",
                             "bg-icon-info-base": state() === "hover",
                             "bg-icon-info-base scale-110": state() === "selected",
