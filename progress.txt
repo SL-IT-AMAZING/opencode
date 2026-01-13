@@ -64,3 +64,16 @@
   - Available icons include: `square-arrow-top-right` (external link), `window-cursor` (browser)
   - Dark theme colors: bg `#252526`, border `#3c3c3c`, input bg `#1e1e1e`
 ---
+
+## Iteration 6 - US-006: Create Preview Pane Component
+- Replaced placeholder with full iframe-based preview pane implementation
+- Files changed: `packages/app/src/components/preview/preview-pane.tsx`
+- Learnings for future iterations:
+  - `useSDK()` returns `{ directory, client, event, url }` - use `sdk.url` for server URL
+  - Event listening pattern: `sdk.event.listen((e) => { const event = e.details; if (event.type === "...") ... })`
+  - `file.watcher.updated` event has `properties.file` (path) and `properties.event` (add/change/unlink)
+  - SolidJS iframes don't support `key` prop for re-rendering - use cache-busting URL params instead
+  - Use `createMemo()` for computed URLs: base URL for toolbar, cache-busted URL for iframe src
+  - Sandbox attribute: `allow-scripts allow-same-origin allow-forms allow-popups` for proper iframe behavior
+  - Live reload pattern: watch HTML/CSS/JS files with regex `/\.(html?|css|js|jsx|ts|tsx)$/i`
+---

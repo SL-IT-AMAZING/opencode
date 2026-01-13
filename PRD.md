@@ -97,16 +97,16 @@ Implement an embedded web browser/preview feature that opens HTML files or local
 **File:** `packages/app/src/components/preview/preview-pane.tsx` (create)
 
 **Acceptance Criteria:**
-- [ ] Create new file at `packages/app/src/components/preview/preview-pane.tsx`
-- [ ] Component accepts `preview: { type: "url" | "file", value: string }` prop
-- [ ] For URL type: use value directly as iframe src
-- [ ] For file type: construct URL as `${server.url}/preview/${path}`
-- [ ] Use `useServer()` from `@/context/server` for dynamic port
-- [ ] Use `useSDK()` from `@/context/sdk` for event listening
-- [ ] Listen to `file.watcher.updated` events and trigger reload for HTML/CSS/JS changes
-- [ ] Include PreviewToolbar component
-- [ ] Render iframe with sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-- [ ] Typecheck passes
+- [x] Create new file at `packages/app/src/components/preview/preview-pane.tsx`
+- [x] Component accepts `preview: { type: "url" | "file", value: string }` prop
+- [x] For URL type: use value directly as iframe src
+- [x] For file type: construct URL as `${server.url}/preview/${path}`
+- [x] Use `useServer()` from `@/context/server` for dynamic port
+- [x] Use `useSDK()` from `@/context/sdk` for event listening
+- [x] Listen to `file.watcher.updated` events and trigger reload for HTML/CSS/JS changes
+- [x] Include PreviewToolbar component
+- [x] Render iframe with sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+- [x] Typecheck passes
 
 ---
 

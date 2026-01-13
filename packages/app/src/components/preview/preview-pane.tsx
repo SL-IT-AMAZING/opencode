@@ -1,17 +1,61 @@
-// PreviewPane component - placeholder for US-006
-// This component will render iframe-based preview for URLs and local files
+import { createMemo, createSignal, onCleanup } from "solid-js"
+import { useSDK } from "@/context/sdk"
+import { PreviewToolbar } from "./preview-toolbar"
 
 interface PreviewPaneProps {
   preview: { type: "url" | "file"; value: string }
 }
 
 export function PreviewPane(props: PreviewPaneProps) {
+  const sdk = useSDK()
+  const [refreshKey, setRefreshKey] = createSignal(0)
+
+  // Base URL without cache buster
+  const baseUrl = createMemo(() => {
+    if (props.preview.type === "url") {
+      return props.preview.value
+    }
+    // For file previews, construct URL using server's preview route
+    return `${sdk.url}/preview/${props.preview.value}`
+  })
+
+  // URL with cache buster for iframe src
+  const iframeSrc = createMemo(() => {
+    const key = refreshKey()
+    const url = baseUrl()
+    if (key === 0) return url
+    // Add cache buster param
+    const separator = url.includes("?") ? "&" : "?"
+    return `${url}${separator}_r=${key}`
+  })
+
+  // Listen for file changes and trigger reload for HTML/CSS/JS files
+  const unsub = sdk.event.listen((e) => {
+    const event = e.details
+    if (event.type !== "file.watcher.updated") return
+
+    const file = event.properties.file
+    // Check if the changed file is HTML, CSS, or JS
+    if (/\.(html?|css|js|jsx|ts|tsx)$/i.test(file)) {
+      setRefreshKey((k) => k + 1)
+    }
+  })
+  onCleanup(unsub)
+
+  const handleRefresh = () => {
+    setRefreshKey((k) => k + 1)
+  }
+
   return (
-    <div class="absolute inset-0 flex items-center justify-center" style={{ "background-color": "#1e1e1e" }}>
-      <div class="text-gray-400 text-center">
-        <div class="text-lg">Preview: {props.preview.type === "url" ? "URL" : "File"}</div>
-        <div class="text-sm mt-2 font-mono">{props.preview.value}</div>
-        <div class="text-xs mt-4 opacity-50">Full implementation in US-006</div>
+    <div class="absolute inset-0 flex flex-col" style={{ "background-color": "#1e1e1e" }}>
+      <PreviewToolbar url={baseUrl()} onRefresh={handleRefresh} />
+      <div class="flex-1 relative">
+        <iframe
+          src={iframeSrc()}
+          sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+          class="absolute inset-0 w-full h-full border-0"
+          style={{ "background-color": "#ffffff" }}
+        />
       </div>
     </div>
   )
