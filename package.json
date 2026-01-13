@@ -60,8 +60,10 @@
   },
   "devDependencies": {
     "@actions/artifact": "5.0.1",
+    "@playwright/test": "1.57.0",
     "@tsconfig/bun": "catalog:",
     "husky": "9.1.7",
+    "playwright": "1.57.0",
     "prettier": "3.6.2",
     "sst": "3.17.23",
     "turbo": "2.5.6"

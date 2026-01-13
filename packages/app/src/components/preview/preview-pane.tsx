@@ -16,7 +16,8 @@ export function PreviewPane(props: PreviewPaneProps) {
       return props.preview.value
     }
     // For file previews, construct URL using server's preview route
-    return `${sdk.url}/preview/${props.preview.value}`
+    // Include directory param so server knows the workspace root
+    return `${sdk.url}/preview/${props.preview.value}?directory=${encodeURIComponent(sdk.directory)}`
   })
 
   // URL with cache buster for iframe src

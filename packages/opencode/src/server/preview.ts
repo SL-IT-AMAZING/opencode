@@ -1,5 +1,4 @@
 import { Hono } from "hono"
-import { Instance } from "../project/instance"
 import path from "node:path"
 
 // MIME type mapping based on file extension
@@ -32,15 +31,21 @@ const mimeTypes: Record<string, string> = {
 }
 
 export const PreviewRoute = new Hono().get("/*", async (c) => {
+  // Get workspace directory from request header/query (same pattern as main middleware)
+  const workspaceRoot = c.req.query("directory") || c.req.header("x-opencode-directory") || process.cwd()
+
   // Extract relative path from URL and decode it
-  const relativePath = decodeURIComponent(c.req.path.replace(/^\//, ""))
+  // Note: c.req.path returns the FULL path including mount prefix (/preview)
+  // so we need to strip the /preview prefix first
+  const relativePath = decodeURIComponent(c.req.path.replace(/^\/preview\/?/, ""))
 
   // Resolve the absolute path
-  const workspaceRoot = Instance.directory
   const absolutePath = path.resolve(workspaceRoot, relativePath)
 
-  // Security check: ensure path is within workspace
-  if (!absolutePath.startsWith(workspaceRoot)) {
+  // Security check: ensure path is within workspace (normalize both paths for comparison)
+  const normalizedWorkspace = path.normalize(workspaceRoot)
+  const normalizedAbsolute = path.normalize(absolutePath)
+  if (!normalizedAbsolute.startsWith(normalizedWorkspace)) {
     return c.json({ error: "Access denied" }, 403)
   }
 
@@ -48,7 +53,7 @@ export const PreviewRoute = new Hono().get("/*", async (c) => {
   const file = Bun.file(absolutePath)
   const exists = await file.exists()
   if (!exists) {
-    return c.json({ error: "File not found" }, 404)
+    return c.json({ error: "File not found", path: relativePath }, 404)
   }
 
   // Get content type based on extension
