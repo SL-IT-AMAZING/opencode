@@ -1,4 +1,4 @@
-import { createMemo, Show } from "solid-js"
+import { createMemo, Match, Show, Switch } from "solid-js"
 import type { JSX } from "solid-js"
 import { createSortable } from "@thisbeyond/solid-dnd"
 import { FileIcon } from "@anyon/ui/file-icon"
@@ -8,6 +8,37 @@ import { Tooltip } from "@anyon/ui/tooltip"
 import { Tabs } from "@anyon/ui/tabs"
 import { getFilename } from "@anyon/util/path"
 import { useFile } from "@/context/file"
+
+function getHostname(url: string): string {
+  try {
+    return new URL(url).hostname
+  } catch {
+    return url
+  }
+}
+
+export function PreviewVisual(props: { preview: { type: "url" | "file"; value: string }; active?: boolean }): JSX.Element {
+  const label = createMemo(() => {
+    if (props.preview.type === "url") {
+      return getHostname(props.preview.value)
+    }
+    return getFilename(props.preview.value)
+  })
+  return (
+    <div class="flex items-center gap-x-1.5">
+      <div
+        classList={{
+          "flex items-center justify-center size-4": true,
+          "grayscale-100 group-data-[selected]/tab:grayscale-0": !props.active,
+          "grayscale-0": props.active,
+        }}
+      >
+        <Icon name="window-cursor" size="small" class="text-icon-base" />
+      </div>
+      <span class="text-14-medium truncate">{label()}</span>
+    </div>
+  )
+}
 
 export function FileVisual(props: { path: string; active?: boolean }): JSX.Element {
   return (
@@ -68,19 +99,30 @@ export function SortableTab(props: {
   const file = useFile()
   const sortable = createSortable(props.tab)
   const path = createMemo(() => file.pathFromTab(props.tab))
+  const preview = createMemo(() => file.previewFromTab(props.tab))
+  const tooltipValue = createMemo(() => {
+    const p = preview()
+    if (p) {
+      return p.value
+    }
+    return path() ?? props.tab
+  })
   return (
     // prettier-ignore
     // @ts-ignore
     <div use:sortable classList={{ "h-full flex-shrink min-w-0": true, "transition-transform duration-200 ease-out": !sortable.isActiveDraggable, "opacity-0": sortable.isActiveDraggable }}>
       <div class="relative h-full">
-        <Tooltip value={path() ?? props.tab} placement="bottom">
+        <Tooltip value={tooltipValue()} placement="bottom">
           <Tabs.Trigger
             value={props.tab}
             onClick={() => props.onTabClick?.(props.tab)}
             closeButton={<IconButton icon="close" variant="ghost" onClick={() => props.onTabClose(props.tab)} />}
             hideCloseButton
           >
-            <Show when={path()}>{(p) => <FileVisual path={p()} />}</Show>
+            <Switch>
+              <Match when={preview()}>{(p) => <PreviewVisual preview={p()} />}</Match>
+              <Match when={path()}>{(p) => <FileVisual path={p()} />}</Match>
+            </Switch>
           </Tabs.Trigger>
         </Tooltip>
       </div>

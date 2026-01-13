@@ -16,6 +16,26 @@
     opacity: 1;
   }
 
+  &:hover,
+  &:active {
+    background: linear-gradient(
+      to right,
+      transparent,
+      var(--surface-float-base),
+      transparent
+    );
+  }
+
+  &[data-direction="vertical"]:hover,
+  &[data-direction="vertical"]:active {
+    background: linear-gradient(
+      to bottom,
+      transparent,
+      var(--surface-float-base),
+      transparent
+    );
+  }
+
   &[data-direction="horizontal"] {
     inset-block: 0;
     inset-inline-start: 0;

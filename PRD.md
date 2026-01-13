@@ -66,12 +66,12 @@ Implement an embedded web browser/preview feature that opens HTML files or local
 **File:** `packages/app/src/components/session/session-sortable-tab.tsx`
 
 **Acceptance Criteria:**
-- [ ] Add `preview` memo using `file.previewFromTab(props.tab)`
-- [ ] When tab is a preview: show globe icon (use existing Icon component)
-- [ ] For URL previews: display hostname as label
-- [ ] For file previews: display filename as label
-- [ ] Fallback to existing FileVisual for non-preview tabs
-- [ ] Typecheck passes
+- [x] Add `preview` memo using `file.previewFromTab(props.tab)`
+- [x] When tab is a preview: show globe icon (use existing Icon component)
+- [x] For URL previews: display hostname as label
+- [x] For file previews: display filename as label
+- [x] Fallback to existing FileVisual for non-preview tabs
+- [x] Typecheck passes
 
 ---
 
