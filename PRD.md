@@ -39,9 +39,9 @@ Implement an embedded web browser/preview feature that opens HTML files or local
 **File:** `packages/app/src/pages/session.tsx`
 
 **Acceptance Criteria:**
-- [ ] Update `allTabs` filter (~line 787) to include tabs starting with `preview://`
-- [ ] Add `activePreviewTab` memo that returns parsed preview info when active tab is a preview
-- [ ] Typecheck passes
+- [x] Update `allTabs` filter (~line 787) to include tabs starting with `preview://`
+- [x] Add `activePreviewTab` memo that returns parsed preview info when active tab is a preview
+- [x] Typecheck passes
 
 ---
 

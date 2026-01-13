@@ -14,3 +14,15 @@
   - Preview tab format: `preview://url:<url>` for http/https URLs, `preview://file:<path>` for files
   - Use `normalize(input)` for file paths to ensure consistent paths
 ---
+
+## Iteration 2 - US-002: Update Tab Filtering for Preview Tabs
+- Updated `allTabs` filter to include `preview://` tabs alongside `session-` and `file://` tabs
+- Added `activePreviewTab` memo that uses `file.previewFromTab()` to parse active preview tabs
+- Files changed: `packages/app/src/pages/session.tsx`
+- Learnings for future iterations:
+  - `useFile()` context provides preview helpers: `previewFromTab()`, `previewTab()`, `isPreviewTab()`
+  - Tab filtering pattern: `tab.startsWith("prefix")` used to distinguish tab types
+  - `createMemo()` pattern for computed values in SolidJS
+  - `tabs().active()` returns the currently active tab string
+  - Run typecheck with `bun run typecheck` from the opencode directory
+---

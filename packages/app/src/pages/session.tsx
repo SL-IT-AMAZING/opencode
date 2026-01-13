@@ -779,12 +779,12 @@ export default function Page() {
       .filter((tab) => tab !== "context"),
   )
 
-  // All tabs unified: sessions + files in single ordered list (Chrome-style)
-  // New tabs (sessions or files) appear at the end (right side)
+  // All tabs unified: sessions + files + previews in single ordered list (Chrome-style)
+  // New tabs (sessions, files, or previews) appear at the end (right side)
   const allTabs = createMemo(() =>
     tabs()
       .all()
-      .filter((tab) => tab.startsWith("session-") || tab.startsWith("file://")),
+      .filter((tab) => tab.startsWith("session-") || tab.startsWith("file://") || tab.startsWith("preview://")),
   )
 
   // Helper: check if there are any file tabs open
@@ -795,6 +795,13 @@ export default function Page() {
     const active = tabs().active()
     if (!active?.startsWith("file://")) return null
     return file.pathFromTab(active)
+  })
+
+  // Active preview tab for preview pane
+  const activePreviewTab = createMemo(() => {
+    const active = tabs().active()
+    if (!active?.startsWith("preview://")) return null
+    return file.previewFromTab(active)
   })
 
   // Switch to session (deactivate file tabs)
@@ -1429,9 +1436,11 @@ export default function Page() {
                 style={{ flex: layout.terminal.opened() ? "1" : "0" }}
               >
                 <div
-                  class="flex-1 min-h-0 flex flex-col transition-transform duration-200 ease-out border-t border-border-weak-base"
+                  class="flex-1 min-h-0 flex flex-col transition-all duration-300 border-t border-border-weak-base"
                   style={{
                     transform: layout.terminal.opened() ? "translateY(0)" : "translateY(100%)",
+                    opacity: layout.terminal.opened() ? 1 : 0,
+                    "transition-timing-function": "cubic-bezier(0.34, 1.56, 0.64, 1)",
                   }}
                 >
                   {/* Resize handle - INSIDE animated container, moves with terminal */}
