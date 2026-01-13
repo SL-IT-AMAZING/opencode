@@ -1400,7 +1400,7 @@ export default function Page() {
               }}
               style={{ height: layout.terminal.opened() ? `${layout.fileExplorer.height()}px` : undefined }}
             >
-              <Tabs.List class="h-10 shrink-0">
+              <Tabs.List class="h-12 shrink-0">
                 <Tabs.Trigger value="files">Files</Tabs.Trigger>
                 <Tabs.Trigger value="timeline">Timeline</Tabs.Trigger>
                 <Tabs.Trigger value="team">Team</Tabs.Trigger>
