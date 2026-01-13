@@ -75,7 +75,7 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
           height: 300,
         },
         rightPanel: {
-          opened: true,
+          opened: false,
           width: 400,
           activeTab: "files" as "files" | "timeline" | "team",
         },

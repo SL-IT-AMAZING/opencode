@@ -45,45 +45,55 @@ export function NewSessionView(props: NewSessionViewProps) {
 
   return (
     <div
-      class="size-full flex flex-col pb-45 justify-end items-start gap-4 flex-[1_0_0] self-stretch max-w-200 mx-auto px-6"
-      style={{ "padding-bottom": "calc(var(--prompt-height, 11.25rem) + 64px)" }}
+      class="size-full flex flex-col justify-center items-center gap-8 flex-[1_0_0] self-stretch max-w-200 mx-auto px-6"
+      style={{ "padding-bottom": "calc(var(--prompt-height, 11.25rem) + 32px)" }}
     >
-      <div class="text-20-medium text-text-weaker">New session</div>
-      <div class="flex justify-center items-center gap-3">
-        <Icon name="folder" size="small" />
-        <div class="text-12-medium text-text-weak">
-          {getDirectory(projectRoot())}
-          <span class="text-text-strong">{getFilename(projectRoot())}</span>
-        </div>
+      {/* Main heading area */}
+      <div class="flex flex-col items-center gap-4 text-center">
+        <Icon name="brain" class="size-10 text-text-weak" />
+        <h1 class="text-36-medium md:text-48-medium text-text-strong">
+          What would you like to build?
+        </h1>
       </div>
-      <div class="flex justify-center items-center gap-1">
-        <Icon name="branch" size="small" />
-        <Select
-          options={options()}
-          current={current()}
-          value={(x) => x}
-          label={label}
-          onSelect={(value) => {
-            props.onWorktreeChange(value ?? MAIN_WORKTREE)
-          }}
-          size="normal"
-          variant="ghost"
-          class="text-12-medium"
-        />
-      </div>
-      <Show when={sync.project}>
-        {(project) => (
-          <div class="flex justify-center items-center gap-3">
-            <Icon name="pencil-line" size="small" />
-            <div class="text-12-medium text-text-weak">
-              Last modified&nbsp;
-              <span class="text-text-strong">
-                {DateTime.fromMillis(project().time.updated ?? project().time.created).toRelative()}
-              </span>
-            </div>
+
+      {/* Project info - secondary */}
+      <div class="flex flex-col items-center gap-3 text-text-weak">
+        <div class="flex items-center gap-3">
+          <Icon name="folder" size="small" />
+          <div class="text-14-regular">
+            {getDirectory(projectRoot())}
+            <span class="text-text-strong">{getFilename(projectRoot())}</span>
           </div>
-        )}
-      </Show>
+        </div>
+        <div class="flex items-center gap-1">
+          <Icon name="branch" size="small" />
+          <Select
+            options={options()}
+            current={current()}
+            value={(x) => x}
+            label={label}
+            onSelect={(value) => {
+              props.onWorktreeChange(value ?? MAIN_WORKTREE)
+            }}
+            size="normal"
+            variant="ghost"
+            class="text-12-medium"
+          />
+        </div>
+        <Show when={sync.project}>
+          {(project) => (
+            <div class="flex items-center gap-3">
+              <Icon name="pencil-line" size="small" />
+              <div class="text-12-medium">
+                Last modified&nbsp;
+                <span class="text-text-strong">
+                  {DateTime.fromMillis(project().time.updated ?? project().time.created).toRelative()}
+                </span>
+              </div>
+            </div>
+          )}
+        </Show>
+      </div>
     </div>
   )
 }

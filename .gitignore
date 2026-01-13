@@ -24,3 +24,7 @@ target
 # Local dev files
 opencode-dev
 logs/
+
+# Claude Code temp files
+tmpclaude-*
+nul

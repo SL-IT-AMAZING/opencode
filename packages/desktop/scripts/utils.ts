@@ -1,4 +1,5 @@
 import { $ } from "bun"
+import path from "path"
 
 export const SIDECAR_BINARIES: Array<{ rustTarget: string; ocBinary: string; assetExt: string }> = [
   {
@@ -42,6 +43,13 @@ export function getCurrentSidecar(target = RUST_TARGET) {
 export async function copyBinaryToSidecarFolder(source: string, target = RUST_TARGET) {
   await $`mkdir -p src-tauri/sidecars`
   const dest = `src-tauri/sidecars/anyon-cli-${target}${process.platform === "win32" ? ".exe" : ""}`
+
+  // Kill the running sidecar process on Windows to prevent "access denied" errors
+  if (process.platform === "win32") {
+    const exeName = path.basename(dest)
+    await $`cmd /c "taskkill /F /IM ${exeName} 2>nul || exit 0"`
+  }
+
   await $`cp ${source} ${dest}`
   if (process.platform !== "win32") {
     await $`chmod +x ${dest}`

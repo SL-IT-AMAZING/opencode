@@ -136,6 +136,11 @@ export namespace CollabTeam {
 
   // Load team from .opencode/team.json
   export async function load(): Promise<TeamData | undefined> {
+    // Guard against root filesystem access
+    if (Instance.worktree === "/" || Instance.worktree === "") {
+      return undefined
+    }
+
     const teamPath = path.join(Instance.worktree, TEAM_FILE)
     const exists = await fs
       .access(teamPath)
@@ -166,6 +171,17 @@ export namespace CollabTeam {
   export async function get(): Promise<TeamData> {
     try {
       console.log("[CollabTeam.get] Starting, worktree:", Instance.worktree)
+
+      // Guard against root filesystem - can't run git commands there
+      if (Instance.worktree === "/" || Instance.worktree === "") {
+        return {
+          members: [],
+          lastUpdated: Date.now(),
+          source: "git",
+          currentUserEmail: undefined,
+        }
+      }
+
       const existing = await load()
       console.log("[CollabTeam.get] Existing from file:", existing ? `yes (${existing.members.length} members)` : "no")
       const currentUserEmail = await getCurrentUserEmail()

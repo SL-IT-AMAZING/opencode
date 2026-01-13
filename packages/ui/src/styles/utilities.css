@@ -129,3 +129,21 @@
   line-height: var(--line-height-x-large); /* 120% */
   letter-spacing: var(--letter-spacing-tightest);
 }
+
+.text-36-medium {
+  font-family: var(--font-family-sans);
+  font-size: var(--font-size-2x-large);
+  font-style: normal;
+  font-weight: var(--font-weight-medium);
+  line-height: 120%;
+  letter-spacing: var(--letter-spacing-tight);
+}
+
+.text-48-medium {
+  font-family: var(--font-family-sans);
+  font-size: var(--font-size-3x-large);
+  font-style: normal;
+  font-weight: var(--font-weight-medium);
+  line-height: 110%;
+  letter-spacing: var(--letter-spacing-tightest);
+}

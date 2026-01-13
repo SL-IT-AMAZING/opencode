@@ -1303,7 +1303,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             if (store.popover === "slash") slashPopoverRef = el
           }}
           class="absolute inset-x-0 -top-3 -translate-y-full origin-bottom-left max-h-80 min-h-10
-                 overflow-auto no-scrollbar flex flex-col p-2 rounded-md
+                 overflow-auto no-scrollbar flex flex-col p-2 rounded-xl
                  border border-border-base bg-surface-raised-stronger-non-alpha shadow-md"
         >
           <Switch>
@@ -1396,7 +1396,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         classList={{
           "group/prompt-input": true,
           "bg-surface-raised-stronger-non-alpha shadow-xs-border relative": true,
-          "rounded-md overflow-clip focus-within:shadow-xs-border": true,
+          "rounded-xl overflow-clip": true,
+          "focus-within:shadow-xs-border-focus": true,
+          "transition-shadow duration-200": true,
           "border-icon-info-active border-dashed": store.dragging,
           [props.class ?? ""]: !!props.class,
         }}
@@ -1413,7 +1415,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           <div class="flex flex-wrap items-center gap-2 px-3 pt-3">
             <Show when={prompt.context.activeTab() ? activeFile() : undefined}>
               {(path) => (
-                <div class="flex items-center gap-2 px-2 py-1 rounded-md bg-surface-base border border-border-base max-w-full">
+                <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-surface-base border border-border-base max-w-full hover:bg-surface-raised-base-hover transition-colors duration-150">
                   <FileIcon node={{ path: path(), type: "file" }} class="shrink-0 size-4" />
                   <div class="flex items-center text-12-regular min-w-0">
                     <span class="text-text-weak whitespace-nowrap truncate min-w-0">{getDirectory(path())}</span>
@@ -1433,7 +1435,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             <Show when={!prompt.context.activeTab() && !!activeFile()}>
               <button
                 type="button"
-                class="flex items-center gap-2 px-2 py-1 rounded-md bg-surface-base border border-border-base text-12-regular text-text-weak hover:bg-surface-raised-base-hover"
+                class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-surface-base border border-border-base text-12-regular text-text-weak hover:bg-surface-raised-base-hover transition-colors duration-150"
                 onClick={() => prompt.context.addActive()}
               >
                 <Icon name="plus-small" size="small" />
@@ -1442,7 +1444,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             </Show>
             <For each={prompt.context.items()}>
               {(item) => (
-                <div class="flex items-center gap-2 px-2 py-1 rounded-md bg-surface-base border border-border-base max-w-full">
+                <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-surface-base border border-border-base max-w-full hover:bg-surface-raised-base-hover transition-colors duration-150">
                   <FileIcon node={{ path: item.path, type: "file" }} class="shrink-0 size-4" />
                   <div class="flex items-center text-12-regular min-w-0">
                     <span class="text-text-weak whitespace-nowrap truncate min-w-0">{getDirectory(item.path)}</span>
@@ -1491,7 +1493,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                   <button
                     type="button"
                     onClick={() => removeImageAttachment(attachment.id)}
-                    class="absolute -top-1.5 -right-1.5 size-5 rounded-full bg-surface-raised-stronger-non-alpha border border-border-base flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-surface-raised-base-hover"
+                    class="absolute -top-1.5 -right-1.5 size-5 rounded-full bg-surface-raised-stronger-non-alpha border border-border-base flex items-center justify-center opacity-0 scale-90 group-hover:opacity-100 group-hover:scale-100 transition-all duration-150 hover:bg-surface-raised-base-hover active:scale-95"
                   >
                     <Icon name="close" class="size-3 text-text-weak" />
                   </button>
@@ -1659,7 +1661,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                 disabled={!prompt.dirty() && !working()}
                 icon={working() ? "stop" : "arrow-up"}
                 variant="primary"
-                class="h-6 w-4.5"
+                size="large"
+                class="rounded-full! hover:scale-110 active:scale-90 transition-transform duration-150"
               />
             </Tooltip>
           </div>

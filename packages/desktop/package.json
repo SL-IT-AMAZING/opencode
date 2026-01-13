@@ -29,6 +29,8 @@
     "solid-js": "catalog:"
   },
   "devDependencies": {
+    "react-grab": "latest",
+    "@react-grab/claude-code": "latest",
     "@actions/artifact": "4.0.0",
     "@tauri-apps/cli": "^2",
     "@types/bun": "catalog:",
