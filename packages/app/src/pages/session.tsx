@@ -58,6 +58,7 @@ import {
 } from "@/components/session"
 import { usePlatform } from "@/context/platform"
 import { same } from "@/utils/same"
+import { PreviewPane } from "@/components/preview/preview-pane"
 
 type DiffStyle = "unified" | "split"
 
@@ -1165,17 +1166,18 @@ export default function Page() {
               "py-6 md:py-3": !activeSessionId() && !hasFileTabs(),
             }}
           >
-            {/* File Viewer */}
-            <Show when={activeFileTab()}>
-              {(path) => (
-                <div class="absolute inset-0" style={{ "background-color": "#1e1e1e" }}>
-                  <FileViewer path={path()} onAskAboutSelection={handleAskAboutSelection} />
-                </div>
-              )}
-            </Show>
-
-            <Show when={!activeFileTab()}>
-              <Switch>
+            {/* Content Gating - Preview, File, or Session */}
+            <Switch>
+              <Match when={activePreviewTab()}>
+                {(preview) => <PreviewPane preview={preview()} />}
+              </Match>
+              <Match when={activeFileTab()}>
+                {(path) => (
+                  <div class="absolute inset-0" style={{ "background-color": "#1e1e1e" }}>
+                    <FileViewer path={path()} onAskAboutSelection={handleAskAboutSelection} />
+                  </div>
+                )}
+              </Match>
                 <Match when={contextActive()}>
                   <div class="relative h-full overflow-hidden">
                     <SessionContextTab
@@ -1297,7 +1299,6 @@ export default function Page() {
                   />
                 </Match>
               </Switch>
-            </Show>
           </div>
 
           {/* Prompt input */}

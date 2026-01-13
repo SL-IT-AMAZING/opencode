@@ -51,12 +51,12 @@ Implement an embedded web browser/preview feature that opens HTML files or local
 **File:** `packages/app/src/pages/session.tsx`
 
 **Acceptance Criteria:**
-- [ ] Replace existing Show blocks (~line 1162-1170) with a Switch/Match structure
-- [ ] First Match: render PreviewPane when `activePreviewTab()` is truthy
-- [ ] Second Match: render FileViewer when `activeFileTab()` is truthy
-- [ ] Third Match: render existing session/context content
-- [ ] Import PreviewPane component
-- [ ] Typecheck passes
+- [x] Replace existing Show blocks (~line 1162-1170) with a Switch/Match structure
+- [x] First Match: render PreviewPane when `activePreviewTab()` is truthy
+- [x] Second Match: render FileViewer when `activeFileTab()` is truthy
+- [x] Third Match: render existing session/context content
+- [x] Import PreviewPane component
+- [x] Typecheck passes
 
 ---
 

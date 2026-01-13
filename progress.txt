@@ -26,3 +26,17 @@
   - `tabs().active()` returns the currently active tab string
   - Run typecheck with `bun run typecheck` from the opencode directory
 ---
+
+## Iteration 3 - US-003: Fix Content Gating with Switch
+- Replaced nested Show blocks with a single Switch/Match structure for content gating
+- Created placeholder PreviewPane component in `packages/app/src/components/preview/preview-pane.tsx`
+- Files changed:
+  - `packages/app/src/pages/session.tsx` (content gating + import)
+  - `packages/app/src/components/preview/preview-pane.tsx` (new placeholder)
+- Learnings for future iterations:
+  - SolidJS Switch/Match is already imported in session.tsx - no additional imports needed
+  - Content area uses Switch/Match for mutually exclusive content rendering (preview, file viewer, session)
+  - Match components can use callback children pattern: `{(value) => <Component prop={value()} />}`
+  - PreviewPane receives `preview: { type: "url" | "file", value: string }` prop
+  - Placeholder components help maintain typecheck while implementing in order
+---
