@@ -77,3 +77,20 @@
   - Sandbox attribute: `allow-scripts allow-same-origin allow-forms allow-popups` for proper iframe behavior
   - Live reload pattern: watch HTML/CSS/JS files with regex `/\.(html?|css|js|jsx|ts|tsx)$/i`
 ---
+
+## Iteration 7 - US-007: Add Static File Preview Route to Server
+- Implemented static file serving route for HTML preview feature
+- Files changed:
+  - `packages/opencode/src/server/preview.ts` (new file - separate route module)
+  - `packages/opencode/src/server/server.ts` (import and mount PreviewRoute)
+- Learnings for future iterations:
+  - Server file uses hono-openapi with chained method calls that hit TypeScript type inference depth limit
+  - Solution: Mount routes BEFORE the lazy App() wrapper using `app.route("/preview", PreviewRoute)`
+  - Do NOT add routes inside the chained method calls - creates TS2589 "Type instantiation excessively deep" error
+  - `Instance.directory` provides the workspace root for security validation
+  - `path.resolve()` + `startsWith()` pattern validates paths stay within workspace
+  - `Bun.file(path).stream()` efficiently streams file content
+  - MIME types must be set manually via `c.header("Content-Type", mimeType)`
+  - CORS header `Access-Control-Allow-Origin: *` required for iframe preview to work
+  - Return proper HTTP status codes: 403 for forbidden paths, 404 for missing files
+---

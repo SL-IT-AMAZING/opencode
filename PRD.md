@@ -116,15 +116,15 @@ Implement an embedded web browser/preview feature that opens HTML files or local
 **File:** `packages/opencode/src/server/server.ts`
 
 **Acceptance Criteria:**
-- [ ] Add new route `.get("/preview/*", ...)` after the `/file/status` endpoint
-- [ ] Extract relative path from URL and decode it
-- [ ] Validate path is within workspace (security check using `path.resolve`)
-- [ ] Return 403 for paths outside workspace
-- [ ] Return 404 for non-existent files
-- [ ] Set correct Content-Type header based on file extension (.html, .css, .js, .png, .jpg, .svg, etc.)
-- [ ] Set CORS header `Access-Control-Allow-Origin: *`
-- [ ] Stream file content using `Bun.file().stream()`
-- [ ] Typecheck passes
+- [x] Add new route `.get("/preview/*", ...)` after the `/file/status` endpoint
+- [x] Extract relative path from URL and decode it
+- [x] Validate path is within workspace (security check using `path.resolve`)
+- [x] Return 403 for paths outside workspace
+- [x] Return 404 for non-existent files
+- [x] Set correct Content-Type header based on file extension (.html, .css, .js, .png, .jpg, .svg, etc.)
+- [x] Set CORS header `Access-Control-Allow-Origin: *`
+- [x] Stream file content using `Bun.file().stream()`
+- [x] Typecheck passes
 
 ---
 
