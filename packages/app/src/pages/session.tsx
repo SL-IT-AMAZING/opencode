@@ -1,4 +1,4 @@
-import { For, onCleanup, Show, Match, Switch, createMemo, createEffect, on, createSignal } from "solid-js"
+import { For, onCleanup, onMount, Show, Match, Switch, createMemo, createEffect, on, createSignal } from "solid-js"
 import { createMediaQuery } from "@solid-primitives/media"
 import { createResizeObserver } from "@solid-primitives/resize-observer"
 import { Dynamic } from "solid-js/web"
@@ -215,6 +215,40 @@ export default function Page() {
     const path = file.pathFromTab(next)
     if (path) file.load(path)
   }
+
+  // Intercept localhost link clicks to open in preview tab instead of external browser
+  onMount(() => {
+    const handler = (e: MouseEvent) => {
+      // Allow Ctrl/Cmd+Click to open externally
+      if (e.ctrlKey || e.metaKey) return
+
+      const target = e.target as HTMLElement
+      const anchor = target.closest("a")
+      if (!anchor) return
+
+      const href = anchor.getAttribute("href")
+      if (!href) return
+
+      // Check if localhost URL
+      try {
+        const url = new URL(href)
+        const isLocalhost =
+          url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname.endsWith(".localhost")
+
+        if (isLocalhost) {
+          e.preventDefault()
+          e.stopPropagation()
+          const previewTabValue = file.previewTab(href)
+          openTab(previewTabValue)
+        }
+      } catch {
+        // Invalid URL, ignore
+      }
+    }
+
+    document.addEventListener("click", handler, true)
+    onCleanup(() => document.removeEventListener("click", handler, true))
+  })
 
   createEffect(() => {
     const active = tabs().active()
