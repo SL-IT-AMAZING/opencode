@@ -40,3 +40,27 @@
   - PreviewPane receives `preview: { type: "url" | "file", value: string }` prop
   - Placeholder components help maintain typecheck while implementing in order
 ---
+
+## Iteration 4 - US-004: Update SortableTab for Preview Rendering
+- Added preview memo and PreviewVisual component to session-sortable-tab.tsx
+- Files changed: `packages/app/src/components/session/session-sortable-tab.tsx`
+- Learnings for future iterations:
+  - Used `window-cursor` icon as a browser/preview indicator (no globe icon in the icon set)
+  - `getFilename()` from `@anyon/util/path` extracts filename from path
+  - Switch/Match can replace Show when multiple conditions need rendering
+  - Tooltip value should be updated to show preview URL/path instead of tab id
+  - Preview object has `{ type: "url" | "file", value: string }` structure
+  - Use try/catch with URL constructor to safely extract hostname from URLs
+---
+
+## Iteration 5 - US-005: Create Preview Toolbar Component
+- Created PreviewToolbar component with URL display, refresh, and external open buttons
+- Files changed: `packages/app/src/components/preview/preview-toolbar.tsx` (new file)
+- Learnings for future iterations:
+  - `usePlatform()` from `@/context/platform` provides `openLink(url)` for opening URLs externally
+  - `IconButton` from `@anyon/ui/icon-button` accepts `icon` (name), `variant`, and standard button props
+  - No refresh icon in the icon set - used custom inline SVG for refresh button
+  - `Tooltip` from `@anyon/ui/tooltip` wraps elements with `value` prop for tooltip text
+  - Available icons include: `square-arrow-top-right` (external link), `window-cursor` (browser)
+  - Dark theme colors: bg `#252526`, border `#3c3c3c`, input bg `#1e1e1e`
+---

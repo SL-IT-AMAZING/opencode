@@ -81,13 +81,13 @@ Implement an embedded web browser/preview feature that opens HTML files or local
 **File:** `packages/app/src/components/preview/preview-toolbar.tsx` (create)
 
 **Acceptance Criteria:**
-- [ ] Create new file at `packages/app/src/components/preview/preview-toolbar.tsx`
-- [ ] Component accepts `url: string` and `onRefresh: () => void` props
-- [ ] Render readonly input showing current URL
-- [ ] Render refresh button that calls `onRefresh`
-- [ ] Render "open external" button that uses `platform.shell?.open(url)`
-- [ ] Style with dark theme matching IDE (bg-[#252526], border-[#3c3c3c])
-- [ ] Typecheck passes
+- [x] Create new file at `packages/app/src/components/preview/preview-toolbar.tsx`
+- [x] Component accepts `url: string` and `onRefresh: () => void` props
+- [x] Render readonly input showing current URL
+- [x] Render refresh button that calls `onRefresh`
+- [x] Render "open external" button that uses `platform.shell?.open(url)`
+- [x] Style with dark theme matching IDE (bg-[#252526], border-[#3c3c3c])
+- [x] Typecheck passes
 
 ---
 
