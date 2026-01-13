@@ -1,11 +1,17 @@
 import { useLocal, type LocalFile } from "@/context/local"
 import { Collapsible } from "@anyon/ui/collapsible"
 import { FileIcon } from "@anyon/ui/file-icon"
+import { IconButton } from "@anyon/ui/icon-button"
 import { Tooltip } from "@anyon/ui/tooltip"
-import { For, Match, Switch, type ComponentProps, type ParentProps } from "solid-js"
+import { For, Match, Show, Switch, type ComponentProps, type ParentProps } from "solid-js"
 import { Dynamic } from "solid-js/web"
 
 const INDENT_SIZE = 16 // VS Code uses ~16px per level
+
+function isHtmlFile(path: string): boolean {
+  const lower = path.toLowerCase()
+  return lower.endsWith(".html") || lower.endsWith(".htm")
+}
 
 export default function FileTree(props: {
   path: string
@@ -14,6 +20,7 @@ export default function FileTree(props: {
   level?: number
   activeFile?: string
   onFileClick?: (file: LocalFile) => void
+  onPreviewClick?: (file: LocalFile) => void
 }) {
   const local = useLocal()
   const level = props.level ?? 0
@@ -112,15 +119,31 @@ export default function FileTree(props: {
                       level={level + 1}
                       activeFile={props.activeFile}
                       onFileClick={props.onFileClick}
+                      onPreviewClick={props.onPreviewClick}
                     />
                   </Collapsible.Content>
                 </Collapsible>
               </Match>
               <Match when={node.type === "file"}>
-                <Node node={node} as="button" onClick={() => props.onFileClick?.(node)}>
-                  <div class="w-4 shrink-0" /> {/* Spacer for alignment with folders */}
-                  <FileIcon node={node} class="text-primary/80 w-4 h-4 shrink-0" />
-                </Node>
+                <div class="group/file-row flex items-center w-full">
+                  <Node node={node} as="button" onClick={() => props.onFileClick?.(node)} class="flex-1 min-w-0">
+                    <div class="w-4 shrink-0" /> {/* Spacer for alignment with folders */}
+                    <FileIcon node={node} class="text-primary/80 w-4 h-4 shrink-0" />
+                  </Node>
+                  <Show when={isHtmlFile(node.path) && props.onPreviewClick}>
+                    <Tooltip value="Preview in browser" placement="right">
+                      <IconButton
+                        icon="window-cursor"
+                        variant="ghost"
+                        class="opacity-0 group-hover/file-row:opacity-100 shrink-0 mr-1"
+                        onClick={(e: MouseEvent) => {
+                          e.stopPropagation()
+                          props.onPreviewClick?.(node)
+                        }}
+                      />
+                    </Tooltip>
+                  </Show>
+                </div>
               </Match>
             </Switch>
           </Tooltip>

@@ -94,3 +94,19 @@
   - CORS header `Access-Control-Allow-Origin: *` required for iframe preview to work
   - Return proper HTTP status codes: 403 for forbidden paths, 404 for missing files
 ---
+
+## Iteration 8 - US-008: Add Preview Entry Point in File Tree
+- Implemented preview icon button for HTML files in file tree
+- Files changed:
+  - `packages/app/src/components/file-tree.tsx` (added isHtmlFile helper, onPreviewClick prop, preview icon button)
+  - `packages/app/src/components/file-explorer-panel.tsx` (added openPreview handler using file.previewTab)
+- Learnings for future iterations:
+  - `isHtmlFile(path)` checks for `.html` or `.htm` extensions (case-insensitive)
+  - FileTree accepts `onPreviewClick?: (file: LocalFile) => void` prop for preview button clicks
+  - FileExplorerPanel uses `file.previewTab(path)` to create preview tab value
+  - `IconButton` only supports `"normal"` or `"large"` sizes, not `"small"`
+  - Use `window-cursor` icon for preview/browser buttons
+  - Group hover pattern: `group/file-row` + `group-hover/file-row:opacity-100` for hover-reveal buttons
+  - Wrap file row in div with `group/file-row` class to enable hover-based icon visibility
+  - Use `e.stopPropagation()` on preview button click to prevent file from being opened
+---

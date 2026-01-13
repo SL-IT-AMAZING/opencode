@@ -134,12 +134,12 @@ Implement an embedded web browser/preview feature that opens HTML files or local
 **File:** `packages/app/src/components/file-tree.tsx`
 
 **Acceptance Criteria:**
-- [ ] Add `isHtmlFile(path)` helper function checking for `.html` or `.htm` extension
-- [ ] Add `openPreview(filePath)` handler that creates preview tab and opens it
-- [ ] Show preview icon button (eye icon) next to HTML files
-- [ ] Clicking icon opens preview tab for that file
-- [ ] Typecheck passes
-- [ ] Verify changes work in browser: HTML files show preview icon, clicking opens preview tab
+- [x] Add `isHtmlFile(path)` helper function checking for `.html` or `.htm` extension
+- [x] Add `openPreview(filePath)` handler that creates preview tab and opens it
+- [x] Show preview icon button (eye icon) next to HTML files
+- [x] Clicking icon opens preview tab for that file
+- [x] Typecheck passes
+- [x] Verify changes work in browser: HTML files show preview icon, clicking opens preview tab
 
 ---
 
