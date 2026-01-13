@@ -1452,6 +1452,9 @@ export default function Page() {
               </div>
             </Tabs>
 
+            {/* Quick Action Bar - Always visible above terminal */}
+            <QuickActionBar />
+
             {/* Terminal - Bottom */}
             <div
               classList={{
@@ -1559,7 +1562,6 @@ export default function Page() {
                         </Tabs.List>
                         {/* Content area - fills remaining space */}
                         <div class="flex-1 min-h-0 flex flex-col">
-                          <QuickActionBar />
                           <For each={terminal.all()}>
                             {(pty) => (
                               <Tabs.Content value={pty.id} class="flex-1 min-h-0 flex flex-col">

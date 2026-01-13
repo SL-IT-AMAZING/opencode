@@ -1,4 +1,5 @@
 import { Button } from "@anyon/ui/button"
+import { Icon } from "@anyon/ui/icon"
 import { useTerminal } from "@/context/terminal"
 
 export function QuickActionBar() {
@@ -20,14 +21,29 @@ export function QuickActionBar() {
   }
 
   return (
-    <div class="flex items-center gap-1 px-2 py-1 border-b border-border-weak-base">
-      <Button size="small" variant="ghost" onClick={handleSave}>
+    <div class="flex items-center justify-center gap-6 px-3 py-1.5 border-t border-border-weak-base bg-background-base">
+      <Button
+        size="small"
+        class="rounded-lg px-3 gap-1.5 bg-surface-subtle hover:bg-surface-base transition-colors"
+        onClick={handleSave}
+      >
+        <Icon name="share" size="small" />
         Save
       </Button>
-      <Button size="small" variant="ghost" onClick={() => sendCommand("git pull")}>
+      <Button
+        size="small"
+        class="rounded-lg px-3 gap-1.5 bg-surface-subtle hover:bg-surface-base transition-colors"
+        onClick={() => sendCommand("git pull")}
+      >
+        <Icon name="download" size="small" />
         Sync
       </Button>
-      <Button size="small" variant="ghost" onClick={() => sendCommand("npm install && npm run dev")}>
+      <Button
+        size="small"
+        class="rounded-lg px-3 gap-1.5 bg-surface-subtle hover:bg-surface-base transition-colors"
+        onClick={() => sendCommand("npm install && npm run dev")}
+      >
+        <Icon name="console" size="small" />
         Run
       </Button>
     </div>
