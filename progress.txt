@@ -1,0 +1,16 @@
+# Progress Log
+
+## Learnings
+(Patterns discovered during implementation)
+
+---
+
+## Iteration 1 - US-001: Add Preview Tab Helpers to File Context
+- Implemented three preview tab helper functions in `packages/app/src/context/file.tsx`
+- Files changed: `packages/app/src/context/file.tsx`
+- Learnings for future iterations:
+  - Follow existing patterns: `tab()` and `pathFromTab()` show the encoding/decoding pattern
+  - Functions go inside the `init()` function and are added to the return object
+  - Preview tab format: `preview://url:<url>` for http/https URLs, `preview://file:<path>` for files
+  - Use `normalize(input)` for file paths to ensure consistent paths
+---

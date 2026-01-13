@@ -129,6 +129,32 @@ export const { use: useFile, provider: FileProvider } = createSimpleContext({
       return normalize(tabValue)
     }
 
+    function previewTab(input: string) {
+      // For http/https URLs, use url type
+      if (input.startsWith("http://") || input.startsWith("https://")) {
+        return `preview://url:${input}`
+      }
+      // For file paths, normalize and use file type
+      const path = normalize(input)
+      return `preview://file:${path}`
+    }
+
+    function previewFromTab(tabValue: string): { type: "url" | "file"; value: string } | null {
+      if (!tabValue.startsWith("preview://")) return null
+      const rest = tabValue.slice("preview://".length)
+      if (rest.startsWith("url:")) {
+        return { type: "url", value: rest.slice("url:".length) }
+      }
+      if (rest.startsWith("file:")) {
+        return { type: "file", value: rest.slice("file:".length) }
+      }
+      return null
+    }
+
+    function isPreviewTab(tabValue: string): boolean {
+      return tabValue.startsWith("preview://")
+    }
+
     const inflight = new Map<string, Promise<void>>()
 
     const [store, setStore] = createStore<{
@@ -268,6 +294,9 @@ export const { use: useFile, provider: FileProvider } = createSimpleContext({
       normalize,
       tab,
       pathFromTab,
+      previewTab,
+      previewFromTab,
+      isPreviewTab,
       get,
       load,
       scrollTop,
