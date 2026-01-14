@@ -49,6 +49,8 @@ export type ElementContextItem = {
   id?: string
   className?: string
   html?: string
+  cssSelector?: string
+  textContent?: string
 }
 
 export type ContextItem = FileContextItem | ElementContextItem
@@ -136,9 +138,14 @@ export const { use: usePrompt, provider: PromptProvider } = createSimpleContext(
       if (item.type === "file") {
         const start = item.selection?.startLine
         const end = item.selection?.endLine
-        return `${item.type}:${item.path}:${start}:${end}`
+        return `file:${item.path}:${start}:${end}`
       }
-      return `element:${item.tagName || ""}:${item.id || ""}:${item.className || ""}`
+      // Generate unique key for elements using cssSelector (most unique) or combination of properties
+      if (item.cssSelector) {
+        return `element:${item.cssSelector}`
+      }
+      const parts = [item.tagName, item.id, item.className, item.html?.slice(0, 50)]
+      return `element:${parts.filter(Boolean).join(":")}`
     }
 
     return {

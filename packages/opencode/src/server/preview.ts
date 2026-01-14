@@ -1,5 +1,6 @@
 import { Hono } from "hono"
 import path from "node:path"
+import { SELECTOR_SCRIPT } from "./selector-script"
 
 // MIME type mapping based on file extension
 const mimeTypes: Record<string, string> = {
@@ -60,10 +61,26 @@ export const PreviewRoute = new Hono().get("/*", async (c) => {
   const ext = path.extname(absolutePath).toLowerCase()
   const contentType = mimeTypes[ext] || "application/octet-stream"
 
-  // Set CORS and Content-Type headers
+  // Set CORS header
   c.header("Access-Control-Allow-Origin", "*")
-  c.header("Content-Type", contentType)
 
-  // Stream the file content
+  // For HTML files, inject selector script
+  if (ext === ".html" || ext === ".htm") {
+    let html = await file.text()
+    // Inject selector script before </head> or at start of <body>
+    if (html.includes("</head>")) {
+      html = html.replace("</head>", `<script>${SELECTOR_SCRIPT}</script></head>`)
+    } else if (html.includes("<body")) {
+      html = html.replace(/<body([^>]*)>/, `<body$1><script>${SELECTOR_SCRIPT}</script>`)
+    } else {
+      // Fallback: prepend script
+      html = `<script>${SELECTOR_SCRIPT}</script>` + html
+    }
+    c.header("Content-Type", "text/html; charset=utf-8")
+    return c.html(html)
+  }
+
+  // For other files, stream the content
+  c.header("Content-Type", contentType)
   return c.body(file.stream())
 })

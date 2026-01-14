@@ -5,10 +5,12 @@ import { Tooltip } from "@anyon/ui/tooltip"
 
 interface PreviewToolbarProps {
   url: string
+  externalUrl?: string // Original URL for "Open in browser" (e.g., original localhost URL instead of proxy)
   onRefresh: () => void
   selectionMode?: boolean
   onToggleSelectionMode?: () => void
   isFilePreview?: boolean
+  isLocalhostPreview?: boolean
 }
 
 export function PreviewToolbar(props: PreviewToolbarProps) {
@@ -26,7 +28,7 @@ export function PreviewToolbar(props: PreviewToolbarProps) {
       <input
         type="text"
         readonly
-        value={props.url}
+        value={props.externalUrl || props.url}
         class="flex-1 h-7 px-2 text-12-regular text-text-weak rounded outline-none cursor-default"
         style={{
           "background-color": "#1e1e1e",
@@ -34,8 +36,8 @@ export function PreviewToolbar(props: PreviewToolbarProps) {
         }}
       />
 
-      {/* Select Element button - only shown for file previews */}
-      <Show when={props.isFilePreview && props.onToggleSelectionMode}>
+      {/* Select Element button - shown for file and localhost previews */}
+      <Show when={(props.isFilePreview || props.isLocalhostPreview) && props.onToggleSelectionMode}>
         <Tooltip value={props.selectionMode ? "Cancel selection" : "Select element"}>
           <button
             type="button"
@@ -81,7 +83,7 @@ export function PreviewToolbar(props: PreviewToolbarProps) {
         <IconButton
           icon="square-arrow-top-right"
           variant="ghost"
-          onClick={() => platform.openLink(props.url)}
+          onClick={() => platform.openLink(props.externalUrl || props.url)}
           aria-label="Open in browser"
         />
       </Tooltip>

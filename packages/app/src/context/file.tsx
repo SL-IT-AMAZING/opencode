@@ -130,9 +130,9 @@ export const { use: useFile, provider: FileProvider } = createSimpleContext({
     }
 
     function previewTab(input: string) {
-      // For localhost URLs, use directly (no proxy needed)
+      // For localhost URLs, route through proxy to enable selector script injection
       if (input.startsWith("http://localhost") || input.startsWith("http://127.0.0.1")) {
-        return `preview://url:${input}`
+        return `preview://url:${sdk.url}/proxy?url=${encodeURIComponent(input)}`
       }
       // For other http/https URLs, use url type directly
       if (input.startsWith("http://") || input.startsWith("https://")) {
@@ -141,6 +141,17 @@ export const { use: useFile, provider: FileProvider } = createSimpleContext({
       // For file paths, normalize and use file type
       const path = normalize(input)
       return `preview://file:${path}`
+    }
+
+    // Extract original localhost URL from proxy URL (for "Open in browser")
+    function getOriginalUrl(proxyUrl: string): string {
+      if (proxyUrl.includes("/proxy?url=")) {
+        const match = proxyUrl.match(/\/proxy\?url=([^&]+)/)
+        if (match) {
+          return decodeURIComponent(match[1])
+        }
+      }
+      return proxyUrl
     }
 
     function previewFromTab(tabValue: string): { type: "url" | "file"; value: string } | null {
@@ -301,6 +312,7 @@ export const { use: useFile, provider: FileProvider } = createSimpleContext({
       previewTab,
       previewFromTab,
       isPreviewTab,
+      getOriginalUrl,
       get,
       load,
       scrollTop,
