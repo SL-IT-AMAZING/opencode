@@ -43,7 +43,15 @@ export type FileContextItem = {
   selection?: FileSelection
 }
 
-export type ContextItem = FileContextItem
+export type ElementContextItem = {
+  type: "element"
+  tagName?: string
+  id?: string
+  className?: string
+  html?: string
+}
+
+export type ContextItem = FileContextItem | ElementContextItem
 
 export const DEFAULT_PROMPT: Prompt = [{ type: "text", content: "", start: 0, end: 0 }]
 
@@ -125,10 +133,12 @@ export const { use: usePrompt, provider: PromptProvider } = createSimpleContext(
     )
 
     function keyForItem(item: ContextItem) {
-      if (item.type !== "file") return item.type
-      const start = item.selection?.startLine
-      const end = item.selection?.endLine
-      return `${item.type}:${item.path}:${start}:${end}`
+      if (item.type === "file") {
+        const start = item.selection?.startLine
+        const end = item.selection?.endLine
+        return `${item.type}:${item.path}:${start}:${end}`
+      }
+      return `element:${item.tagName || ""}:${item.id || ""}:${item.className || ""}`
     }
 
     return {
