@@ -68,6 +68,7 @@ const platform: Platform = {
       clear(): Promise<unknown>
       keys(): Promise<string[]>
       length(): Promise<number>
+      save(): Promise<unknown>
     }
 
     const memory = () => {
@@ -85,6 +86,7 @@ const platform: Platform = {
         },
         keys: async () => Array.from(data.keys()),
         length: async () => data.size,
+        save: async () => undefined,
       }
       return store
     }
