@@ -51,9 +51,7 @@ export function NewSessionView(props: NewSessionViewProps) {
       {/* Main heading area */}
       <div class="flex flex-col items-center gap-4 text-center">
         <Icon name="brain" class="size-10 text-text-weak" />
-        <h1 class="text-36-medium md:text-48-medium text-text-strong">
-          What would you like to build?
-        </h1>
+        <h1 class="text-36-medium md:text-48-medium text-text-strong">What would you like to build?</h1>
       </div>
 
       {/* Project info - secondary */}

@@ -17,7 +17,10 @@ function getHostname(url: string): string {
   }
 }
 
-export function PreviewVisual(props: { preview: { type: "url" | "file"; value: string }; active?: boolean }): JSX.Element {
+export function PreviewVisual(props: {
+  preview: { type: "url" | "file"; value: string }
+  active?: boolean
+}): JSX.Element {
   const label = createMemo(() => {
     if (props.preview.type === "url") {
       return getHostname(props.preview.value)

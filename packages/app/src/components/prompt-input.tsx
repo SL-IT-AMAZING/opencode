@@ -1197,10 +1197,29 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       addContextFile(activePath)
     }
 
+    // Add file context items
     for (const item of prompt.context.items()) {
-      if (item.type !== "file") continue
-      addContextFile(item.path, item.selection)
+      if (item.type === "file") {
+        addContextFile(item.path, item.selection)
+      }
     }
+
+    // Build element context as text parts
+    const elementContextParts = prompt.context
+      .items()
+      .filter((item) => item.type === "element")
+      .map((item) => {
+        const el = item as { tagName?: string; id?: string; className?: string; html?: string }
+        const parts = [`Selected element: <${el.tagName?.toLowerCase() || "element"}>`]
+        if (el.id) parts.push(`id="${el.id}"`)
+        if (el.className) parts.push(`class="${el.className}"`)
+        if (el.html) parts.push(`\nHTML:\n${el.html}`)
+        return {
+          id: Identifier.ascending("part"),
+          type: "text" as const,
+          text: parts.join(" "),
+        }
+      })
 
     const imageAttachmentParts = images.map((attachment) => ({
       id: Identifier.ascending("part"),
@@ -1222,6 +1241,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       ...contextFileParts,
       ...agentAttachmentParts,
       ...imageAttachmentParts,
+      ...elementContextParts,
     ]
 
     const optimisticParts = requestParts.map((part) => ({
@@ -1444,29 +1464,75 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             </Show>
             <For each={prompt.context.items()}>
               {(item) => (
-                <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-surface-base border border-border-base max-w-full hover:bg-surface-raised-base-hover transition-colors duration-150">
-                  <FileIcon node={{ path: item.path, type: "file" }} class="shrink-0 size-4" />
-                  <div class="flex items-center text-12-regular min-w-0">
-                    <span class="text-text-weak whitespace-nowrap truncate min-w-0">{getDirectory(item.path)}</span>
-                    <span class="text-text-strong whitespace-nowrap">{getFilename(item.path)}</span>
-                    <Show when={item.selection}>
-                      {(sel) => (
-                        <span class="text-text-weak whitespace-nowrap ml-1">
-                          {sel().startLine === sel().endLine
-                            ? `:${sel().startLine}`
-                            : `:${sel().startLine}-${sel().endLine}`}
-                        </span>
-                      )}
-                    </Show>
+                <Show
+                  when={item.type === "file"}
+                  fallback={
+                    /* Element context item */
+                    (() => {
+                      const el = item as {
+                        type: "element"
+                        tagName?: string
+                        id?: string
+                        className?: string
+                        key: string
+                      }
+                      return (
+                        <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-surface-info-base border border-border-base max-w-full hover:bg-surface-raised-base-hover transition-colors duration-150">
+                          <Icon name="window-cursor" class="shrink-0 size-4 text-text-info" />
+                          <div class="flex items-center text-12-regular min-w-0">
+                            <span class="text-text-strong whitespace-nowrap">
+                              {el.tagName ? `<${el.tagName.toLowerCase()}>` : "Element"}
+                            </span>
+                            <Show when={el.id}>
+                              <span class="text-text-weak whitespace-nowrap ml-1">#{el.id}</span>
+                            </Show>
+                            <Show when={el.className}>
+                              <span class="text-text-weak whitespace-nowrap ml-1 truncate max-w-32">
+                                .{el.className?.split(" ")[0]}
+                              </span>
+                            </Show>
+                          </div>
+                          <IconButton
+                            type="button"
+                            icon="close"
+                            variant="ghost"
+                            class="h-6 w-6"
+                            onClick={() => prompt.context.remove(el.key)}
+                          />
+                        </div>
+                      )
+                    })()
+                  }
+                >
+                  {/* File context item */}
+                  <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-surface-base border border-border-base max-w-full hover:bg-surface-raised-base-hover transition-colors duration-150">
+                    <FileIcon node={{ path: (item as { path: string }).path, type: "file" }} class="shrink-0 size-4" />
+                    <div class="flex items-center text-12-regular min-w-0">
+                      <span class="text-text-weak whitespace-nowrap truncate min-w-0">
+                        {getDirectory((item as { path: string }).path)}
+                      </span>
+                      <span class="text-text-strong whitespace-nowrap">
+                        {getFilename((item as { path: string }).path)}
+                      </span>
+                      <Show when={"selection" in item && item.selection}>
+                        {(sel) => (
+                          <span class="text-text-weak whitespace-nowrap ml-1">
+                            {sel().startLine === sel().endLine
+                              ? `:${sel().startLine}`
+                              : `:${sel().startLine}-${sel().endLine}`}
+                          </span>
+                        )}
+                      </Show>
+                    </div>
+                    <IconButton
+                      type="button"
+                      icon="close"
+                      variant="ghost"
+                      class="h-6 w-6"
+                      onClick={() => prompt.context.remove(item.key)}
+                    />
                   </div>
-                  <IconButton
-                    type="button"
-                    icon="close"
-                    variant="ghost"
-                    class="h-6 w-6"
-                    onClick={() => prompt.context.remove(item.key)}
-                  />
-                </div>
+                </Show>
               )}
             </For>
           </div>

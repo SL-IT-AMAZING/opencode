@@ -27,7 +27,9 @@ export default function FileTree(props: {
 
   const isActive = (path: string) => props.activeFile === path
 
-  const Node = (p: ParentProps & ComponentProps<"div"> & { node: LocalFile; as?: "div" | "button"; trailing?: JSX.Element }) => {
+  const Node = (
+    p: ParentProps & ComponentProps<"div"> & { node: LocalFile; as?: "div" | "button"; trailing?: JSX.Element },
+  ) => {
     // Destructure custom props to avoid spreading them to DOM
     // CRITICAL: Also extract 'class' to prevent it from overwriting classList
     const { node, as: Component = "div", trailing, children, class: className, ...rest } = p

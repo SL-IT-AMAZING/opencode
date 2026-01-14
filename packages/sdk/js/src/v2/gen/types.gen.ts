@@ -735,6 +735,7 @@ export type EventCollabSaveCompleted = {
     message: string
     pushed: boolean
     skipped: boolean
+    pushError?: "remote_ahead" | "auth_failed" | "network" | "other"
   }
 }
 
@@ -750,6 +751,8 @@ export type CollabSyncResult = {
   success: boolean
   changes: number
   conflicts: boolean
+  blocked?: boolean
+  blockedFiles?: Array<string>
 }
 
 export type EventCollabSyncCompleted = {
@@ -775,6 +778,14 @@ export type EventCollabConflictResolved = {
   type: "collab.conflict.resolved"
   properties: {
     file: string
+  }
+}
+
+export type EventCollabMergeBlocked = {
+  type: "collab.merge.blocked"
+  properties: {
+    reason: "uncommitted_changes" | "untracked_files"
+    files: Array<string>
   }
 }
 
@@ -890,6 +901,7 @@ export type Event =
   | EventCollabTeamUpdated
   | EventCollabConflictDetected
   | EventCollabConflictResolved
+  | EventCollabMergeBlocked
   | EventCollabGitChanged
   | EventFileWatcherUpdated
   | EventVcsBranchUpdated
@@ -925,6 +937,7 @@ export type CollabSaveResult = {
   message: string
   pushed: boolean
   skipped: boolean
+  pushError?: "remote_ahead" | "auth_failed" | "network" | "other"
 }
 
 export type CollabAuthor = {
@@ -2342,6 +2355,24 @@ export type CollabSyncResponses = {
 }
 
 export type CollabSyncResponse = CollabSyncResponses[keyof CollabSyncResponses]
+
+export type CollabStashSyncData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/collab/stash-sync"
+}
+
+export type CollabStashSyncResponses = {
+  /**
+   * Sync result
+   */
+  200: CollabSyncResult
+}
+
+export type CollabStashSyncResponse = CollabStashSyncResponses[keyof CollabStashSyncResponses]
 
 export type CollabHistoryData = {
   body?: never

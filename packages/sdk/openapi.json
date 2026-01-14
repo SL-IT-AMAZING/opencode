@@ -365,6 +365,40 @@
         ]
       }
     },
+    "/collab/stash-sync": {
+      "post": {
+        "operationId": "collab.stashSync",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Stash changes, sync, then restore",
+        "description": "Temporarily stash local changes, sync with remote, then restore the stashed changes.",
+        "responses": {
+          "200": {
+            "description": "Sync result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollabSyncResult"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.collab.stashSync({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/collab/history": {
       "get": {
         "operationId": "collab.history",
@@ -8210,6 +8244,10 @@
               },
               "skipped": {
                 "type": "boolean"
+              },
+              "pushError": {
+                "type": "string",
+                "enum": ["remote_ahead", "auth_failed", "network", "other"]
               }
             },
             "required": ["commitHash", "message", "pushed", "skipped"]
@@ -8250,6 +8288,15 @@
           },
           "conflicts": {
             "type": "boolean"
+          },
+          "blocked": {
+            "type": "boolean"
+          },
+          "blockedFiles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         },
         "required": ["success", "changes", "conflicts"]
@@ -8323,6 +8370,32 @@
               }
             },
             "required": ["file"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "Event.collab.merge.blocked": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "collab.merge.blocked"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "reason": {
+                "type": "string",
+                "enum": ["uncommitted_changes", "untracked_files"]
+              },
+              "files": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": ["reason", "files"]
           }
         },
         "required": ["type", "properties"]
@@ -8646,6 +8719,9 @@
             "$ref": "#/components/schemas/Event.collab.conflict.resolved"
           },
           {
+            "$ref": "#/components/schemas/Event.collab.merge.blocked"
+          },
+          {
             "$ref": "#/components/schemas/Event.collab.git.changed"
           },
           {
@@ -8740,6 +8816,10 @@
           },
           "skipped": {
             "type": "boolean"
+          },
+          "pushError": {
+            "type": "string",
+            "enum": ["remote_ahead", "auth_failed", "network", "other"]
           }
         },
         "required": ["commitHash", "message", "pushed", "skipped"]

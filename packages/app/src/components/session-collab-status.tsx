@@ -1,4 +1,4 @@
-import { Show, createMemo } from "solid-js"
+import { Show, createMemo, createEffect } from "solid-js"
 import { Button } from "@anyon/ui/button"
 import { Popover } from "@anyon/ui/popover"
 import { Tooltip } from "@anyon/ui/tooltip"
@@ -6,6 +6,8 @@ import { useDialog } from "@anyon/ui/context/dialog"
 import { useSync } from "@/context/sync"
 import { useSDK } from "@/context/sdk"
 import { DialogConflictResolution } from "./dialog-conflict-resolution"
+import { DialogSyncRequired } from "./dialog-sync-required"
+import { DialogMergeBlocked } from "./dialog-merge-blocked"
 
 export function SessionCollabStatus() {
   const sync = useSync()
@@ -42,6 +44,34 @@ export function SessionCollabStatus() {
   const handleResolveConflicts = () => {
     dialog.show(() => <DialogConflictResolution />)
   }
+
+  // Watch for sync required dialog trigger
+  createEffect(() => {
+    if (sync.data.showSyncRequiredDialog) {
+      sync.set("showSyncRequiredDialog", false)
+      dialog.show(() => <DialogSyncRequired />)
+    }
+  })
+
+  // Watch for merge blocked dialog trigger
+  createEffect(() => {
+    if (sync.data.showMergeBlockedDialog) {
+      const reason = sync.data.mergeBlockedReason
+      const files = sync.data.mergeBlockedFiles
+      sync.set("showMergeBlockedDialog", false)
+      sync.set("mergeBlockedReason", undefined)
+      sync.set("mergeBlockedFiles", [])
+      dialog.show(() => <DialogMergeBlocked reason={reason ?? ""} files={files ?? []} />)
+    }
+  })
+
+  // Watch for conflict dialog trigger
+  createEffect(() => {
+    if (sync.data.showConflictDialog) {
+      sync.set("showConflictDialog", false)
+      dialog.show(() => <DialogConflictResolution />)
+    }
+  })
 
   return (
     <Show when={collab()}>

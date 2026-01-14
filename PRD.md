@@ -20,11 +20,13 @@ Implement an embedded web browser/preview feature that opens HTML files or local
 ## User Stories
 
 ### US-001: Add Preview Tab Helpers to File Context
+
 **Description:** As a developer, I want preview tab encoding/decoding functions so that the tab system can recognize and handle preview tabs.
 
 **File:** `packages/app/src/context/file.tsx`
 
 **Acceptance Criteria:**
+
 - [x] Add `previewTab(input: string)` function that returns `preview://url:<url>` for http URLs or `preview://file:<path>` for file paths
 - [x] Add `previewFromTab(tabValue: string)` function that parses preview tabs and returns `{ type: "url" | "file", value: string }` or `null`
 - [x] Add `isPreviewTab(tabValue: string)` function that returns boolean
@@ -34,11 +36,13 @@ Implement an embedded web browser/preview feature that opens HTML files or local
 ---
 
 ### US-002: Update Tab Filtering for Preview Tabs
+
 **Description:** As a user, I want preview tabs to appear in the tab bar so that I can switch between previews and other tabs.
 
 **File:** `packages/app/src/pages/session.tsx`
 
 **Acceptance Criteria:**
+
 - [x] Update `allTabs` filter (~line 787) to include tabs starting with `preview://`
 - [x] Add `activePreviewTab` memo that returns parsed preview info when active tab is a preview
 - [x] Typecheck passes
@@ -46,11 +50,13 @@ Implement an embedded web browser/preview feature that opens HTML files or local
 ---
 
 ### US-003: Fix Content Gating with Switch
+
 **Description:** As a user, I want only one content type (preview, file, or session) to render at a time so that views don't overlap.
 
 **File:** `packages/app/src/pages/session.tsx`
 
 **Acceptance Criteria:**
+
 - [x] Replace existing Show blocks (~line 1162-1170) with a Switch/Match structure
 - [x] First Match: render PreviewPane when `activePreviewTab()` is truthy
 - [x] Second Match: render FileViewer when `activeFileTab()` is truthy
@@ -61,11 +67,13 @@ Implement an embedded web browser/preview feature that opens HTML files or local
 ---
 
 ### US-004: Update SortableTab for Preview Rendering
+
 **Description:** As a user, I want preview tabs to show a globe icon and meaningful label so that I can identify them in the tab bar.
 
 **File:** `packages/app/src/components/session/session-sortable-tab.tsx`
 
 **Acceptance Criteria:**
+
 - [x] Add `preview` memo using `file.previewFromTab(props.tab)`
 - [x] When tab is a preview: show globe icon (use existing Icon component)
 - [x] For URL previews: display hostname as label
@@ -76,11 +84,13 @@ Implement an embedded web browser/preview feature that opens HTML files or local
 ---
 
 ### US-005: Create Preview Toolbar Component
+
 **Description:** As a user, I want a toolbar above the preview with URL display, refresh, and external open buttons.
 
 **File:** `packages/app/src/components/preview/preview-toolbar.tsx` (create)
 
 **Acceptance Criteria:**
+
 - [x] Create new file at `packages/app/src/components/preview/preview-toolbar.tsx`
 - [x] Component accepts `url: string` and `onRefresh: () => void` props
 - [x] Render readonly input showing current URL
@@ -92,11 +102,13 @@ Implement an embedded web browser/preview feature that opens HTML files or local
 ---
 
 ### US-006: Create Preview Pane Component
+
 **Description:** As a user, I want an iframe-based preview pane that loads URLs and auto-refreshes on file changes.
 
 **File:** `packages/app/src/components/preview/preview-pane.tsx` (create)
 
 **Acceptance Criteria:**
+
 - [x] Create new file at `packages/app/src/components/preview/preview-pane.tsx`
 - [x] Component accepts `preview: { type: "url" | "file", value: string }` prop
 - [x] For URL type: use value directly as iframe src
@@ -111,11 +123,13 @@ Implement an embedded web browser/preview feature that opens HTML files or local
 ---
 
 ### US-007: Add Static File Preview Route to Server
+
 **Description:** As a developer, I want the server to serve static files with proper MIME types so that HTML previews load correctly with relative assets.
 
 **File:** `packages/opencode/src/server/server.ts`
 
 **Acceptance Criteria:**
+
 - [x] Add new route `.get("/preview/*", ...)` after the `/file/status` endpoint
 - [x] Extract relative path from URL and decode it
 - [x] Validate path is within workspace (security check using `path.resolve`)
@@ -129,11 +143,13 @@ Implement an embedded web browser/preview feature that opens HTML files or local
 ---
 
 ### US-008: Add Preview Entry Point in File Tree
+
 **Description:** As a user, I want to click a preview icon on HTML files to open them in the preview pane.
 
 **File:** `packages/app/src/components/file-tree.tsx`
 
 **Acceptance Criteria:**
+
 - [x] Add `isHtmlFile(path)` helper function checking for `.html` or `.htm` extension
 - [x] Add `openPreview(filePath)` handler that creates preview tab and opens it
 - [x] Show preview icon button (eye icon) next to HTML files

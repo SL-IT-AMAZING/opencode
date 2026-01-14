@@ -1,6 +1,7 @@
 import { Ghostty, Terminal as Term, FitAddon } from "ghostty-web"
 import { ComponentProps, createEffect, createSignal, onCleanup, onMount, splitProps } from "solid-js"
 import { useSDK } from "@/context/sdk"
+import { useSync } from "@/context/sync"
 import { SerializeAddon } from "@/addons/serialize"
 import { LocalPTY, TerminalRef } from "@/context/terminal"
 import { resolveThemeVariant, useTheme } from "@anyon/ui/theme"
@@ -27,6 +28,7 @@ const DEFAULT_TERMINAL_COLORS: TerminalColors = {
 
 export const Terminal = (props: TerminalProps) => {
   const sdk = useSDK()
+  const sync = useSync()
   const theme = useTheme()
   let container!: HTMLDivElement
   const [local, others] = splitProps(props, ["pty", "class", "classList", "onConnectError", "onRef"])
@@ -216,6 +218,16 @@ export const Terminal = (props: TerminalProps) => {
     })
     socket.addEventListener("message", (event) => {
       t.write(event.data)
+
+      // Detect git push rejection and show sync dialog
+      const data = typeof event.data === "string" ? event.data : ""
+      if (
+        data.includes("fetch first") ||
+        data.includes("non-fast-forward") ||
+        data.includes("remote contains work")
+      ) {
+        sync.set("showSyncRequiredDialog", true)
+      }
     })
     socket.addEventListener("error", (error) => {
       console.error("WebSocket error:", error)

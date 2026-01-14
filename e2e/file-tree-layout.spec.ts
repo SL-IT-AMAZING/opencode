@@ -15,9 +15,12 @@ test.describe("File Tree Layout", () => {
     const fileRows = page.locator('button[draggable="true"]')
 
     // Wait for file tree to load
-    await fileRows.first().waitFor({ timeout: 10000 }).catch(() => {
-      console.log("No file rows found - app may not have loaded properly")
-    })
+    await fileRows
+      .first()
+      .waitFor({ timeout: 10000 })
+      .catch(() => {
+        console.log("No file rows found - app may not have loaded properly")
+      })
 
     const count = await fileRows.count()
     console.log(`Found ${count} file rows`)

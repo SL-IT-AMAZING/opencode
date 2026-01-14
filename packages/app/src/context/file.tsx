@@ -130,7 +130,11 @@ export const { use: useFile, provider: FileProvider } = createSimpleContext({
     }
 
     function previewTab(input: string) {
-      // For http/https URLs, use url type
+      // For localhost URLs, use directly (no proxy needed)
+      if (input.startsWith("http://localhost") || input.startsWith("http://127.0.0.1")) {
+        return `preview://url:${input}`
+      }
+      // For other http/https URLs, use url type directly
       if (input.startsWith("http://") || input.startsWith("https://")) {
         return `preview://url:${input}`
       }

@@ -57,6 +57,11 @@ type State = {
   vcs: VcsInfo | undefined
   collab: CollabStatus | undefined
   collabHistory: CollabCommitInfo[] | undefined
+  showSyncRequiredDialog: boolean
+  showMergeBlockedDialog: boolean
+  mergeBlockedReason: string | undefined
+  mergeBlockedFiles: string[]
+  showConflictDialog: boolean
   limit: number
   message: {
     [sessionID: string]: Message[]
@@ -105,6 +110,11 @@ function createGlobalSync() {
         vcs: undefined,
         collab: undefined,
         collabHistory: undefined,
+        showSyncRequiredDialog: false,
+        showMergeBlockedDialog: false,
+        mergeBlockedReason: undefined,
+        mergeBlockedFiles: [],
+        showConflictDialog: false,
         limit: 5,
         message: {},
         part: {},
@@ -421,7 +431,12 @@ function createGlobalSync() {
         break
       }
       case "collab.save.completed": {
-        const props = event.properties as { message: string; pushed: boolean; commitHash: string }
+        const props = event.properties as {
+          message: string
+          pushed: boolean
+          commitHash: string
+          pushError?: "remote_ahead" | "auth_failed" | "network" | "other"
+        }
         const sdk = createOpencodeClient({
           baseUrl: globalSDK.url,
           directory,
@@ -436,11 +451,15 @@ function createGlobalSync() {
           .history({ limit: 1000, offset: 0 })
           .then((x) => setStore("collabHistory", x.data ?? []))
           .catch(() => {})
-        // Show toast (skip if no actual commit was made)
-        if (props.commitHash) {
+        // Handle push errors
+        if (props.pushError === "remote_ahead") {
+          // Show sync required dialog
+          setStore("showSyncRequiredDialog", true)
+        } else if (props.commitHash) {
+          // Show toast (skip if no actual commit was made)
           showToast({
-            title: "저장 완료",
-            description: props.pushed ? "원격에 업로드됨" : props.message || "로컬에 저장됨",
+            title: "Saved",
+            description: props.pushed ? "Uploaded to remote" : props.message || "Saved locally",
           })
         }
         break
@@ -454,7 +473,7 @@ function createGlobalSync() {
         break
       }
       case "collab.sync.completed": {
-        const props = event.properties as { success: boolean; changes: number; conflicts: boolean }
+        const props = event.properties as { success: boolean; changes: number; conflicts: boolean; blocked?: boolean }
         const sdk = createOpencodeClient({
           baseUrl: globalSDK.url,
           directory,
@@ -465,6 +484,13 @@ function createGlobalSync() {
           .history({ limit: 1000, offset: 0 })
           .then((x) => setStore("collabHistory", x.data ?? []))
           .catch(() => {})
+
+        // Only show toasts if NOT blocked
+        if (props.blocked) {
+          // Don't show toast - dialog will handle it
+          break
+        }
+
         // Show toast only if there were changes or conflicts
         if (props.conflicts) {
           showToast({
@@ -494,6 +520,17 @@ function createGlobalSync() {
           .history({ limit: 1000, offset: 0 })
           .then((x) => setStore("collabHistory", x.data ?? []))
           .catch(() => {})
+        break
+      }
+      case "collab.merge.blocked": {
+        const props = event.properties as { reason: string; files: string[] }
+        setStore("mergeBlockedReason", props.reason)
+        setStore("mergeBlockedFiles", props.files)
+        setStore("showMergeBlockedDialog", true)
+        break
+      }
+      case "collab.conflict.detected": {
+        setStore("showConflictDialog", true)
         break
       }
     }
