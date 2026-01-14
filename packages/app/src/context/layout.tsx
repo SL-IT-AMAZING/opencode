@@ -82,6 +82,7 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
         sessionTabs: {} as Record<string, SessionTabs>,
         sessionView: {} as Record<string, SessionView>,
         openSessions: {} as Record<string, string[]>, // Track open session tabs per directory
+        terminalState: {} as Record<string, { opened: boolean }>, // Per-project terminal state
       }),
     )
 
@@ -219,6 +220,40 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
         resize(height: number) {
           setStore("terminal", "height", height)
         },
+      },
+      terminalFor(projectKey: string) {
+        const state = createMemo(() => store.terminalState?.[projectKey] ?? { opened: false })
+        return {
+          opened: createMemo(() => state().opened),
+          open() {
+            if (!store.terminalState) {
+              setStore("terminalState", { [projectKey]: { opened: true } })
+            } else if (!store.terminalState[projectKey]) {
+              setStore("terminalState", projectKey, { opened: true })
+            } else {
+              setStore("terminalState", projectKey, "opened", true)
+            }
+          },
+          close() {
+            if (!store.terminalState) {
+              setStore("terminalState", { [projectKey]: { opened: false } })
+            } else if (!store.terminalState[projectKey]) {
+              setStore("terminalState", projectKey, { opened: false })
+            } else {
+              setStore("terminalState", projectKey, "opened", false)
+            }
+          },
+          toggle() {
+            const current = store.terminalState?.[projectKey]?.opened ?? false
+            if (!store.terminalState) {
+              setStore("terminalState", { [projectKey]: { opened: !current } })
+            } else if (!store.terminalState[projectKey]) {
+              setStore("terminalState", projectKey, { opened: !current })
+            } else {
+              setStore("terminalState", projectKey, "opened", !current)
+            }
+          },
+        }
       },
       review: {
         opened: createMemo(() => store.review?.opened ?? true),

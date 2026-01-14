@@ -12,6 +12,8 @@
     position: relative;
     display: flex;
     align-items: center;
+    gap: 2px; /* Chrome-style tab spacing */
+    padding-left: 2px; /* Chrome-style left edge spacing */
     overflow-x: clip; /* Force compression instead of scrolling (Chrome-style tabs) */
 
     /* After element to fill remaining space */
@@ -20,7 +22,6 @@
       display: block;
       flex-grow: 1;
       height: 100%;
-      border-bottom: 1px solid var(--border-weak-base);
       background-color: var(--background-base);
     }
 
@@ -51,9 +52,9 @@
     min-width: 80px;
     max-width: 200px;
     overflow: hidden;
-    border-bottom: 1px solid var(--border-weak-base);
-    border-right: 1px solid var(--border-weak-base);
+    border-radius: 8px 8px 0 0; /* Chrome-style rounded top corners */
     background-color: var(--background-base);
+    transition: background-color 150ms ease; /* Smooth hover transition */
 
     [data-slot="tabs-trigger"] {
       display: flex;
@@ -100,14 +101,14 @@
     }
     &:has([data-selected]) {
       color: var(--text-strong);
-      background-color: transparent;
-      border-bottom-color: transparent;
+      background-color: var(--background-weak); /* Brighter selected tab */
       [data-slot="tabs-trigger-close-button"] {
         opacity: 1;
       }
     }
-    &:hover:not(:disabled):not([data-selected]) {
+    &:hover:not(:disabled):not(:has([data-selected])) {
       color: var(--text-strong);
+      background-color: color-mix(in oklch, var(--background-base) 70%, var(--background-stronger) 30%);
     }
     &:has([data-slot="tabs-trigger-close-button"]) {
       padding-right: 12px;
@@ -264,7 +265,6 @@
         height: auto;
         flex-grow: 1;
         border-bottom: none;
-        border-right: 1px solid var(--border-weak-base);
       }
     }
 
@@ -272,11 +272,7 @@
       width: 100%;
       height: auto;
       border-bottom: none;
-      border-right: 1px solid var(--border-weak-base);
-
-      &:has([data-selected]) {
-        border-right-color: transparent;
-      }
+      border-radius: 0 8px 8px 0; /* Chrome-style rounded right corners for vertical */
     }
 
     [data-slot="tabs-content"] {

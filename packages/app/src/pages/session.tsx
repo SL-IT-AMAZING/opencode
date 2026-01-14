@@ -169,6 +169,10 @@ export default function Page() {
   const tabs = createMemo(() => layout.tabs(sessionKey()))
   const view = createMemo(() => layout.view(sessionKey()))
   const sessions = createMemo(() => layout.sessions(params.dir ?? ""))
+  const projectTerminal = createMemo(() => {
+    const dir = sync.directory
+    return dir ? layout.terminalFor(dir) : layout.terminal
+  })
 
   // Derive current session from active tab (for multi-tab support)
   const activeSessionId = createMemo(() => {
@@ -320,8 +324,8 @@ export default function Page() {
     if (getAskedFolders().includes(directory)) return
 
     // Ensure terminal panel is open
-    if (!layout.terminal.opened()) {
-      layout.terminal.open()
+    if (!projectTerminal().opened()) {
+      projectTerminal().open()
     }
 
     // Delay to wait for terminal WebSocket connection
@@ -471,7 +475,7 @@ export default function Page() {
   })
 
   createEffect(() => {
-    if (layout.terminal.opened()) {
+    if (projectTerminal().opened()) {
       if (terminal.all().length === 0) {
         terminal.new()
       }
@@ -535,7 +539,7 @@ export default function Page() {
       category: "View",
       keybind: "ctrl+`",
       slash: "terminal",
-      onSelect: () => layout.terminal.toggle(),
+      onSelect: () => projectTerminal().toggle(),
     },
     {
       id: "review.toggle",
@@ -1429,10 +1433,10 @@ export default function Page() {
               onChange={(tab) => layout.rightPanel.setActiveTab(tab as "files" | "timeline" | "team")}
               classList={{
                 "flex flex-col overflow-hidden": true,
-                "shrink-0": layout.terminal.opened(),
-                "flex-1": !layout.terminal.opened(),
+                "shrink-0": projectTerminal().opened(),
+                "flex-1": !projectTerminal().opened(),
               }}
-              style={{ height: layout.terminal.opened() ? `${layout.fileExplorer.height()}px` : undefined }}
+              style={{ height: projectTerminal().opened() ? `${layout.fileExplorer.height()}px` : undefined }}
             >
               <Tabs.List class="h-12 shrink-0">
                 <Tabs.Trigger value="files">Files</Tabs.Trigger>
@@ -1459,8 +1463,8 @@ export default function Page() {
             <div
               classList={{
                 "flex flex-col": true,
-                "flex-1": layout.terminal.opened(),
-                "h-8 shrink-0": !layout.terminal.opened(),
+                "flex-1": projectTerminal().opened(),
+                "h-8 shrink-0": !projectTerminal().opened(),
               }}
               data-prevent-autofocus
             >
@@ -1468,16 +1472,16 @@ export default function Page() {
               <div
                 classList={{
                   "overflow-hidden min-h-0 flex flex-col": true,
-                  "flex-1": layout.terminal.opened(),
+                  "flex-1": projectTerminal().opened(),
                   "transition-[flex] duration-200 ease-out": true,
                 }}
-                style={{ flex: layout.terminal.opened() ? "1" : "0" }}
+                style={{ flex: projectTerminal().opened() ? "1" : "0" }}
               >
                 <div
                   class="flex-1 min-h-0 flex flex-col transition-all duration-300 border-t border-border-weak-base"
                   style={{
-                    transform: layout.terminal.opened() ? "translateY(0)" : "translateY(100%)",
-                    opacity: layout.terminal.opened() ? 1 : 0,
+                    transform: projectTerminal().opened() ? "translateY(0)" : "translateY(100%)",
+                    opacity: projectTerminal().opened() ? 1 : 0,
                     "transition-timing-function": "cubic-bezier(0.34, 1.56, 0.64, 1)",
                   }}
                 >
@@ -1530,19 +1534,19 @@ export default function Page() {
                           </div>
                           <div class="absolute right-0 h-full flex items-center pr-2">
                             <TooltipKeybind
-                              title={layout.terminal.opened() ? "Close terminal" : "Open terminal"}
+                              title={projectTerminal().opened() ? "Close terminal" : "Open terminal"}
                               keybind={command.keybind("terminal.toggle")}
                               class="flex items-center"
                             >
                               <Button
                                 variant="ghost"
                                 class="group/terminal-toggle size-6 p-0"
-                                onClick={layout.terminal.toggle}
+                                onClick={() => projectTerminal().toggle()}
                               >
                                 <div class="relative flex items-center justify-center size-4 [&>*]:absolute [&>*]:inset-0">
                                   <Icon
                                     size="small"
-                                    name={layout.terminal.opened() ? "layout-bottom-full" : "layout-bottom"}
+                                    name={projectTerminal().opened() ? "layout-bottom-full" : "layout-bottom"}
                                     class="group-hover/terminal-toggle:hidden"
                                   />
                                   <Icon
@@ -1552,7 +1556,7 @@ export default function Page() {
                                   />
                                   <Icon
                                     size="small"
-                                    name={layout.terminal.opened() ? "layout-bottom" : "layout-bottom-full"}
+                                    name={projectTerminal().opened() ? "layout-bottom" : "layout-bottom-full"}
                                     class="hidden group-active/terminal-toggle:inline-block"
                                   />
                                 </div>
@@ -1603,9 +1607,9 @@ export default function Page() {
               </div>
 
               {/* Collapsed bar - only shown when terminal is closed */}
-              <Show when={!layout.terminal.opened()}>
+              <Show when={!projectTerminal().opened()}>
                 <button
-                  onClick={layout.terminal.open}
+                  onClick={projectTerminal().open}
                   class="mt-auto h-8 flex items-center px-3 gap-2 text-text-subtle hover:text-text-base hover:bg-surface-subtle transition-colors cursor-pointer border-t border-border-weak-base"
                 >
                   <Icon name="chevron-right" size="small" class="-rotate-90" />

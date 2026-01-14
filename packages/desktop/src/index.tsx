@@ -105,6 +105,7 @@ const platform: Platform = {
       setItem: async (key: string, value: string) => {
         const store = await api._getStore()
         await store.set(key, value).catch(() => undefined)
+        await store.save().catch(() => undefined)
       },
       removeItem: async (key: string) => {
         const store = await api._getStore()
