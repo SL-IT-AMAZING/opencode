@@ -206,6 +206,27 @@ export async function getContributors(from: string, to: string) {
   return contributors
 }
 
+function generateSimpleChangelog(commits: Commit[]): string[] {
+  const grouped = new Map<string, string[]>()
+  for (const commit of commits) {
+    const section = getSection(commit.areas)
+    const attribution = commit.author && !team.includes(commit.author) ? ` (@${commit.author})` : ""
+    const entry = `- ${commit.message}${attribution}`
+    if (!grouped.has(section)) grouped.set(section, [])
+    grouped.get(section)!.push(entry)
+  }
+
+  const sectionOrder = ["Core", "TUI", "Desktop", "SDK"]
+  const lines: string[] = []
+  for (const section of sectionOrder) {
+    const entries = grouped.get(section)
+    if (!entries || entries.length === 0) continue
+    lines.push(`## ${section}`)
+    lines.push(...entries)
+  }
+  return lines
+}
+
 export async function buildNotes(from: string, to: string) {
   const commits = await getCommits(from, to)
 
@@ -215,27 +236,34 @@ export async function buildNotes(from: string, to: string) {
 
   console.log("generating changelog since " + from)
 
-  const opencode = await createOpencode({ port: 5044 })
   const notes: string[] = []
 
+  // Try to use opencode for AI-powered changelog, fall back to simple format
+  let opencode: Awaited<ReturnType<typeof createOpencode>> | null = null
   try {
-    const lines = await generateChangelog(commits, opencode)
-    notes.push(...lines)
-    console.log("---- Generated Changelog ----")
-    console.log(notes.join("\n"))
-    console.log("-----------------------------")
+    opencode = await createOpencode({ port: 5044 })
   } catch (error) {
-    if (error instanceof Error && error.name === "TimeoutError") {
-      console.log("Changelog generation timed out, using raw commits")
-      for (const commit of commits) {
-        const attribution = commit.author && !team.includes(commit.author) ? ` (@${commit.author})` : ""
-        notes.push(`- ${commit.message}${attribution}`)
+    console.log("opencode not available, using simple changelog format")
+    notes.push(...generateSimpleChangelog(commits))
+  }
+
+  if (opencode) {
+    try {
+      const lines = await generateChangelog(commits, opencode)
+      notes.push(...lines)
+      console.log("---- Generated Changelog ----")
+      console.log(notes.join("\n"))
+      console.log("-----------------------------")
+    } catch (error) {
+      if (error instanceof Error && error.name === "TimeoutError") {
+        console.log("Changelog generation timed out, using raw commits")
+        notes.push(...generateSimpleChangelog(commits))
+      } else {
+        throw error
       }
-    } else {
-      throw error
+    } finally {
+      opencode.server.close()
     }
-  } finally {
-    opencode.server.close()
   }
 
   const contributors = await getContributors(from, to)
