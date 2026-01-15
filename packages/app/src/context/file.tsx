@@ -129,12 +129,51 @@ export const { use: useFile, provider: FileProvider } = createSimpleContext({
       return normalize(tabValue)
     }
 
+    function previewTab(input: string) {
+      // For all HTTP/HTTPS URLs, store the original URL (proxy constructed dynamically in preview-pane)
+      if (input.startsWith("http://") || input.startsWith("https://")) {
+        return `preview://url:${input}`
+      }
+      // For file paths, normalize and use file type
+      const path = normalize(input)
+      return `preview://file:${path}`
+    }
+
+    // Extract original localhost URL from proxy URL (for "Open in browser")
+    function getOriginalUrl(proxyUrl: string): string {
+      if (proxyUrl.includes("/proxy?url=")) {
+        const match = proxyUrl.match(/\/proxy\?url=([^&]+)/)
+        if (match) {
+          return decodeURIComponent(match[1])
+        }
+      }
+      return proxyUrl
+    }
+
+    function previewFromTab(tabValue: string): { type: "url" | "file"; value: string } | null {
+      if (!tabValue.startsWith("preview://")) return null
+      const rest = tabValue.slice("preview://".length)
+      if (rest.startsWith("url:")) {
+        return { type: "url", value: rest.slice("url:".length) }
+      }
+      if (rest.startsWith("file:")) {
+        return { type: "file", value: rest.slice("file:".length) }
+      }
+      return null
+    }
+
+    function isPreviewTab(tabValue: string): boolean {
+      return tabValue.startsWith("preview://")
+    }
+
     const inflight = new Map<string, Promise<void>>()
 
     const [store, setStore] = createStore<{
       file: Record<string, FileState>
+      selectionMode: boolean
     }>({
       file: {},
+      selectionMode: false,
     })
 
     const viewKey = createMemo(() => `${params.dir}/file${params.id ? "/" + params.id : ""}.v1`)
@@ -268,6 +307,10 @@ export const { use: useFile, provider: FileProvider } = createSimpleContext({
       normalize,
       tab,
       pathFromTab,
+      previewTab,
+      previewFromTab,
+      isPreviewTab,
+      getOriginalUrl,
       get,
       load,
       scrollTop,
@@ -276,6 +319,8 @@ export const { use: useFile, provider: FileProvider } = createSimpleContext({
       setScrollLeft,
       selectedLines,
       setSelectedLines,
+      selectionMode: () => store.selectionMode,
+      setSelectionMode: (mode: boolean) => setStore("selectionMode", mode),
       searchFiles: (query: string) =>
         sdk.client.find.files({ query, dirs: "false" }).then((x) => (x.data ?? []).map(normalize)),
       searchFilesAndDirectories: (query: string) =>

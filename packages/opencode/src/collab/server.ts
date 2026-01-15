@@ -68,6 +68,24 @@ export const CollabRoute = new Hono()
       return c.json(result)
     },
   )
+  .post(
+    "/stash-sync",
+    describeRoute({
+      summary: "Stash changes, sync, then restore",
+      description: "Temporarily stash local changes, sync with remote, then restore the stashed changes.",
+      operationId: "collab.stashSync",
+      responses: {
+        200: {
+          description: "Sync result",
+          content: { "application/json": { schema: resolver(Collab.SyncResult) } },
+        },
+      },
+    }),
+    async (c) => {
+      const result = await CollabSync.executeWithStash()
+      return c.json(result)
+    },
+  )
   .get(
     "/history",
     describeRoute({

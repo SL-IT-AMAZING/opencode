@@ -23,6 +23,7 @@ export namespace Collab {
       message: z.string(),
       pushed: z.boolean(),
       skipped: z.boolean(),
+      pushError: z.enum(["remote_ahead", "auth_failed", "network", "other"]).optional(),
     })
     .meta({ ref: "CollabSaveResult" })
   export type SaveResult = z.infer<typeof SaveResult>
@@ -32,6 +33,8 @@ export namespace Collab {
       success: z.boolean(),
       changes: z.number(),
       conflicts: z.boolean(),
+      blocked: z.boolean().optional(),
+      blockedFiles: z.array(z.string()).optional(),
     })
     .meta({ ref: "CollabSyncResult" })
   export type SyncResult = z.infer<typeof SyncResult>
@@ -140,6 +143,7 @@ export namespace Collab {
         message: z.string(),
         pushed: z.boolean(),
         skipped: z.boolean(),
+        pushError: z.enum(["remote_ahead", "auth_failed", "network", "other"]).optional(),
       }),
     ),
     SaveFailed: BusEvent.define(
@@ -153,6 +157,13 @@ export namespace Collab {
     TeamUpdated: BusEvent.define("collab.team.updated", z.object({ members: z.number() })),
     ConflictDetected: BusEvent.define("collab.conflict.detected", z.object({ files: z.array(z.string()) })),
     ConflictResolved: BusEvent.define("collab.conflict.resolved", z.object({ file: z.string() })),
+    MergeBlocked: BusEvent.define(
+      "collab.merge.blocked",
+      z.object({
+        reason: z.enum(["uncommitted_changes", "untracked_files"]),
+        files: z.array(z.string()),
+      }),
+    ),
     GitChanged: BusEvent.define("collab.git.changed", z.object({})),
   }
 }

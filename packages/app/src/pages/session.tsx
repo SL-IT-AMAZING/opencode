@@ -1,4 +1,4 @@
-import { For, onCleanup, Show, Match, Switch, createMemo, createEffect, on, createSignal } from "solid-js"
+import { For, onCleanup, onMount, Show, Match, Switch, createMemo, createEffect, on, createSignal } from "solid-js"
 import { createMediaQuery } from "@solid-primitives/media"
 import { createResizeObserver } from "@solid-primitives/resize-observer"
 import { Dynamic } from "solid-js/web"
@@ -58,6 +58,7 @@ import {
 } from "@/components/session"
 import { usePlatform } from "@/context/platform"
 import { same } from "@/utils/same"
+import { PreviewPane } from "@/components/preview/preview-pane"
 
 type DiffStyle = "unified" | "split"
 
@@ -168,6 +169,13 @@ export default function Page() {
   const tabs = createMemo(() => layout.tabs(sessionKey()))
   const view = createMemo(() => layout.view(sessionKey()))
   const sessions = createMemo(() => layout.sessions(params.dir ?? ""))
+  const projectTerminal = createMemo(() => {
+    const dir = sync.directory
+    return dir ? layout.terminalFor(dir) : layout.terminal
+  })
+
+  // Track opened preview URLs to avoid duplicates
+  const openedPreviewUrls = new Set<string>()
 
   // Derive current session from active tab (for multi-tab support)
   const activeSessionId = createMemo(() => {
@@ -214,6 +222,80 @@ export default function Page() {
     const path = file.pathFromTab(next)
     if (path) file.load(path)
   }
+
+  // Intercept localhost link clicks to open in preview tab instead of external browser
+  onMount(() => {
+    const handler = (e: MouseEvent) => {
+      // Allow Ctrl/Cmd+Click to open externally
+      if (e.ctrlKey || e.metaKey) return
+
+      const target = e.target as HTMLElement
+      const anchor = target.closest("a")
+      if (!anchor) return
+
+      const href = anchor.getAttribute("href")
+      if (!href) return
+
+      // Check if localhost URL
+      try {
+        const url = new URL(href)
+        const isLocalhost =
+          url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname.endsWith(".localhost")
+
+        if (isLocalhost) {
+          e.preventDefault()
+          e.stopPropagation()
+          const previewTabValue = file.previewTab(href)
+          openTab(previewTabValue)
+        }
+      } catch {
+        // Invalid URL, ignore
+      }
+    }
+
+    document.addEventListener("click", handler, true)
+    onCleanup(() => document.removeEventListener("click", handler, true))
+  })
+
+  // Detect localhost URLs in AI tool output (e.g., when AI runs `bun dev`)
+  createEffect(() => {
+    const sessionId = activeSessionId()
+    if (!sessionId) return
+
+    const messages = sync.data.message[sessionId] ?? []
+
+    // Strip ANSI escape codes (colors, formatting) that break regex matching
+    const stripAnsi = (str: string) => str.replace(/\x1b\[[0-9;]*m/g, "")
+
+    for (const msg of messages) {
+      const parts = sync.data.part[msg.id] ?? []
+
+      // Check tool parts for localhost URLs in completed state
+      for (const part of parts) {
+        if (part.type !== "tool") continue
+        if (part.state.status !== "completed") continue
+
+        // Strip ANSI codes before matching - dev server output contains color codes
+        const output = stripAnsi(part.state.output ?? "")
+
+        const serverReadyPatterns = [
+          /Local:\s*(https?:\/\/(?:localhost|127\.0\.0\.1):\d+)/i,
+          /listening.*?(https?:\/\/(?:localhost|127\.0\.0\.1):\d+)/i,
+          /started.*?(https?:\/\/(?:localhost|127\.0\.0\.1):\d+)/i,
+          /running.*?(https?:\/\/(?:localhost|127\.0\.0\.1):\d+)/i,
+        ]
+
+        for (const pattern of serverReadyPatterns) {
+          const match = output.match(pattern)
+          if (match && match[1] && !openedPreviewUrls.has(match[1])) {
+            openedPreviewUrls.add(match[1])
+            tabs().open(`preview://url:${match[1]}`)
+            break
+          }
+        }
+      }
+    }
+  })
 
   createEffect(() => {
     const active = tabs().active()
@@ -284,11 +366,6 @@ export default function Page() {
     // Check localStorage to see if we already asked about this folder
     if (getAskedFolders().includes(directory)) return
 
-    // Ensure terminal panel is open
-    if (!layout.terminal.opened()) {
-      layout.terminal.open()
-    }
-
     // Delay to wait for terminal WebSocket connection
     setTimeout(() => {
       sdk.client.file
@@ -300,31 +377,19 @@ export default function Page() {
             dialog.show(() => (
               <DialogGitInit
                 onInit={() => {
-                  const ref = terminal.activeRef?.()
-                  if (ref?.write) {
-                    // Clear line (Ctrl+U) before command to avoid leftover chars
-                    ref.write("\x15git init && git branch -M main\n")
-                  }
+                  terminal.writeWhenReady("\x15git init && git branch -M main\n")
                 }}
                 onClone={(url) => {
-                  const ref = terminal.activeRef?.()
-                  if (ref?.write) {
-                    // Clear line (Ctrl+U) before command to avoid leftover chars
-                    ref.write(`\x15git clone ${url} . && npm install\n`)
-                  }
+                  terminal.writeWhenReady(`\x15git clone ${url} . && npm install\n`)
                 }}
                 onShowGitHubConnect={() => {
                   // Show GitHub connect dialog to create remote repo
                   dialog.show(() => (
                     <DialogGitHubConnect
                       onConnect={(repoUrl) => {
-                        const ref = terminal.activeRef?.()
-                        if (ref?.write) {
-                          // Add remote and push
-                          ref.write(
-                            `\x15git remote add origin ${repoUrl} && git add -A && git commit -m "Initial commit" && git push -u origin main\n`,
-                          )
-                        }
+                        terminal.writeWhenReady(
+                          `\x15git remote add origin ${repoUrl} && git add -A && git commit -m "Initial commit" && git push -u origin main\n`,
+                        )
                       }}
                       onSkip={() => {
                         // User skipped, no action needed
@@ -435,11 +500,23 @@ export default function Page() {
     sync.session.sync(activeSessionId()!)
   })
 
+  // Create terminal on project entry (regardless of panel state)
   createEffect(() => {
-    if (layout.terminal.opened()) {
-      if (terminal.all().length === 0) {
-        terminal.new()
-      }
+    if (!sync.directory) return
+    if (terminal.all().length === 0) {
+      terminal.new()
+    }
+  })
+
+  // Handle resize when panel opens
+  createEffect(() => {
+    if (projectTerminal().opened()) {
+      requestAnimationFrame(() => {
+        window.dispatchEvent(new Event("resize"))
+        setTimeout(() => {
+          window.dispatchEvent(new Event("resize"))
+        }, 350)
+      })
     }
   })
 
@@ -500,7 +577,7 @@ export default function Page() {
       category: "View",
       keybind: "ctrl+`",
       slash: "terminal",
-      onSelect: () => layout.terminal.toggle(),
+      onSelect: () => projectTerminal().toggle(),
     },
     {
       id: "review.toggle",
@@ -779,12 +856,12 @@ export default function Page() {
       .filter((tab) => tab !== "context"),
   )
 
-  // All tabs unified: sessions + files in single ordered list (Chrome-style)
-  // New tabs (sessions or files) appear at the end (right side)
+  // All tabs unified: sessions + files + previews in single ordered list (Chrome-style)
+  // New tabs (sessions, files, or previews) appear at the end (right side)
   const allTabs = createMemo(() =>
     tabs()
       .all()
-      .filter((tab) => tab.startsWith("session-") || tab.startsWith("file://")),
+      .filter((tab) => tab.startsWith("session-") || tab.startsWith("file://") || tab.startsWith("preview://")),
   )
 
   // Helper: check if there are any file tabs open
@@ -795,6 +872,13 @@ export default function Page() {
     const active = tabs().active()
     if (!active?.startsWith("file://")) return null
     return file.pathFromTab(active)
+  })
+
+  // Active preview tab for preview pane
+  const activePreviewTab = createMemo(() => {
+    const active = tabs().active()
+    if (!active?.startsWith("preview://")) return null
+    return file.previewFromTab(active)
   })
 
   // Switch to session (deactivate file tabs)
@@ -1050,7 +1134,7 @@ export default function Page() {
               <Tabs value={tabs().active() ?? "session"} onChange={openTab} class="shrink-0 !h-auto">
                 <Tabs.List
                   classList={{
-                    "h-12 shrink-0 border-b border-border-weak-base bg-background-base overflow-hidden": true,
+                    "h-12 shrink-0 bg-background-base overflow-hidden": true,
                     "pr-10": !layout.rightPanel.opened(),
                   }}
                 >
@@ -1158,139 +1242,143 @@ export default function Page() {
               "py-6 md:py-3": !activeSessionId() && !hasFileTabs(),
             }}
           >
-            {/* File Viewer */}
-            <Show when={activeFileTab()}>
-              {(path) => (
-                <div class="absolute inset-0" style={{ "background-color": "#1e1e1e" }}>
-                  <FileViewer path={path()} onAskAboutSelection={handleAskAboutSelection} />
-                </div>
-              )}
-            </Show>
-
-            <Show when={!activeFileTab()}>
-              <Switch>
-                <Match when={contextActive()}>
-                  <div class="relative h-full overflow-hidden">
-                    <SessionContextTab
-                      messages={messages}
-                      visibleUserMessages={() => visibleUserMessages()}
-                      view={() => view()}
-                      info={() => info()}
-                    />
+            {/* Content Gating - Preview, File, or Session */}
+            <Switch>
+              <Match when={activePreviewTab()}>{(preview) => <PreviewPane preview={preview()} />}</Match>
+              <Match when={activeFileTab()}>
+                {(path) => (
+                  <div
+                    class="absolute inset-x-0 top-0"
+                    style={{
+                      "background-color": "#1e1e1e",
+                      bottom: "calc(var(--prompt-height, 8rem) + 32px)",
+                    }}
+                  >
+                    <FileViewer path={path()} onAskAboutSelection={handleAskAboutSelection} />
                   </div>
-                </Match>
-                <Match when={activeSessionId()}>
-                  <Show when={activeMessage()}>
-                    <Show
-                      when={!mobileReview()}
-                      fallback={
-                        <div class="relative h-full overflow-hidden">
-                          <SessionReviewTab
-                            diffs={diffs}
-                            view={view}
-                            diffStyle="unified"
-                            classes={{
-                              root: "pb-[calc(var(--prompt-height,8rem)+32px)]",
-                              header: "px-4",
-                              container: "px-4",
-                            }}
+                )}
+              </Match>
+              <Match when={contextActive()}>
+                <div class="relative h-full overflow-hidden">
+                  <SessionContextTab
+                    messages={messages}
+                    visibleUserMessages={() => visibleUserMessages()}
+                    view={() => view()}
+                    info={() => info()}
+                  />
+                </div>
+              </Match>
+              <Match when={activeSessionId()}>
+                <Show when={activeMessage()}>
+                  <Show
+                    when={!mobileReview()}
+                    fallback={
+                      <div class="relative h-full overflow-hidden">
+                        <SessionReviewTab
+                          diffs={diffs}
+                          view={view}
+                          diffStyle="unified"
+                          classes={{
+                            root: "pb-[calc(var(--prompt-height,8rem)+32px)]",
+                            header: "px-4",
+                            container: "px-4",
+                          }}
+                        />
+                      </div>
+                    }
+                  >
+                    <div class="relative w-full h-full min-w-0">
+                      <Show when={isDesktop()}>
+                        <div class="absolute inset-0 pointer-events-none z-10">
+                          <SessionMessageRail
+                            messages={visibleUserMessages()}
+                            current={activeMessage()}
+                            onMessageSelect={scrollToMessage}
+                            wide={!showTabs()}
+                            class="pointer-events-auto"
                           />
                         </div>
-                      }
-                    >
-                      <div class="relative w-full h-full min-w-0">
-                        <Show when={isDesktop()}>
-                          <div class="absolute inset-0 pointer-events-none z-10">
-                            <SessionMessageRail
-                              messages={visibleUserMessages()}
-                              current={activeMessage()}
-                              onMessageSelect={scrollToMessage}
-                              wide={!showTabs()}
-                              class="pointer-events-auto"
-                            />
-                          </div>
-                        </Show>
+                      </Show>
+                      <div
+                        ref={setScrollRef}
+                        onScroll={(e) => {
+                          autoScroll.handleScroll()
+                          if (isDesktop()) scheduleScrollSpy(e.currentTarget)
+                        }}
+                        onClick={autoScroll.handleInteraction}
+                        class="relative min-w-0 w-full h-full overflow-y-auto no-scrollbar"
+                      >
                         <div
-                          ref={setScrollRef}
-                          onScroll={(e) => {
-                            autoScroll.handleScroll()
-                            if (isDesktop()) scheduleScrollSpy(e.currentTarget)
+                          ref={autoScroll.contentRef}
+                          class="flex flex-col gap-32 items-start justify-start pb-[calc(var(--prompt-height,8rem)+64px)] md:pb-[calc(var(--prompt-height,10rem)+64px)] transition-[margin]"
+                          classList={{
+                            "mt-0.5": !showTabs(),
+                            "mt-0": showTabs(),
                           }}
-                          onClick={autoScroll.handleInteraction}
-                          class="relative min-w-0 w-full h-full overflow-y-auto no-scrollbar"
                         >
-                          <div
-                            ref={autoScroll.contentRef}
-                            class="flex flex-col gap-32 items-start justify-start pb-[calc(var(--prompt-height,8rem)+64px)] md:pb-[calc(var(--prompt-height,10rem)+64px)] transition-[margin]"
-                            classList={{
-                              "mt-0.5": !showTabs(),
-                              "mt-0": showTabs(),
-                            }}
-                          >
-                            <For each={visibleUserMessages()}>
-                              {(message) => (
-                                <div
-                                  id={anchor(message.id)}
-                                  data-message-id={message.id}
-                                  classList={{
-                                    "min-w-0 w-full max-w-full": true,
-                                    "last:min-h-[calc(100vh-5.5rem-var(--prompt-height,8rem)-64px)] md:last:min-h-[calc(100vh-4.5rem-var(--prompt-height,10rem)-64px)]":
-                                      platform.platform !== "desktop",
-                                    "last:min-h-[calc(100vh-7rem-var(--prompt-height,8rem)-64px)] md:last:min-h-[calc(100vh-6rem-var(--prompt-height,10rem)-64px)]":
-                                      platform.platform === "desktop",
+                          <For each={visibleUserMessages()}>
+                            {(message) => (
+                              <div
+                                id={anchor(message.id)}
+                                data-message-id={message.id}
+                                classList={{
+                                  "min-w-0 w-full max-w-full": true,
+                                  "last:min-h-[calc(100vh-5.5rem-var(--prompt-height,8rem)-64px)] md:last:min-h-[calc(100vh-4.5rem-var(--prompt-height,10rem)-64px)]":
+                                    platform.platform !== "desktop",
+                                  "last:min-h-[calc(100vh-7rem-var(--prompt-height,8rem)-64px)] md:last:min-h-[calc(100vh-6rem-var(--prompt-height,10rem)-64px)]":
+                                    platform.platform === "desktop",
+                                }}
+                              >
+                                <SessionTurn
+                                  sessionID={activeSessionId()!}
+                                  messageID={message.id}
+                                  lastUserMessageID={lastUserMessage()?.id}
+                                  stepsExpanded={store.expanded[message.id] ?? false}
+                                  onStepsExpandedToggle={() =>
+                                    setStore("expanded", message.id, (open: boolean | undefined) => !open)
+                                  }
+                                  classes={{
+                                    root: "min-w-0 w-full relative",
+                                    content:
+                                      "flex flex-col justify-between !overflow-visible [&_[data-slot=session-turn-message-header]]:top-[-32px]",
+                                    container:
+                                      "px-4 md:px-6 " +
+                                      (!showTabs()
+                                        ? "md:max-w-200 md:mx-auto"
+                                        : visibleUserMessages().length > 1
+                                          ? "md:pr-6 md:pl-18"
+                                          : ""),
                                   }}
-                                >
-                                  <SessionTurn
-                                    sessionID={activeSessionId()!}
-                                    messageID={message.id}
-                                    lastUserMessageID={lastUserMessage()?.id}
-                                    stepsExpanded={store.expanded[message.id] ?? false}
-                                    onStepsExpandedToggle={() =>
-                                      setStore("expanded", message.id, (open: boolean | undefined) => !open)
-                                    }
-                                    classes={{
-                                      root: "min-w-0 w-full relative",
-                                      content:
-                                        "flex flex-col justify-between !overflow-visible [&_[data-slot=session-turn-message-header]]:top-[-32px]",
-                                      container:
-                                        "px-4 md:px-6 " +
-                                        (!showTabs()
-                                          ? "md:max-w-200 md:mx-auto"
-                                          : visibleUserMessages().length > 1
-                                            ? "md:pr-6 md:pl-18"
-                                            : ""),
-                                    }}
-                                  />
-                                </div>
-                              )}
-                            </For>
-                          </div>
+                                />
+                              </div>
+                            )}
+                          </For>
                         </div>
                       </div>
-                    </Show>
+                    </div>
                   </Show>
-                </Match>
-                <Match when={true}>
-                  <NewSessionView
-                    worktree={newSessionWorktree()}
-                    onWorktreeChange={(value) => {
-                      if (value === "create") {
-                        setStore("newSessionWorktree", value)
-                        return
-                      }
+                </Show>
+              </Match>
+              <Match when={true}>
+                <NewSessionView
+                  worktree={newSessionWorktree()}
+                  onWorktreeChange={(value) => {
+                    if (value === "create") {
+                      setStore("newSessionWorktree", value)
+                      return
+                    }
 
-                      setStore("newSessionWorktree", "main")
+                    setStore("newSessionWorktree", "main")
 
-                      const target = value === "main" ? sync.project?.worktree : value
-                      if (!target) return
-                      if (target === sync.data.path.directory) return
-                      layout.projects.open(target)
-                      navigate(`/${base64Encode(target)}/session`)
-                    }}
-                  />
-                </Match>
-              </Switch>
-            </Show>
+                    const target = value === "main" ? sync.project?.worktree : value
+                    if (!target) return
+                    if (target === sync.data.path.directory) return
+                    layout.projects.open(target)
+                    navigate(`/${base64Encode(target)}/session`)
+                  }}
+                />
+              </Match>
+            </Switch>
           </div>
 
           {/* Prompt input */}
@@ -1312,10 +1400,19 @@ export default function Page() {
                 newSessionWorktree={newSessionWorktree()}
                 onNewSessionWorktreeReset={() => setStore("newSessionWorktree", "main")}
                 onMessageSent={() => {
-                  // Track the current session as last active when a message is sent
                   const active = tabs().active()
+
+                  // Track the current session as last active when a message is sent
                   if (active?.startsWith("session-")) {
                     setLastActiveSession(active)
+                  }
+
+                  // Switch back to session tab if on preview/file tab
+                  if (active?.startsWith("preview://") || active?.startsWith("file://")) {
+                    const sessionTab = lastActiveSession() || `session-${info()?.id}`
+                    if (sessionTab) {
+                      tabs().setActive(sessionTab)
+                    }
                   }
                 }}
               />
@@ -1387,12 +1484,15 @@ export default function Page() {
               onChange={(tab) => layout.rightPanel.setActiveTab(tab as "files" | "timeline" | "team")}
               classList={{
                 "flex flex-col overflow-hidden": true,
-                "shrink-0": layout.terminal.opened(),
-                "flex-1": !layout.terminal.opened(),
+                "shrink-0 grow-0": projectTerminal().opened(),
+                "flex-1": !projectTerminal().opened(),
               }}
-              style={{ height: layout.terminal.opened() ? `${layout.fileExplorer.height()}px` : undefined }}
+              style={{
+                height: projectTerminal().opened() ? `${layout.fileExplorer.height()}px` : undefined,
+                "flex-basis": projectTerminal().opened() ? `${layout.fileExplorer.height()}px` : undefined,
+              }}
             >
-              <Tabs.List class="h-10 shrink-0">
+              <Tabs.List class="h-12 shrink-0">
                 <Tabs.Trigger value="files">Files</Tabs.Trigger>
                 <Tabs.Trigger value="timeline">Timeline</Tabs.Trigger>
                 <Tabs.Trigger value="team">Team</Tabs.Trigger>
@@ -1410,36 +1510,35 @@ export default function Page() {
               </div>
             </Tabs>
 
+            {/* Quick Action Bar - Always visible above terminal */}
+            <QuickActionBar activeSessionId={activeSessionId()} />
+
             {/* Terminal - Bottom */}
             <div
               classList={{
                 "flex flex-col": true,
-                "flex-1": layout.terminal.opened(),
-                "h-8 shrink-0": !layout.terminal.opened(),
+                "flex-1 min-h-[100px]": projectTerminal().opened(),
+                "shrink-0": !projectTerminal().opened(),
               }}
               data-prevent-autofocus
             >
-              {/* Full panel - animated */}
+              {/* Full panel - animated with grid */}
               <div
                 classList={{
-                  "overflow-hidden min-h-0 flex flex-col": true,
-                  "flex-1": layout.terminal.opened(),
-                  "transition-[flex] duration-200 ease-out": true,
+                  "grid transition-[grid-template-rows] duration-300 ease-out overflow-hidden": true,
+                  "flex-1": projectTerminal().opened(),
                 }}
-                style={{ flex: layout.terminal.opened() ? "1" : "0" }}
+                style={{
+                  "grid-template-rows": projectTerminal().opened() ? "1fr" : "0fr",
+                }}
               >
-                <div
-                  class="flex-1 min-h-0 flex flex-col transition-transform duration-200 ease-out border-t border-border-weak-base"
-                  style={{
-                    transform: layout.terminal.opened() ? "translateY(0)" : "translateY(100%)",
-                  }}
-                >
+                <div class="min-h-0 flex flex-col overflow-hidden border-t border-border-weak-base">
                   {/* Resize handle - INSIDE animated container, moves with terminal */}
                   <ResizeHandle
                     direction="vertical"
                     size={layout.fileExplorer.height()}
                     min={50}
-                    max={window.innerHeight * 0.7}
+                    max={Math.min(window.innerHeight * 0.7, window.innerHeight - 200)}
                     collapseThreshold={40}
                     invert
                     onResize={layout.fileExplorer.resize}
@@ -1483,19 +1582,19 @@ export default function Page() {
                           </div>
                           <div class="absolute right-0 h-full flex items-center pr-2">
                             <TooltipKeybind
-                              title={layout.terminal.opened() ? "Close terminal" : "Open terminal"}
+                              title={projectTerminal().opened() ? "Close terminal" : "Open terminal"}
                               keybind={command.keybind("terminal.toggle")}
                               class="flex items-center"
                             >
                               <Button
                                 variant="ghost"
                                 class="group/terminal-toggle size-6 p-0"
-                                onClick={layout.terminal.toggle}
+                                onClick={() => projectTerminal().toggle()}
                               >
                                 <div class="relative flex items-center justify-center size-4 [&>*]:absolute [&>*]:inset-0">
                                   <Icon
                                     size="small"
-                                    name={layout.terminal.opened() ? "layout-bottom-full" : "layout-bottom"}
+                                    name={projectTerminal().opened() ? "layout-bottom-full" : "layout-bottom"}
                                     class="group-hover/terminal-toggle:hidden"
                                   />
                                   <Icon
@@ -1505,7 +1604,7 @@ export default function Page() {
                                   />
                                   <Icon
                                     size="small"
-                                    name={layout.terminal.opened() ? "layout-bottom" : "layout-bottom-full"}
+                                    name={projectTerminal().opened() ? "layout-bottom" : "layout-bottom-full"}
                                     class="hidden group-active/terminal-toggle:inline-block"
                                   />
                                 </div>
@@ -1515,7 +1614,6 @@ export default function Page() {
                         </Tabs.List>
                         {/* Content area - fills remaining space */}
                         <div class="flex-1 min-h-0 flex flex-col">
-                          <QuickActionBar />
                           <For each={terminal.all()}>
                             {(pty) => (
                               <Tabs.Content value={pty.id} class="flex-1 min-h-0 flex flex-col">
@@ -1525,8 +1623,16 @@ export default function Page() {
                                   onCleanup={terminal.update}
                                   onConnectError={() => terminal.clone(pty.id)}
                                   onRef={(ref) => {
-                                    if (terminal.active() === pty.id) {
+                                    if (ref && terminal.active() === pty.id) {
                                       terminal.setActiveRef(ref)
+                                      terminal.markReady(pty.id)
+                                    }
+                                  }}
+                                  onLocalhostDetected={(url) => {
+                                    // Debounce: only open each URL once per session
+                                    if (!openedPreviewUrls.has(url)) {
+                                      openedPreviewUrls.add(url)
+                                      tabs().open(`preview://url:${url}`)
                                     }
                                   }}
                                 />
@@ -1556,16 +1662,23 @@ export default function Page() {
                 </div>
               </div>
 
-              {/* Collapsed bar - only shown when terminal is closed */}
-              <Show when={!layout.terminal.opened()}>
-                <button
-                  onClick={layout.terminal.open}
-                  class="mt-auto h-8 flex items-center px-3 gap-2 text-text-subtle hover:text-text-base hover:bg-surface-subtle transition-colors cursor-pointer border-t border-border-weak-base"
-                >
-                  <Icon name="chevron-right" size="small" class="-rotate-90" />
-                  <span class="text-13-regular">Terminal</span>
-                </button>
-              </Show>
+              {/* Collapsed bar - visible when terminal is closed */}
+              <div
+                class="grid transition-[grid-template-rows] duration-300 ease-out overflow-hidden"
+                style={{
+                  "grid-template-rows": projectTerminal().opened() ? "0fr" : "1fr",
+                }}
+              >
+                <div class="min-h-0 overflow-hidden">
+                  <button
+                    onClick={projectTerminal().open}
+                    class="h-8 w-full flex items-center px-3 gap-2 text-text-subtle hover:text-text-base hover:bg-surface-subtle transition-colors cursor-pointer border-t border-border-weak-base"
+                  >
+                    <Icon name="chevron-right" size="small" class="-rotate-90" />
+                    <span class="text-13-regular">Terminal</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </Show>

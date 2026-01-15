@@ -68,6 +68,7 @@ const platform: Platform = {
       clear(): Promise<unknown>
       keys(): Promise<string[]>
       length(): Promise<number>
+      save(): Promise<unknown>
     }
 
     const memory = () => {
@@ -85,6 +86,7 @@ const platform: Platform = {
         },
         keys: async () => Array.from(data.keys()),
         length: async () => data.size,
+        save: async () => undefined,
       }
       return store
     }
@@ -105,6 +107,7 @@ const platform: Platform = {
       setItem: async (key: string, value: string) => {
         const store = await api._getStore()
         await store.set(key, value).catch(() => undefined)
+        await store.save().catch(() => undefined)
       },
       removeItem: async (key: string) => {
         const store = await api._getStore()

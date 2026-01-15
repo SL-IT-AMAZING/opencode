@@ -21,6 +21,7 @@ import type {
   CollabRevertFreshResponses,
   CollabRevertReplaceResponses,
   CollabSaveResponses,
+  CollabStashSyncResponses,
   CollabStatusResponses,
   CollabSyncResponses,
   CollabTeamRefreshResponses,
@@ -406,6 +407,25 @@ export class Collab extends HeyApiClient {
     const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "directory" }] }])
     return (options?.client ?? this.client).post<CollabSyncResponses, unknown, ThrowOnError>({
       url: "/collab/sync",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Stash changes, sync, then restore
+   *
+   * Temporarily stash local changes, sync with remote, then restore the stashed changes.
+   */
+  public stashSync<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "directory" }] }])
+    return (options?.client ?? this.client).post<CollabStashSyncResponses, unknown, ThrowOnError>({
+      url: "/collab/stash-sync",
       ...options,
       ...params,
     })

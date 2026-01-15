@@ -1,7 +1,8 @@
-import { For, Show, createSignal, createMemo } from "solid-js"
+import { For, Show, createSignal, createMemo, createResource } from "solid-js"
 import { Icon } from "@anyon/ui/icon"
+import { Button } from "@anyon/ui/button"
 import { useDialog } from "@anyon/ui/context/dialog"
-import { useSync } from "@/context/sync"
+import { useSDK } from "@/context/sdk"
 import type { CollabCommitInfo } from "@anyon/sdk/v2/client"
 import { DialogCollabRevert } from "./dialog-collab-revert"
 
@@ -12,13 +13,26 @@ const NODE_SIZE = 12 // px diameter
 type TimelineItem = { type: "date"; label: string } | { type: "commit"; commit: CollabCommitInfo }
 
 export function CollabTimeline() {
-  const sync = useSync()
+  const sdk = useSDK()
   const dialog = useDialog()
   const [hoveredCommit, setHoveredCommit] = createSignal<string | null>(null)
   const [selectedCommit, setSelectedCommit] = createSignal<string | null>(null)
+  const [loading, setLoading] = createSignal(false)
+
+  // Fetch history directly from SDK
+  const [historyData, { refetch }] = createResource(async () => {
+    const result = await sdk.client.collab.history({ limit: 1000, offset: 0 })
+    return result.data ?? []
+  })
+
+  const handleRefresh = async () => {
+    setLoading(true)
+    await refetch()
+    setLoading(false)
+  }
 
   // Memoized history access
-  const history = createMemo(() => sync.data.collabHistory ?? [])
+  const history = createMemo(() => historyData() ?? [])
 
   // Sort by timestamp descending to ensure correct order regardless of backend
   const sortedHistory = createMemo(() => [...history()].sort((a, b) => b.timestamp - a.timestamp))
@@ -82,11 +96,21 @@ export function CollabTimeline() {
 
   return (
     <div class="flex flex-col h-full">
-      <Show when={history().length === 0}>
+      <div class="flex justify-end items-center p-2">
+        <Button variant="ghost" size="small" onClick={handleRefresh} disabled={loading()}>
+          {loading() ? "Refreshing..." : "Refresh"}
+        </Button>
+      </div>
+
+      <Show when={historyData.loading}>
+        <div class="p-4 text-12-regular text-text-weak text-center">Loading...</div>
+      </Show>
+
+      <Show when={!historyData.loading && history().length === 0}>
         <div class="p-4 text-12-regular text-text-weak text-center">No commit history</div>
       </Show>
 
-      <Show when={history().length > 0}>
+      <Show when={!historyData.loading && history().length > 0}>
         <div class="flex-1 overflow-auto">
           <div class="relative py-3 pr-3" style={{ "padding-left": `${TIMELINE_OFFSET + NODE_SIZE}px` }}>
             {/* Vertical timeline line */}

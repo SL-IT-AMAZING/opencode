@@ -1,0 +1,112 @@
+# Progress Log
+
+## Learnings
+(Patterns discovered during implementation)
+
+---
+
+## Iteration 1 - US-001: Add Preview Tab Helpers to File Context
+- Implemented three preview tab helper functions in `packages/app/src/context/file.tsx`
+- Files changed: `packages/app/src/context/file.tsx`
+- Learnings for future iterations:
+  - Follow existing patterns: `tab()` and `pathFromTab()` show the encoding/decoding pattern
+  - Functions go inside the `init()` function and are added to the return object
+  - Preview tab format: `preview://url:<url>` for http/https URLs, `preview://file:<path>` for files
+  - Use `normalize(input)` for file paths to ensure consistent paths
+---
+
+## Iteration 2 - US-002: Update Tab Filtering for Preview Tabs
+- Updated `allTabs` filter to include `preview://` tabs alongside `session-` and `file://` tabs
+- Added `activePreviewTab` memo that uses `file.previewFromTab()` to parse active preview tabs
+- Files changed: `packages/app/src/pages/session.tsx`
+- Learnings for future iterations:
+  - `useFile()` context provides preview helpers: `previewFromTab()`, `previewTab()`, `isPreviewTab()`
+  - Tab filtering pattern: `tab.startsWith("prefix")` used to distinguish tab types
+  - `createMemo()` pattern for computed values in SolidJS
+  - `tabs().active()` returns the currently active tab string
+  - Run typecheck with `bun run typecheck` from the opencode directory
+---
+
+## Iteration 3 - US-003: Fix Content Gating with Switch
+- Replaced nested Show blocks with a single Switch/Match structure for content gating
+- Created placeholder PreviewPane component in `packages/app/src/components/preview/preview-pane.tsx`
+- Files changed:
+  - `packages/app/src/pages/session.tsx` (content gating + import)
+  - `packages/app/src/components/preview/preview-pane.tsx` (new placeholder)
+- Learnings for future iterations:
+  - SolidJS Switch/Match is already imported in session.tsx - no additional imports needed
+  - Content area uses Switch/Match for mutually exclusive content rendering (preview, file viewer, session)
+  - Match components can use callback children pattern: `{(value) => <Component prop={value()} />}`
+  - PreviewPane receives `preview: { type: "url" | "file", value: string }` prop
+  - Placeholder components help maintain typecheck while implementing in order
+---
+
+## Iteration 4 - US-004: Update SortableTab for Preview Rendering
+- Added preview memo and PreviewVisual component to session-sortable-tab.tsx
+- Files changed: `packages/app/src/components/session/session-sortable-tab.tsx`
+- Learnings for future iterations:
+  - Used `window-cursor` icon as a browser/preview indicator (no globe icon in the icon set)
+  - `getFilename()` from `@anyon/util/path` extracts filename from path
+  - Switch/Match can replace Show when multiple conditions need rendering
+  - Tooltip value should be updated to show preview URL/path instead of tab id
+  - Preview object has `{ type: "url" | "file", value: string }` structure
+  - Use try/catch with URL constructor to safely extract hostname from URLs
+---
+
+## Iteration 5 - US-005: Create Preview Toolbar Component
+- Created PreviewToolbar component with URL display, refresh, and external open buttons
+- Files changed: `packages/app/src/components/preview/preview-toolbar.tsx` (new file)
+- Learnings for future iterations:
+  - `usePlatform()` from `@/context/platform` provides `openLink(url)` for opening URLs externally
+  - `IconButton` from `@anyon/ui/icon-button` accepts `icon` (name), `variant`, and standard button props
+  - No refresh icon in the icon set - used custom inline SVG for refresh button
+  - `Tooltip` from `@anyon/ui/tooltip` wraps elements with `value` prop for tooltip text
+  - Available icons include: `square-arrow-top-right` (external link), `window-cursor` (browser)
+  - Dark theme colors: bg `#252526`, border `#3c3c3c`, input bg `#1e1e1e`
+---
+
+## Iteration 6 - US-006: Create Preview Pane Component
+- Replaced placeholder with full iframe-based preview pane implementation
+- Files changed: `packages/app/src/components/preview/preview-pane.tsx`
+- Learnings for future iterations:
+  - `useSDK()` returns `{ directory, client, event, url }` - use `sdk.url` for server URL
+  - Event listening pattern: `sdk.event.listen((e) => { const event = e.details; if (event.type === "...") ... })`
+  - `file.watcher.updated` event has `properties.file` (path) and `properties.event` (add/change/unlink)
+  - SolidJS iframes don't support `key` prop for re-rendering - use cache-busting URL params instead
+  - Use `createMemo()` for computed URLs: base URL for toolbar, cache-busted URL for iframe src
+  - Sandbox attribute: `allow-scripts allow-same-origin allow-forms allow-popups` for proper iframe behavior
+  - Live reload pattern: watch HTML/CSS/JS files with regex `/\.(html?|css|js|jsx|ts|tsx)$/i`
+---
+
+## Iteration 7 - US-007: Add Static File Preview Route to Server
+- Implemented static file serving route for HTML preview feature
+- Files changed:
+  - `packages/opencode/src/server/preview.ts` (new file - separate route module)
+  - `packages/opencode/src/server/server.ts` (import and mount PreviewRoute)
+- Learnings for future iterations:
+  - Server file uses hono-openapi with chained method calls that hit TypeScript type inference depth limit
+  - Solution: Mount routes BEFORE the lazy App() wrapper using `app.route("/preview", PreviewRoute)`
+  - Do NOT add routes inside the chained method calls - creates TS2589 "Type instantiation excessively deep" error
+  - `Instance.directory` provides the workspace root for security validation
+  - `path.resolve()` + `startsWith()` pattern validates paths stay within workspace
+  - `Bun.file(path).stream()` efficiently streams file content
+  - MIME types must be set manually via `c.header("Content-Type", mimeType)`
+  - CORS header `Access-Control-Allow-Origin: *` required for iframe preview to work
+  - Return proper HTTP status codes: 403 for forbidden paths, 404 for missing files
+---
+
+## Iteration 8 - US-008: Add Preview Entry Point in File Tree
+- Implemented preview icon button for HTML files in file tree
+- Files changed:
+  - `packages/app/src/components/file-tree.tsx` (added isHtmlFile helper, onPreviewClick prop, preview icon button)
+  - `packages/app/src/components/file-explorer-panel.tsx` (added openPreview handler using file.previewTab)
+- Learnings for future iterations:
+  - `isHtmlFile(path)` checks for `.html` or `.htm` extensions (case-insensitive)
+  - FileTree accepts `onPreviewClick?: (file: LocalFile) => void` prop for preview button clicks
+  - FileExplorerPanel uses `file.previewTab(path)` to create preview tab value
+  - `IconButton` only supports `"normal"` or `"large"` sizes, not `"small"`
+  - Use `window-cursor` icon for preview/browser buttons
+  - Group hover pattern: `group/file-row` + `group-hover/file-row:opacity-100` for hover-reveal buttons
+  - Wrap file row in div with `group/file-row` class to enable hover-based icon visibility
+  - Use `e.stopPropagation()` on preview button click to prevent file from being opened
+---
