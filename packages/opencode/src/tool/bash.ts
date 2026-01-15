@@ -192,12 +192,26 @@ export const BashTool = Tool.define("bash", async () => {
 
       // Idle timeout - return early if output stops but process still running
       // This allows dev servers (npm run dev, etc.) to return quickly
-      const IDLE_TIMEOUT = 3000 // 3 seconds
+      const IDLE_TIMEOUT = 3000 // 3 seconds after last output
+      const STARTUP_TIMEOUT = 5000 // 5 seconds max wait if no output at all
       let idleTimer: ReturnType<typeof setTimeout> | null = null
+      let startupTimer: ReturnType<typeof setTimeout> | null = null
       let hasOutput = false
+
+      // Start a timer that fires even if no output is produced (for silent servers like python http.server)
+      startupTimer = setTimeout(() => {
+        if (!exited && !hasOutput) {
+          idleReturned = true
+        }
+      }, STARTUP_TIMEOUT)
 
       const resetIdleTimer = () => {
         hasOutput = true
+        // Cancel startup timer once we get output - idle timer takes over
+        if (startupTimer) {
+          clearTimeout(startupTimer)
+          startupTimer = null
+        }
         if (idleTimer) clearTimeout(idleTimer)
         idleTimer = setTimeout(() => {
           if (!exited && hasOutput) {
@@ -235,6 +249,7 @@ export const BashTool = Tool.define("bash", async () => {
         const cleanup = () => {
           clearTimeout(timeoutTimer)
           if (idleTimer) clearTimeout(idleTimer)
+          if (startupTimer) clearTimeout(startupTimer)
           ctx.abort.removeEventListener("abort", abortHandler)
         }
 

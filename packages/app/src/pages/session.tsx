@@ -264,6 +264,9 @@ export default function Page() {
 
     const messages = sync.data.message[sessionId] ?? []
 
+    // Strip ANSI escape codes (colors, formatting) that break regex matching
+    const stripAnsi = (str: string) => str.replace(/\x1b\[[0-9;]*m/g, "")
+
     for (const msg of messages) {
       const parts = sync.data.part[msg.id] ?? []
 
@@ -272,7 +275,8 @@ export default function Page() {
         if (part.type !== "tool") continue
         if (part.state.status !== "completed") continue
 
-        const output = part.state.output ?? ""
+        // Strip ANSI codes before matching - dev server output contains color codes
+        const output = stripAnsi(part.state.output ?? "")
 
         const serverReadyPatterns = [
           /Local:\s*(https?:\/\/(?:localhost|127\.0\.0\.1):\d+)/i,
@@ -361,11 +365,6 @@ export default function Page() {
 
     // Check localStorage to see if we already asked about this folder
     if (getAskedFolders().includes(directory)) return
-
-    // Ensure terminal panel is open
-    if (!projectTerminal().opened()) {
-      projectTerminal().open()
-    }
 
     // Delay to wait for terminal WebSocket connection
     setTimeout(() => {

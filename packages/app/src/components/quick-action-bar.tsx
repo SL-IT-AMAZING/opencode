@@ -1,5 +1,6 @@
 import { Button } from "@anyon/ui/button"
-import { Icon } from "@anyon/ui/icon"
+import { Icon, type IconProps } from "@anyon/ui/icon"
+import { Tooltip } from "@anyon/ui/tooltip"
 import { useTerminal } from "@/context/terminal"
 import { useSDK } from "@/context/sdk"
 import { useLocal } from "@/context/local"
@@ -10,6 +11,26 @@ import { Identifier } from "@/utils/id"
 
 interface QuickActionBarProps {
   activeSessionId?: string
+}
+
+function ActionButton(props: {
+  icon: IconProps["name"]
+  label: string
+  onClick: () => void
+}) {
+  return (
+    <Tooltip value={props.label}>
+      <Button
+        variant="secondary"
+        size="normal"
+        class="flex-1 min-w-0 justify-center @[220px]:flex-initial @[220px]:px-4"
+        onClick={props.onClick}
+      >
+        <Icon name={props.icon} size="small" />
+        <span class="hidden @[220px]:inline">{props.label}</span>
+      </Button>
+    </Tooltip>
+  )
 }
 
 export function QuickActionBar(props: QuickActionBarProps) {
@@ -167,31 +188,10 @@ If none exist -> run "npx vite" or "npx next dev" based on dependencies`
   }
 
   return (
-    <div class="flex items-center justify-center gap-6 px-3 py-1.5 border-t border-border-weak-base bg-background-base">
-      <Button
-        size="small"
-        class="rounded-lg px-3 gap-1.5 bg-surface-subtle hover:bg-surface-base transition-colors"
-        onClick={handleSave}
-      >
-        <Icon name="share" size="small" />
-        Save
-      </Button>
-      <Button
-        size="small"
-        class="rounded-lg px-3 gap-1.5 bg-surface-subtle hover:bg-surface-base transition-colors"
-        onClick={() => sendCommand("git pull --no-rebase")}
-      >
-        <Icon name="download" size="small" />
-        Sync
-      </Button>
-      <Button
-        size="small"
-        class="rounded-lg px-3 gap-1.5 bg-surface-subtle hover:bg-surface-base transition-colors"
-        onClick={handleRun}
-      >
-        <Icon name="console" size="small" />
-        Run
-      </Button>
+    <div class="@container flex items-center justify-center gap-2 @[220px]:gap-3 px-2 py-2 border-t border-border-weak-base bg-background-base">
+      <ActionButton icon="share" label="Save" onClick={handleSave} />
+      <ActionButton icon="download" label="Sync" onClick={() => sendCommand("git pull --no-rebase")} />
+      <ActionButton icon="console" label="Run" onClick={handleRun} />
     </div>
   )
 }
