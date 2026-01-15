@@ -57,29 +57,12 @@ export const Logo = (props: { class?: string }) => {
 
 export const AnyonLogo = (props: { class?: string }) => {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 144 42"
-      fill="none"
+    <img
+      data-component="anyon-logo"
+      src={logoFull}
+      alt="ANYON"
       classList={{ [props.class ?? ""]: !!props.class }}
-    >
-      <g>
-        {/* A at 0-24 */}
-        <path d="M18 30H6V24H18V30Z" fill="rgba(255, 255, 255, 0.5)" />
-        <path d="M24 36H0V6H24V36ZM18 12H6V18H18V12ZM18 24H6V36H18V24Z" fill="rgba(255, 255, 255, 0.9)" />
-        {/* N at 30-54 */}
-        <path d="M48 36H36V18H48V36Z" fill="rgba(255, 255, 255, 0.5)" />
-        <path d="M48 12H36V36H30V6H48V12ZM54 36H48V12H54V36Z" fill="rgba(255, 255, 255, 0.9)" />
-        {/* Y at 60-84 */}
-        <path d="M78 30H66V24H78V30Z" fill="rgba(255, 255, 255, 0.5)" />
-        <path d="M66 18H60V6H66V18ZM84 18H78V6H84V18ZM78 36H66V18H78V36Z" fill="rgba(255, 255, 255, 0.9)" />
-        {/* O at 90-114 */}
-        <path d="M108 30H96V18H108V30Z" fill="rgba(255, 255, 255, 0.5)" />
-        <path d="M108 12H96V30H108V12ZM114 36H90V6H114V36Z" fill="rgba(255, 255, 255, 0.9)" />
-        {/* N at 120-144 */}
-        <path d="M138 36H126V18H138V36Z" fill="rgba(255, 255, 255, 0.5)" />
-        <path d="M138 12H126V36H120V6H138V12ZM144 36H138V12H144V36Z" fill="rgba(255, 255, 255, 0.9)" />
-      </g>
-    </svg>
+      class="h-40 object-contain"
+    />
   )
 }

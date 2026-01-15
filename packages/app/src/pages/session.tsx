@@ -1,4 +1,4 @@
-import { For, onCleanup, Show, Match, Switch, createMemo, createEffect, on } from "solid-js"
+import { For, onCleanup, onMount, Show, Match, Switch, createMemo, createEffect, on, createSignal } from "solid-js"
 import { createMediaQuery } from "@solid-primitives/media"
 import { createResizeObserver } from "@solid-primitives/resize-observer"
 import { Dynamic } from "solid-js/web"
@@ -8,6 +8,7 @@ import { createStore } from "solid-js/store"
 import { PromptInput } from "@/components/prompt-input"
 import { SessionContextUsage } from "@/components/session-context-usage"
 import { IconButton } from "@anyon/ui/icon-button"
+import { Button } from "@anyon/ui/button"
 import { Icon } from "@anyon/ui/icon"
 import { Tooltip, TooltipKeybind } from "@anyon/ui/tooltip"
 import { DiffChanges } from "@anyon/ui/diff-changes"
@@ -25,12 +26,18 @@ import { useSync } from "@/context/sync"
 import { useTerminal, type LocalPTY } from "@/context/terminal"
 import { useLayout } from "@/context/layout"
 import { Terminal } from "@/components/terminal"
+import { QuickActionBar } from "@/components/quick-action-bar"
 import { FileExplorerPanel } from "@/components/file-explorer-panel"
+import { CollabTimeline } from "@/components/collab-timeline"
+import { CollabTeam } from "@/components/collab-team"
+import { FileViewer } from "@/components/file-viewer"
 import { checksum, base64Encode, base64Decode } from "@anyon/util/encode"
 import { useDialog } from "@anyon/ui/context/dialog"
 import { DialogSelectFile } from "@/components/dialog-select-file"
 import { DialogSelectModel } from "@/components/dialog-select-model"
 import { DialogSelectMcp } from "@/components/dialog-select-mcp"
+import { DialogGitInit } from "@/components/dialog-git-init"
+import { DialogGitHubConnect } from "@/components/dialog-github-connect"
 import { useCommand } from "@/context/command"
 import { useNavigate, useParams } from "@solidjs/router"
 import { UserMessage } from "@anyon/sdk/v2"
@@ -42,15 +49,16 @@ import { ConstrainDragYAxis, getDraggableId } from "@/utils/solid-dnd"
 import { usePermission } from "@/context/permission"
 import { showToast } from "@anyon/ui/toast"
 import {
-  SessionHeader,
   SessionContextTab,
   SortableTab,
+  SortableSessionTab,
   FileVisual,
   SortableTerminalTab,
   NewSessionView,
 } from "@/components/session"
 import { usePlatform } from "@/context/platform"
 import { same } from "@/utils/same"
+import { PreviewPane } from "@/components/preview/preview-pane"
 
 type DiffStyle = "unified" | "split"
 
@@ -123,7 +131,7 @@ function SessionReviewTab(props: SessionReviewTabProps) {
 
   return (
     <SessionReview
-      scrollRef={(el) => {
+      scrollRef={(el: HTMLDivElement | undefined) => {
         scroll = el
         restoreScroll()
       }}
@@ -160,6 +168,27 @@ export default function Page() {
   const sessionKey = createMemo(() => `${params.dir}${params.id ? "/" + params.id : ""}`)
   const tabs = createMemo(() => layout.tabs(sessionKey()))
   const view = createMemo(() => layout.view(sessionKey()))
+  const sessions = createMemo(() => layout.sessions(params.dir ?? ""))
+  const projectTerminal = createMemo(() => {
+    const dir = sync.directory
+    return dir ? layout.terminalFor(dir) : layout.terminal
+  })
+
+  // Track opened preview URLs to avoid duplicates
+  const openedPreviewUrls = new Set<string>()
+
+  // Derive current session from active tab (for multi-tab support)
+  const activeSessionId = createMemo(() => {
+    const active = tabs().active()
+    if (active?.startsWith("session-")) {
+      return active.replace("session-", "")
+    }
+    // Fall back to URL param when no session tab is active
+    return params.id
+  })
+
+  // Track the last active session tab (for returning after file operations)
+  const [lastActiveSession, setLastActiveSession] = createSignal<string | undefined>()
 
   const isDesktop = createMediaQuery("(min-width: 768px)")
 
@@ -182,11 +211,91 @@ export default function Page() {
 
   const openTab = (value: string) => {
     const next = normalizeTab(value)
+    // Track last session before switching to a file tab
+    if (next.startsWith("file://")) {
+      const currentActive = tabs().active()
+      if (currentActive?.startsWith("session-")) {
+        setLastActiveSession(currentActive)
+      }
+    }
     tabs().open(next)
-
     const path = file.pathFromTab(next)
     if (path) file.load(path)
   }
+
+  // Intercept localhost link clicks to open in preview tab instead of external browser
+  onMount(() => {
+    const handler = (e: MouseEvent) => {
+      // Allow Ctrl/Cmd+Click to open externally
+      if (e.ctrlKey || e.metaKey) return
+
+      const target = e.target as HTMLElement
+      const anchor = target.closest("a")
+      if (!anchor) return
+
+      const href = anchor.getAttribute("href")
+      if (!href) return
+
+      // Check if localhost URL
+      try {
+        const url = new URL(href)
+        const isLocalhost =
+          url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname.endsWith(".localhost")
+
+        if (isLocalhost) {
+          e.preventDefault()
+          e.stopPropagation()
+          const previewTabValue = file.previewTab(href)
+          openTab(previewTabValue)
+        }
+      } catch {
+        // Invalid URL, ignore
+      }
+    }
+
+    document.addEventListener("click", handler, true)
+    onCleanup(() => document.removeEventListener("click", handler, true))
+  })
+
+  // Detect localhost URLs in AI tool output (e.g., when AI runs `bun dev`)
+  createEffect(() => {
+    const sessionId = activeSessionId()
+    if (!sessionId) return
+
+    const messages = sync.data.message[sessionId] ?? []
+
+    // Strip ANSI escape codes (colors, formatting) that break regex matching
+    const stripAnsi = (str: string) => str.replace(/\x1b\[[0-9;]*m/g, "")
+
+    for (const msg of messages) {
+      const parts = sync.data.part[msg.id] ?? []
+
+      // Check tool parts for localhost URLs in completed state
+      for (const part of parts) {
+        if (part.type !== "tool") continue
+        if (part.state.status !== "completed") continue
+
+        // Strip ANSI codes before matching - dev server output contains color codes
+        const output = stripAnsi(part.state.output ?? "")
+
+        const serverReadyPatterns = [
+          /Local:\s*(https?:\/\/(?:localhost|127\.0\.0\.1):\d+)/i,
+          /listening.*?(https?:\/\/(?:localhost|127\.0\.0\.1):\d+)/i,
+          /started.*?(https?:\/\/(?:localhost|127\.0\.0\.1):\d+)/i,
+          /running.*?(https?:\/\/(?:localhost|127\.0\.0\.1):\d+)/i,
+        ]
+
+        for (const pattern of serverReadyPatterns) {
+          const match = output.match(pattern)
+          if (match && match[1] && !openedPreviewUrls.has(match[1])) {
+            openedPreviewUrls.add(match[1])
+            tabs().open(`preview://url:${match[1]}`)
+            break
+          }
+        }
+      }
+    }
+  })
 
   createEffect(() => {
     const active = tabs().active()
@@ -214,11 +323,102 @@ export default function Page() {
     tabs().setActive(normalized)
   })
 
-  const info = createMemo(() => (params.id ? sync.session.get(params.id) : undefined))
+  // Auto-add session to open tabs when navigating via sidebar
+  createEffect(() => {
+    const sessionId = params.id
+    if (!sessionId) return
+    // Only add and set active if session wasn't already open
+    const sessionTab = `session-${sessionId}`
+    const wasOpen = tabs().all().includes(sessionTab)
+    if (!wasOpen) {
+      // Add to unified tabs list (appends to end - Chrome style)
+      tabs().open(sessionTab)
+      // Also track in sessions for sidebar
+      sessions().open(sessionId)
+    }
+  })
+
+  // Auto git init dialog when opening a folder without .git
+  // Use localStorage to persist "already asked" state across page reloads
+  const GIT_INIT_ASKED_KEY = "git-init-asked"
+  const getAskedFolders = (): string[] => {
+    try {
+      return JSON.parse(localStorage.getItem(GIT_INIT_ASKED_KEY) || "[]")
+    } catch {
+      return []
+    }
+  }
+  const markAsked = (dir: string) => {
+    const asked = getAskedFolders()
+    if (!asked.includes(dir)) {
+      localStorage.setItem(GIT_INIT_ASKED_KEY, JSON.stringify([...asked, dir]))
+    }
+  }
+  const isUserFolder = (path: string) => path.startsWith("/Users/") || path.startsWith("/home/")
+
+  createEffect(() => {
+    // Use sync.directory (from URL) instead of sync.project?.worktree
+    // because new folders aren't registered as projects yet
+    const directory = sync.directory
+    if (!directory) return
+    if (!isUserFolder(directory)) return
+
+    // Check localStorage to see if we already asked about this folder
+    if (getAskedFolders().includes(directory)) return
+
+    // Delay to wait for terminal WebSocket connection
+    setTimeout(() => {
+      sdk.client.file
+        .list({ path: "." })
+        .then((res) => {
+          const hasGit = res.data?.some((f) => f.name === ".git")
+          if (!hasGit) {
+            // Show dialog to choose git init or clone
+            dialog.show(() => (
+              <DialogGitInit
+                onInit={() => {
+                  terminal.writeWhenReady("\x15git init && git branch -M main\n")
+                }}
+                onClone={(url) => {
+                  terminal.writeWhenReady(`\x15git clone ${url} . && npm install\n`)
+                }}
+                onShowGitHubConnect={() => {
+                  // Show GitHub connect dialog to create remote repo
+                  dialog.show(() => (
+                    <DialogGitHubConnect
+                      onConnect={(repoUrl) => {
+                        terminal.writeWhenReady(
+                          `\x15git remote add origin ${repoUrl} && git add -A && git commit -m "Initial commit" && git push -u origin main\n`,
+                        )
+                      }}
+                      onSkip={() => {
+                        // User skipped, no action needed
+                      }}
+                    />
+                  ))
+                }}
+              />
+            ))
+          }
+          // Mark this folder as asked (regardless of choice) to prevent repeated popups
+          markAsked(directory)
+        })
+        .catch(() => {
+          // If file.list fails, still mark as asked to avoid repeated attempts
+          markAsked(directory)
+        })
+    }, 500)
+  })
+
+  const info = createMemo(() => (activeSessionId() ? sync.session.get(activeSessionId()!) : undefined))
+  const getSessionTitle = (sessionId: string) => {
+    const session = sync.session.get(sessionId)
+    return session?.title || "New Session"
+  }
   const revertMessageID = createMemo(() => info()?.revert?.messageID)
-  const messages = createMemo(() => (params.id ? (sync.data.message[params.id] ?? []) : []))
+  const messages = createMemo(() => (activeSessionId() ? (sync.data.message[activeSessionId()!] ?? []) : []))
   const messagesReady = createMemo(() => {
-    const id = params.id
+    const id = activeSessionId()
     if (!id) return true
     return sync.data.message[id] !== undefined
   })
@@ -288,7 +488,7 @@ export default function Page() {
     scrollToMessage(msgs[targetIndex], "auto")
   }
 
-  const diffs = createMemo(() => (params.id ? (sync.data.session_diff[params.id] ?? []) : []))
+  const diffs = createMemo(() => (activeSessionId() ? (sync.data.session_diff[activeSessionId()!] ?? []) : []))
 
   const idle = { type: "idle" as const }
   let inputRef!: HTMLDivElement
@@ -296,15 +496,27 @@ export default function Page() {
   let scroller: HTMLDivElement | undefined
 
   createEffect(() => {
-    if (!params.id) return
-    sync.session.sync(params.id)
+    if (!activeSessionId()) return
+    sync.session.sync(activeSessionId()!)
   })
 
+  // Create terminal on project entry (regardless of panel state)
   createEffect(() => {
-    if (layout.terminal.opened()) {
-      if (terminal.all().length === 0) {
-        terminal.new()
-      }
+    if (!sync.directory) return
+    if (terminal.all().length === 0) {
+      terminal.new()
+    }
+  })
+
+  // Handle resize when panel opens
+  createEffect(() => {
+    if (projectTerminal().opened()) {
+      requestAnimationFrame(() => {
+        window.dispatchEvent(new Event("resize"))
+        setTimeout(() => {
+          window.dispatchEvent(new Event("resize"))
+        }, 350)
+      })
     }
   })
 
@@ -320,11 +532,11 @@ export default function Page() {
     ),
   )
 
-  const status = createMemo(() => sync.data.session_status[params.id ?? ""] ?? idle)
+  const status = createMemo(() => sync.data.session_status[activeSessionId() ?? ""] ?? idle)
 
   createEffect(
     on(
-      () => params.id,
+      () => activeSessionId(),
       () => {
         setStore("messageId", undefined)
         setStore("expanded", {})
@@ -365,7 +577,7 @@ export default function Page() {
       category: "View",
       keybind: "ctrl+`",
       slash: "terminal",
-      onSelect: () => layout.terminal.toggle(),
+      onSelect: () => projectTerminal().toggle(),
     },
     {
       id: "review.toggle",
@@ -390,7 +602,7 @@ export default function Page() {
       category: "View",
       keybind: "mod+e",
       slash: "steps",
-      disabled: !params.id,
+      disabled: !activeSessionId(),
       onSelect: () => {
         const msg = activeMessage()
         if (!msg) return
@@ -403,7 +615,7 @@ export default function Page() {
       description: "Go to the previous user message",
       category: "Session",
       keybind: "mod+arrowup",
-      disabled: !params.id,
+      disabled: !activeSessionId(),
       onSelect: () => navigateMessageByOffset(-1),
     },
     {
@@ -412,7 +624,7 @@ export default function Page() {
       description: "Go to the next user message",
       category: "Session",
       keybind: "mod+arrowdown",
-      disabled: !params.id,
+      disabled: !activeSessionId(),
       onSelect: () => navigateMessageByOffset(1),
     },
     {
@@ -466,12 +678,15 @@ export default function Page() {
     },
     {
       id: "permissions.autoaccept",
-      title: params.id && permission.isAutoAccepting(params.id) ? "Stop auto-accepting edits" : "Auto-accept edits",
+      title:
+        activeSessionId() && permission.isAutoAccepting(activeSessionId()!)
+          ? "Stop auto-accepting edits"
+          : "Auto-accept edits",
       category: "Permissions",
       keybind: "mod+shift+a",
-      disabled: !params.id || !permission.permissionsEnabled(),
+      disabled: !activeSessionId() || !permission.permissionsEnabled(),
       onSelect: () => {
-        const sessionID = params.id
+        const sessionID = activeSessionId()
         if (!sessionID) return
         permission.toggleAutoAccept(sessionID, sdk.directory)
         showToast({
@@ -488,9 +703,9 @@ export default function Page() {
       description: "Undo the last message",
       category: "Session",
       slash: "undo",
-      disabled: !params.id || visibleUserMessages().length === 0,
+      disabled: !activeSessionId() || visibleUserMessages().length === 0,
       onSelect: async () => {
-        const sessionID = params.id
+        const sessionID = activeSessionId()
         if (!sessionID) return
         if (status()?.type !== "idle") {
           await sdk.client.session.abort({ sessionID }).catch(() => {})
@@ -517,9 +732,9 @@ export default function Page() {
       description: "Redo the last undone message",
       category: "Session",
       slash: "redo",
-      disabled: !params.id || !info()?.revert?.messageID,
+      disabled: !activeSessionId() || !info()?.revert?.messageID,
       onSelect: async () => {
-        const sessionID = params.id
+        const sessionID = activeSessionId()
         if (!sessionID) return
         const revertMessageID = info()?.revert?.messageID
         if (!revertMessageID) return
@@ -546,9 +761,9 @@ export default function Page() {
       description: "Summarize the session to reduce context size",
       category: "Session",
       slash: "compact",
-      disabled: !params.id || visibleUserMessages().length === 0,
+      disabled: !activeSessionId() || visibleUserMessages().length === 0,
       onSelect: async () => {
-        const sessionID = params.id
+        const sessionID = activeSessionId()
         if (!sessionID) return
         const model = local.model.current()
         if (!model) {
@@ -592,19 +807,21 @@ export default function Page() {
     setStore("activeDraggable", id)
   }
 
-  const handleDragOver = (event: DragEvent) => {
+  const handleDragOver = (_event: DragEvent) => {
+    // SortableProvider handles visual reordering during drag
+    // Do not modify actual tab order here - it causes index conflicts
+  }
+
+  const handleDragEnd = (event: DragEvent) => {
     const { draggable, droppable } = event
     if (draggable && droppable) {
       const currentTabs = tabs().all()
-      const fromIndex = currentTabs?.indexOf(draggable.id.toString())
-      const toIndex = currentTabs?.indexOf(droppable.id.toString())
-      if (fromIndex !== toIndex && toIndex !== undefined) {
+      const fromIndex = currentTabs.indexOf(draggable.id.toString())
+      const toIndex = currentTabs.indexOf(droppable.id.toString())
+      if (fromIndex !== -1 && toIndex !== -1 && fromIndex !== toIndex) {
         tabs().move(draggable.id.toString(), toIndex)
       }
     }
-  }
-
-  const handleDragEnd = () => {
     setStore("activeDraggable", undefined)
   }
 
@@ -631,11 +848,91 @@ export default function Page() {
   }
 
   const contextOpen = createMemo(() => tabs().active() === "context" || tabs().all().includes("context"))
+  const contextActive = createMemo(() => tabs().active() === "context")
+
   const openedTabs = createMemo(() =>
     tabs()
       .all()
       .filter((tab) => tab !== "context"),
   )
+
+  // All tabs unified: sessions + files + previews in single ordered list (Chrome-style)
+  // New tabs (sessions, files, or previews) appear at the end (right side)
+  const allTabs = createMemo(() =>
+    tabs()
+      .all()
+      .filter((tab) => tab.startsWith("session-") || tab.startsWith("file://") || tab.startsWith("preview://")),
+  )
+
+  // Helper: check if there are any file tabs open
+  const hasFileTabs = createMemo(() => allTabs().some((tab) => tab.startsWith("file://")))
+
+  // Active file tab for file viewer
+  const activeFileTab = createMemo(() => {
+    const active = tabs().active()
+    if (!active?.startsWith("file://")) return null
+    return file.pathFromTab(active)
+  })
+
+  // Active preview tab for preview pane
+  const activePreviewTab = createMemo(() => {
+    const active = tabs().active()
+    if (!active?.startsWith("preview://")) return null
+    return file.previewFromTab(active)
+  })
+
+  // Switch to session (deactivate file tabs)
+  const switchToSession = () => {
+    tabs().setActive(undefined)
+  }
+
+  // Close a specific tab
+  const closeTab = (tab: string) => {
+    tabs().close(tab)
+  }
+
+  // Handle ask about selection from file viewer
+  const handleAskAboutSelection = (selection: { text: string; startLine: number; endLine: number }) => {
+    const path = activeFileTab()
+    if (!path) return
+
+    // Add selected code to prompt context
+    prompt.context.add({
+      type: "file",
+      path,
+      selection: {
+        startLine: selection.startLine,
+        endLine: selection.endLine,
+        startChar: 0,
+        endChar: 0,
+      },
+    })
+
+    // Switch to the last active session (or first session if none)
+    const targetSession = lastActiveSession()
+    if (targetSession) {
+      tabs().setActive(targetSession)
+    } else {
+      // Fall back to first open session
+      const firstSession = sessions().list()[0]
+      if (firstSession) {
+        tabs().setActive(`session-${firstSession}`)
+      } else {
+        tabs().setActive(undefined)
+      }
+    }
+
+    // Focus prompt input
+    inputRef?.focus()
+  }
+
+  // Close file viewer and go back to session
+  const closeFileViewer = () => {
+    const active = tabs().active()
+    if (active?.startsWith("file://")) {
+      tabs().close(active)
+    }
+  }
 
   const reviewTab = createMemo(() => diffs().length > 0 || tabs().active() === "review")
   const mobileReview = createMemo(() => !isDesktop() && diffs().length > 0 && store.mobileTab === "review")
@@ -743,7 +1040,7 @@ export default function Page() {
   }
 
   createEffect(() => {
-    const sessionID = params.id
+    const sessionID = activeSessionId()
     const ready = messagesReady()
     if (!sessionID || !ready) return
 
@@ -769,7 +1066,6 @@ export default function Page() {
 
   return (
     <div class="relative bg-background-base size-full overflow-hidden flex flex-col">
-      <SessionHeader />
       <div class="flex-1 min-h-0 flex flex-col md:flex-row">
         {/* Mobile tab bar - only shown on mobile when there are diffs */}
         <Show when={!isDesktop() && diffs().length > 0}>
@@ -799,16 +1095,180 @@ export default function Page() {
         <div
           classList={{
             "@container relative flex flex-col min-h-0 h-full bg-background-stronger": true,
-            "flex-1 py-6 md:py-3": true,
+            "flex-1": true,
           }}
           style={{
             "min-width": isDesktop() ? "400px" : undefined,
             "--prompt-height": store.promptHeight ? `${store.promptHeight}px` : undefined,
           }}
         >
-          <div class="flex-1 min-h-0 overflow-hidden">
+          {/* Right panel toggle - shows when panel is closed */}
+          <Show when={isDesktop() && !layout.rightPanel.opened()}>
+            <div class="absolute top-0 right-0 z-10 h-12 flex items-center pr-2">
+              <TooltipKeybind
+                placement="left"
+                title="Toggle right panel"
+                keybind={command.keybind("rightPanel.toggle")}
+              >
+                <Button
+                  variant="ghost"
+                  class="group/panel-toggle shrink-0 size-8 p-0 rounded-lg"
+                  onClick={layout.rightPanel.toggle}
+                >
+                  <Icon name="layout-right-partial" size="small" />
+                </Button>
+              </TooltipKeybind>
+            </div>
+          </Show>
+
+          {/* Session and file tabs bar - Chrome style */}
+          <Show when={allTabs().length > 0}>
+            <DragDropProvider
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+              onDragOver={handleDragOver}
+              collisionDetector={closestCenter}
+            >
+              <DragDropSensors />
+              <ConstrainDragYAxis />
+              <Tabs value={tabs().active() ?? "session"} onChange={openTab} class="shrink-0 !h-auto">
+                <Tabs.List
+                  classList={{
+                    "h-12 shrink-0 bg-background-base overflow-hidden": true,
+                    "pr-10": !layout.rightPanel.opened(),
+                  }}
+                >
+                  {/* Unified tabs: sessions + files mixed together */}
+                  <SortableProvider ids={allTabs()}>
+                    <For each={allTabs()}>
+                      {(tab) => (
+                        <Show
+                          when={tab.startsWith("session-")}
+                          fallback={<SortableTab tab={tab} onTabClose={closeTab} onTabClick={openTab} />}
+                        >
+                          <SortableSessionTab
+                            sessionId={tab.replace("session-", "")}
+                            title={getSessionTitle(tab.replace("session-", ""))}
+                            onClose={(id) => {
+                              const sessionTab = `session-${id}`
+                              // Close from unified tabs list (handles active tab switch)
+                              tabs().close(sessionTab)
+                              // Also remove from sessions tracking
+                              sessions().close(id)
+                            }}
+                            onClick={(id) => {
+                              tabs().setActive(`session-${id}`)
+                              setLastActiveSession(`session-${id}`)
+                            }}
+                          />
+                        </Show>
+                      )}
+                    </For>
+                  </SortableProvider>
+
+                  {/* Context tab - shown when context is open */}
+                  <Show when={contextOpen()}>
+                    <div class="h-full flex-shrink min-w-0">
+                      <div class="relative h-full">
+                        <Tabs.Trigger
+                          value="context"
+                          closeButton={
+                            <IconButton
+                              icon="close"
+                              variant="ghost"
+                              onClick={(e: MouseEvent) => {
+                                e.stopPropagation()
+                                tabs().close("context")
+                              }}
+                            />
+                          }
+                        >
+                          <Icon name="brain" />
+                          <span class="ml-1">Context</span>
+                        </Tabs.Trigger>
+                      </div>
+                    </div>
+                  </Show>
+
+                  {/* New session button */}
+                  <Tooltip value="New session">
+                    <IconButton
+                      icon="plus"
+                      variant="ghost"
+                      class="ml-1 shrink-0"
+                      onClick={async () => {
+                        // Create actual session via API
+                        const newSession = await sdk.client.session.create().then((x) => x.data)
+                        if (newSession) {
+                          // Add session tab to unified tabs list (appends to end - Chrome style)
+                          tabs().open(`session-${newSession.id}`)
+                          // Also track in sessions for sidebar
+                          sessions().open(newSession.id)
+                          setLastActiveSession(`session-${newSession.id}`)
+                        }
+                        prompt.reset()
+                      }}
+                    />
+                  </Tooltip>
+                </Tabs.List>
+              </Tabs>
+              <DragOverlay>
+                <Show when={store.activeDraggable}>
+                  {(draggedId) => {
+                    const isSession = () => draggedId().startsWith("session-")
+                    const sessionId = () => draggedId().replace("session-", "")
+                    const path = createMemo(() => file.pathFromTab(draggedId()))
+                    return (
+                      <div class="relative p-1 h-12 flex items-center bg-background-stronger text-14-regular">
+                        <Show
+                          when={isSession()}
+                          fallback={<Show when={path()}>{(p) => <FileVisual path={p()} />}</Show>}
+                        >
+                          <Icon name="bubble-5" />
+                          <span class="ml-1 truncate">{getSessionTitle(sessionId())}</span>
+                        </Show>
+                      </div>
+                    )
+                  }}
+                </Show>
+              </DragOverlay>
+            </DragDropProvider>
+          </Show>
+
+          {/* Content area */}
+          <div
+            classList={{
+              "flex-1 min-h-0 overflow-hidden relative": true,
+              "py-6 md:py-3": !activeSessionId() && !hasFileTabs(),
+            }}
+          >
+            {/* Content Gating - Preview, File, or Session */}
             <Switch>
-              <Match when={params.id}>
+              <Match when={activePreviewTab()}>{(preview) => <PreviewPane preview={preview()} />}</Match>
+              <Match when={activeFileTab()}>
+                {(path) => (
+                  <div
+                    class="absolute inset-x-0 top-0"
+                    style={{
+                      "background-color": "#1e1e1e",
+                      bottom: "calc(var(--prompt-height, 8rem) + 32px)",
+                    }}
+                  >
+                    <FileViewer path={path()} onAskAboutSelection={handleAskAboutSelection} />
+                  </div>
+                )}
+              </Match>
+              <Match when={contextActive()}>
+                <div class="relative h-full overflow-hidden">
+                  <SessionContextTab
+                    messages={messages}
+                    visibleUserMessages={() => visibleUserMessages()}
+                    view={() => view()}
+                    info={() => info()}
+                  />
+                </div>
+              </Match>
+              <Match when={activeSessionId()}>
                 <Show when={activeMessage()}>
                   <Show
                     when={!mobileReview()}
@@ -870,7 +1330,7 @@ export default function Page() {
                                 }}
                               >
                                 <SessionTurn
-                                  sessionID={params.id!}
+                                  sessionID={activeSessionId()!}
                                   messageID={message.id}
                                   lastUserMessageID={lastUserMessage()?.id}
                                   stepsExpanded={store.expanded[message.id] ?? false}
@@ -936,8 +1396,25 @@ export default function Page() {
                 ref={(el) => {
                   inputRef = el
                 }}
+                activeSessionId={activeSessionId()}
                 newSessionWorktree={newSessionWorktree()}
                 onNewSessionWorktreeReset={() => setStore("newSessionWorktree", "main")}
+                onMessageSent={() => {
+                  const active = tabs().active()
+
+                  // Track the current session as last active when a message is sent
+                  if (active?.startsWith("session-")) {
+                    setLastActiveSession(active)
+                  }
+
+                  // Switch back to session tab if on preview/file tab
+                  if (active?.startsWith("preview://") || active?.startsWith("file://")) {
+                    const sessionTab = lastActiveSession() || `session-${info()?.id}`
+                    if (sessionTab) {
+                      tabs().setActive(sessionTab)
+                    }
+                  }
+                }}
               />
             </div>
           </div>
@@ -956,94 +1433,253 @@ export default function Page() {
         {/* Right panel - File Explorer + Terminal */}
         <Show when={isDesktop()}>
           <div
-            class="relative flex flex-col h-full border-l border-border-weak-base ml-auto"
-            style={{ width: `${layout.rightPanel.width()}px` }}
+            classList={{
+              "relative flex flex-col h-full ml-auto": true,
+              "border-l border-border-weak-base": layout.rightPanel.opened(),
+              "transition-[width] duration-200 ease-out overflow-y-clip": true,
+            }}
+            style={{ width: layout.rightPanel.opened() ? `${layout.rightPanel.width()}px` : "0px" }}
           >
             {/* Horizontal resize handle for panel width */}
-            <ResizeHandle
-              direction="horizontal"
-              size={layout.rightPanel.width()}
-              min={150}
-              max={window.innerWidth * 0.5}
-              onResize={layout.rightPanel.resize}
-              invert
-              class="!inset-inline-start-0 !inset-inline-end-auto !-translate-x-1/2"
-            />
+            <Show when={layout.rightPanel.opened()}>
+              <ResizeHandle
+                direction="horizontal"
+                size={layout.rightPanel.width()}
+                min={150}
+                max={window.innerWidth * 0.5}
+                onResize={layout.rightPanel.resize}
+                invert
+                style={{
+                  "inset-inline-start": "0",
+                  "inset-inline-end": "auto",
+                  transform: "translateX(-50%)",
+                }}
+              />
+            </Show>
 
-            {/* File Explorer - Top */}
-            <div
-              class="relative shrink-0 overflow-hidden"
-              style={{ height: `${layout.fileExplorer.height()}px` }}
-            >
-              <FileExplorerPanel onFileOpen={openTab} />
-            </div>
-
-            {/* Vertical resize handle between explorer and terminal */}
-            <ResizeHandle
-              direction="vertical"
-              size={layout.fileExplorer.height()}
-              min={50}
-              max={window.innerHeight * 0.7}
-              collapseThreshold={40}
-              invert
-              onResize={layout.fileExplorer.resize}
-              onCollapse={layout.fileExplorer.close}
-              class="!relative !transform-none h-1 shrink-0 cursor-ns-resize hover:bg-border-strong-base transition-colors"
-            />
-
-            {/* Terminal - Bottom */}
-            <Show when={layout.terminal.opened()}>
-              <div class="flex-1 min-h-0 flex flex-col border-t border-border-weak-base">
-                <DragDropProvider
-                  onDragStart={handleTerminalDragStart}
-                  onDragEnd={handleTerminalDragEnd}
-                  onDragOver={handleTerminalDragOver}
-                  collisionDetector={closestCenter}
+            {/* Toggle button - shows when panel is open */}
+            <Show when={layout.rightPanel.opened()}>
+              <div class="absolute top-0 right-0 z-10 h-10 flex items-center pr-2">
+                <TooltipKeybind
+                  placement="left"
+                  title="Toggle right panel"
+                  keybind={command.keybind("rightPanel.toggle")}
                 >
-                  <DragDropSensors />
-                  <ConstrainDragYAxis />
-                  <Tabs variant="alt" value={terminal.active()} onChange={terminal.open}>
-                    <Tabs.List class="h-10">
-                      <SortableProvider ids={terminal.all().map((t: LocalPTY) => t.id)}>
-                        <For each={terminal.all()}>{(pty) => <SortableTerminalTab terminal={pty} />}</For>
-                      </SortableProvider>
-                      <div class="h-full flex items-center justify-center">
-                        <TooltipKeybind
-                          title="New terminal"
-                          keybind={command.keybind("terminal.new")}
-                          class="flex items-center"
-                        >
-                          <IconButton icon="plus-small" variant="ghost" iconSize="large" onClick={terminal.new} />
-                        </TooltipKeybind>
-                      </div>
-                    </Tabs.List>
-                    <For each={terminal.all()}>
-                      {(pty) => (
-                        <Tabs.Content value={pty.id}>
-                          <Terminal pty={pty} onCleanup={terminal.update} onConnectError={() => terminal.clone(pty.id)} />
-                        </Tabs.Content>
-                      )}
-                    </For>
-                  </Tabs>
-                  <DragOverlay>
-                    <Show when={store.activeTerminalDraggable}>
-                      {(draggedId) => {
-                        const pty = createMemo(() => terminal.all().find((t: LocalPTY) => t.id === draggedId()))
-                        return (
-                          <Show when={pty()}>
-                            {(t) => (
-                              <div class="relative p-1 h-10 flex items-center bg-background-stronger text-14-regular">
-                                {t().title}
-                              </div>
-                            )}
-                          </Show>
-                        )
-                      }}
-                    </Show>
-                  </DragOverlay>
-                </DragDropProvider>
+                  <Button
+                    variant="ghost"
+                    class="group/panel-toggle shrink-0 size-8 p-0 rounded-lg"
+                    onClick={layout.rightPanel.toggle}
+                  >
+                    <Icon name="layout-right-partial" size="small" />
+                  </Button>
+                </TooltipKeybind>
               </div>
             </Show>
+
+            {/* Panel Tabs - Files, Timeline, Team */}
+            <Tabs
+              variant="alt"
+              data-panel="right"
+              value={layout.rightPanel.activeTab()}
+              onChange={(tab) => layout.rightPanel.setActiveTab(tab as "files" | "timeline" | "team")}
+              classList={{
+                "flex flex-col overflow-hidden": true,
+                "shrink-0 grow-0": projectTerminal().opened(),
+                "flex-1": !projectTerminal().opened(),
+              }}
+              style={{
+                height: projectTerminal().opened() ? `${layout.fileExplorer.height()}px` : undefined,
+                "flex-basis": projectTerminal().opened() ? `${layout.fileExplorer.height()}px` : undefined,
+              }}
+            >
+              <Tabs.List class="h-12 shrink-0">
+                <Tabs.Trigger value="files">Files</Tabs.Trigger>
+                <Tabs.Trigger value="timeline">Timeline</Tabs.Trigger>
+                <Tabs.Trigger value="team">Team</Tabs.Trigger>
+              </Tabs.List>
+              <div class="flex-1 min-h-0 flex flex-col">
+                <Tabs.Content value="files" class="flex-1 min-h-0 overflow-auto">
+                  <FileExplorerPanel onFileOpen={openTab} activeFile={activeFileTab() ?? undefined} />
+                </Tabs.Content>
+                <Tabs.Content value="timeline" class="flex-1 min-h-0 overflow-auto">
+                  <CollabTimeline />
+                </Tabs.Content>
+                <Tabs.Content value="team" class="flex-1 min-h-0 overflow-auto">
+                  <CollabTeam />
+                </Tabs.Content>
+              </div>
+            </Tabs>
+
+            {/* Quick Action Bar - Always visible above terminal */}
+            <QuickActionBar activeSessionId={activeSessionId()} />
+
+            {/* Terminal - Bottom */}
+            <div
+              classList={{
+                "flex flex-col": true,
+                "flex-1 min-h-[100px]": projectTerminal().opened(),
+                "shrink-0": !projectTerminal().opened(),
+              }}
+              data-prevent-autofocus
+            >
+              {/* Full panel - animated with grid */}
+              <div
+                classList={{
+                  "grid transition-[grid-template-rows] duration-300 ease-out overflow-hidden": true,
+                  "flex-1": projectTerminal().opened(),
+                }}
+                style={{
+                  "grid-template-rows": projectTerminal().opened() ? "1fr" : "0fr",
+                }}
+              >
+                <div class="min-h-0 flex flex-col overflow-hidden border-t border-border-weak-base">
+                  {/* Resize handle - INSIDE animated container, moves with terminal */}
+                  <ResizeHandle
+                    direction="vertical"
+                    size={layout.fileExplorer.height()}
+                    min={50}
+                    max={Math.min(window.innerHeight * 0.7, window.innerHeight - 200)}
+                    collapseThreshold={40}
+                    invert
+                    onResize={layout.fileExplorer.resize}
+                    onCollapse={layout.fileExplorer.close}
+                    class="!relative !transform-none h-1 shrink-0 cursor-ns-resize hover:bg-border-strong-base transition-colors"
+                  />
+                  <div class="flex-1 flex flex-col min-h-0">
+                    <DragDropProvider
+                      onDragStart={handleTerminalDragStart}
+                      onDragEnd={handleTerminalDragEnd}
+                      onDragOver={handleTerminalDragOver}
+                      collisionDetector={closestCenter}
+                    >
+                      <DragDropSensors />
+                      <ConstrainDragYAxis />
+                      <Tabs
+                        variant="alt"
+                        value={terminal.active()}
+                        onChange={terminal.open}
+                        class="flex-1 flex flex-col min-h-0"
+                      >
+                        {/* Tab bar - fixed h-10 (40px), always visible */}
+                        <Tabs.List class="h-10 shrink-0 overflow-y-clip">
+                          <SortableProvider ids={terminal.all().map((t: LocalPTY) => t.id)}>
+                            <For each={terminal.all()}>{(pty) => <SortableTerminalTab terminal={pty} />}</For>
+                          </SortableProvider>
+                          <div class="h-full flex items-center justify-center">
+                            <TooltipKeybind
+                              title="New terminal"
+                              keybind={command.keybind("terminal.new")}
+                              class="flex items-center"
+                            >
+                              <IconButton
+                                icon="plus-small"
+                                variant="ghost"
+                                iconSize="large"
+                                onClick={terminal.new}
+                                tabIndex={-1}
+                              />
+                            </TooltipKeybind>
+                          </div>
+                          <div class="absolute right-0 h-full flex items-center pr-2">
+                            <TooltipKeybind
+                              title={projectTerminal().opened() ? "Close terminal" : "Open terminal"}
+                              keybind={command.keybind("terminal.toggle")}
+                              class="flex items-center"
+                            >
+                              <Button
+                                variant="ghost"
+                                class="group/terminal-toggle size-6 p-0"
+                                onClick={() => projectTerminal().toggle()}
+                              >
+                                <div class="relative flex items-center justify-center size-4 [&>*]:absolute [&>*]:inset-0">
+                                  <Icon
+                                    size="small"
+                                    name={projectTerminal().opened() ? "layout-bottom-full" : "layout-bottom"}
+                                    class="group-hover/terminal-toggle:hidden"
+                                  />
+                                  <Icon
+                                    size="small"
+                                    name="layout-bottom-partial"
+                                    class="hidden group-hover/terminal-toggle:inline-block"
+                                  />
+                                  <Icon
+                                    size="small"
+                                    name={projectTerminal().opened() ? "layout-bottom" : "layout-bottom-full"}
+                                    class="hidden group-active/terminal-toggle:inline-block"
+                                  />
+                                </div>
+                              </Button>
+                            </TooltipKeybind>
+                          </div>
+                        </Tabs.List>
+                        {/* Content area - fills remaining space */}
+                        <div class="flex-1 min-h-0 flex flex-col">
+                          <For each={terminal.all()}>
+                            {(pty) => (
+                              <Tabs.Content value={pty.id} class="flex-1 min-h-0 flex flex-col">
+                                <Terminal
+                                  class="flex-1 !h-auto min-h-0"
+                                  pty={pty}
+                                  onCleanup={terminal.update}
+                                  onConnectError={() => terminal.clone(pty.id)}
+                                  onRef={(ref) => {
+                                    if (ref && terminal.active() === pty.id) {
+                                      terminal.setActiveRef(ref)
+                                      terminal.markReady(pty.id)
+                                    }
+                                  }}
+                                  onLocalhostDetected={(url) => {
+                                    // Debounce: only open each URL once per session
+                                    if (!openedPreviewUrls.has(url)) {
+                                      openedPreviewUrls.add(url)
+                                      tabs().open(`preview://url:${url}`)
+                                    }
+                                  }}
+                                />
+                              </Tabs.Content>
+                            )}
+                          </For>
+                        </div>
+                      </Tabs>
+                      <DragOverlay>
+                        <Show when={store.activeTerminalDraggable}>
+                          {(draggedId) => {
+                            const pty = createMemo(() => terminal.all().find((t: LocalPTY) => t.id === draggedId()))
+                            return (
+                              <Show when={pty()}>
+                                {(t) => (
+                                  <div class="relative p-1 h-10 flex items-center bg-background-stronger text-14-regular">
+                                    {t().title}
+                                  </div>
+                                )}
+                              </Show>
+                            )
+                          }}
+                        </Show>
+                      </DragOverlay>
+                    </DragDropProvider>
+                  </div>
+                </div>
+              </div>
+
+              {/* Collapsed bar - visible when terminal is closed */}
+              <div
+                class="grid transition-[grid-template-rows] duration-300 ease-out overflow-hidden"
+                style={{
+                  "grid-template-rows": projectTerminal().opened() ? "0fr" : "1fr",
+                }}
+              >
+                <div class="min-h-0 overflow-hidden">
+                  <button
+                    onClick={projectTerminal().open}
+                    class="h-8 w-full flex items-center px-3 gap-2 text-text-subtle hover:text-text-base hover:bg-surface-subtle transition-colors cursor-pointer border-t border-border-weak-base"
+                  >
+                    <Icon name="chevron-right" size="small" class="-rotate-90" />
+                    <span class="text-13-regular">Terminal</span>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </Show>
       </div>

@@ -16,6 +16,8 @@ import {
   type LspStatus,
   type VcsInfo,
   type PermissionRequest,
+  type CollabStatus,
+  type CollabCommitInfo,
   createOpencodeClient,
 } from "@anyon/sdk/v2/client"
 import { createStore, produce, reconcile } from "solid-js/store"
@@ -53,6 +55,13 @@ type State = {
   }
   lsp: LspStatus[]
   vcs: VcsInfo | undefined
+  collab: CollabStatus | undefined
+  collabHistory: CollabCommitInfo[] | undefined
+  showSyncRequiredDialog: boolean
+  showMergeBlockedDialog: boolean
+  mergeBlockedReason: string | undefined
+  mergeBlockedFiles: string[]
+  showConflictDialog: boolean
   limit: number
   message: {
     [sessionID: string]: Message[]
@@ -99,6 +108,13 @@ function createGlobalSync() {
         mcp: {},
         lsp: [],
         vcs: undefined,
+        collab: undefined,
+        collabHistory: undefined,
+        showSyncRequiredDialog: false,
+        showMergeBlockedDialog: false,
+        mergeBlockedReason: undefined,
+        mergeBlockedFiles: [],
+        showConflictDialog: false,
         limit: 5,
         message: {},
         part: {},
@@ -173,6 +189,14 @@ function createGlobalSync() {
           sdk.mcp.status().then((x) => setStore("mcp", x.data!)),
           sdk.lsp.status().then((x) => setStore("lsp", x.data!)),
           sdk.vcs.get().then((x) => setStore("vcs", x.data)),
+          sdk.collab
+            .status()
+            .then((x) => setStore("collab", x.data))
+            .catch(() => {}),
+          sdk.collab
+            .history({ limit: 1000, offset: 0 })
+            .then((x) => setStore("collabHistory", x.data ?? []))
+            .catch(() => {}),
           sdk.permission.list().then((x) => {
             const grouped: Record<string, PermissionRequest[]> = {}
             for (const perm of x.data ?? []) {
@@ -400,6 +424,113 @@ function createGlobalSync() {
           throwOnError: true,
         })
         sdk.lsp.status().then((x) => setStore("lsp", x.data ?? []))
+        break
+      }
+      case "collab.status.changed": {
+        setStore("collab", event.properties)
+        break
+      }
+      case "collab.save.completed": {
+        const props = event.properties as {
+          message: string
+          pushed: boolean
+          commitHash: string
+          pushError?: "remote_ahead" | "auth_failed" | "network" | "other"
+        }
+        const sdk = createOpencodeClient({
+          baseUrl: globalSDK.url,
+          directory,
+          throwOnError: true,
+        })
+        // Refresh status and history
+        sdk.collab
+          .status()
+          .then((x) => setStore("collab", x.data))
+          .catch(() => {})
+        sdk.collab
+          .history({ limit: 1000, offset: 0 })
+          .then((x) => setStore("collabHistory", x.data ?? []))
+          .catch(() => {})
+        // Handle push errors
+        if (props.pushError === "remote_ahead") {
+          // Show sync required dialog
+          setStore("showSyncRequiredDialog", true)
+        } else if (props.commitHash) {
+          // Show toast (skip if no actual commit was made)
+          showToast({
+            title: "Saved",
+            description: props.pushed ? "Uploaded to remote" : props.message || "Saved locally",
+          })
+        }
+        break
+      }
+      case "collab.save.failed": {
+        const props = event.properties as { error: string; offline: boolean }
+        showToast({
+          title: props.offline ? "오프라인" : "저장 실패",
+          description: props.error,
+        })
+        break
+      }
+      case "collab.sync.completed": {
+        const props = event.properties as { success: boolean; changes: number; conflicts: boolean; blocked?: boolean }
+        const sdk = createOpencodeClient({
+          baseUrl: globalSDK.url,
+          directory,
+          throwOnError: true,
+        })
+        // Refresh history
+        sdk.collab
+          .history({ limit: 1000, offset: 0 })
+          .then((x) => setStore("collabHistory", x.data ?? []))
+          .catch(() => {})
+
+        // Only show toasts if NOT blocked
+        if (props.blocked) {
+          // Don't show toast - dialog will handle it
+          break
+        }
+
+        // Show toast only if there were changes or conflicts
+        if (props.conflicts) {
+          showToast({
+            title: "충돌 발생",
+            description: "파일 충돌이 있습니다. 확인해주세요.",
+          })
+        } else if (props.changes > 0) {
+          showToast({
+            title: "동기화 완료",
+            description: `${props.changes}개의 변경사항을 받았습니다.`,
+          })
+        }
+        break
+      }
+      case "collab.git.changed": {
+        // External git changes detected - refresh all collab data
+        const sdk = createOpencodeClient({
+          baseUrl: globalSDK.url,
+          directory,
+          throwOnError: true,
+        })
+        sdk.collab
+          .status()
+          .then((x) => setStore("collab", x.data))
+          .catch(() => {})
+        sdk.collab
+          .history({ limit: 1000, offset: 0 })
+          .then((x) => setStore("collabHistory", x.data ?? []))
+          .catch(() => {})
+        break
+      }
+      case "collab.merge.blocked": {
+        const props = event.properties as { reason: string; files: string[] }
+        setStore("mergeBlockedReason", props.reason)
+        setStore("mergeBlockedFiles", props.files)
+        setStore("showMergeBlockedDialog", true)
+        break
+      }
+      case "collab.conflict.detected": {
+        setStore("showConflictDialog", true)
         break
       }
     }

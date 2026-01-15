@@ -36,7 +36,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.global.health({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.global.health({\n  ...\n})"
           }
         ]
       }
@@ -61,7 +61,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.global.event({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.global.event({\n  ...\n})"
           }
         ]
       }
@@ -86,7 +86,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.global.dispose({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.global.dispose({\n  ...\n})"
           }
         ]
       }
@@ -123,7 +123,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.project.list({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.project.list({\n  ...\n})"
           }
         ]
       }
@@ -157,7 +157,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.project.current({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.project.current({\n  ...\n})"
           }
         ]
       }
@@ -244,7 +244,781 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.project.update({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.project.update({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/collab/status": {
+      "get": {
+        "operationId": "collab.status",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Get collab status",
+        "description": "Get the current collaboration status including branch, dirty state, and online status.",
+        "responses": {
+          "200": {
+            "description": "Collaboration status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollabStatus"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.collab.status({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/collab/save": {
+      "post": {
+        "operationId": "collab.save",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Save changes (add + commit + push)",
+        "description": "Stage all changes, create a commit, and push to remote if available.",
+        "responses": {
+          "200": {
+            "description": "Save result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollabSaveResult"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "message": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.collab.save({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/collab/sync": {
+      "post": {
+        "operationId": "collab.sync",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Sync with remote (fetch + merge)",
+        "description": "Fetch changes from remote and merge them into the current branch.",
+        "responses": {
+          "200": {
+            "description": "Sync result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollabSyncResult"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.collab.sync({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/collab/stash-sync": {
+      "post": {
+        "operationId": "collab.stashSync",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Stash changes, sync, then restore",
+        "description": "Temporarily stash local changes, sync with remote, then restore the stashed changes.",
+        "responses": {
+          "200": {
+            "description": "Sync result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollabSyncResult"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.collab.stashSync({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/collab/history": {
+      "get": {
+        "operationId": "collab.history",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "schema": {
+              "default": 0,
+              "type": "number"
+            }
+          }
+        ],
+        "summary": "Get commit history",
+        "description": "Get paginated commit history for the current branch.",
+        "responses": {
+          "200": {
+            "description": "Commit history",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CollabCommitInfo"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.collab.history({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/collab/history/{hash}/files": {
+      "get": {
+        "operationId": "collab.historyFiles",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "hash",
+            "required": true
+          }
+        ],
+        "summary": "Get changed files for a commit",
+        "description": "Get the list of files changed in a specific commit.",
+        "responses": {
+          "200": {
+            "description": "Changed files",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.collab.historyFiles({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/collab/revert/browse": {
+      "post": {
+        "operationId": "collab.revertBrowse",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Browse specific commit (detached HEAD)",
+        "description": "Enter read-only mode at a specific commit. Stashes any uncommitted changes.",
+        "responses": {
+          "200": {
+            "description": "Browse result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollabBrowseResult"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "commitHash": {
+                    "type": "string"
+                  }
+                },
+                "required": ["commitHash"]
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.collab.revertBrowse({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/collab/revert/exit-browse": {
+      "post": {
+        "operationId": "collab.revertExitBrowse",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Exit browse mode",
+        "description": "Return to original branch and restore stashed changes.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["success"]
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "originalBranch": {
+                    "type": "string"
+                  }
+                },
+                "required": ["originalBranch"]
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.collab.revertExitBrowse({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/collab/revert/fresh": {
+      "post": {
+        "operationId": "collab.revertFresh",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Create new branch from commit",
+        "description": "Start fresh by creating a new branch at a specific commit.",
+        "responses": {
+          "200": {
+            "description": "Fresh result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollabFreshResult"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "commitHash": {
+                    "type": "string"
+                  },
+                  "branchName": {
+                    "type": "string"
+                  }
+                },
+                "required": ["commitHash", "branchName"]
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.collab.revertFresh({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/collab/revert/replace": {
+      "post": {
+        "operationId": "collab.revertReplace",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Hard reset to commit (DANGEROUS)",
+        "description": "Replace current branch with a specific commit. This is destructive!",
+        "responses": {
+          "200": {
+            "description": "Replace result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollabReplaceResult"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "commitHash": {
+                    "type": "string"
+                  },
+                  "forcePush": {
+                    "default": false,
+                    "type": "boolean"
+                  }
+                },
+                "required": ["commitHash"]
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.collab.revertReplace({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/collab/team": {
+      "get": {
+        "operationId": "collab.team",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Get team members",
+        "description": "Get team members detected from git history.",
+        "responses": {
+          "200": {
+            "description": "Team data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollabTeamData"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.collab.team({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/collab/team/refresh": {
+      "post": {
+        "operationId": "collab.teamRefresh",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Refresh team from git",
+        "description": "Re-detect team members from git history.",
+        "responses": {
+          "200": {
+            "description": "Refreshed team data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CollabTeamData"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.collab.teamRefresh({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/collab/team/{email}": {
+      "patch": {
+        "operationId": "collab.teamUpdate",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "email",
+            "required": true
+          }
+        ],
+        "summary": "Update team member",
+        "description": "Update a specific team member's info.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["success"]
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "github": {
+                    "type": "string"
+                  },
+                  "avatar": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.collab.teamUpdate({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/collab/conflicts": {
+      "get": {
+        "operationId": "collab.conflicts",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Get all conflicts",
+        "description": "Get list of conflicted files with parsed conflict sections.",
+        "responses": {
+          "200": {
+            "description": "Conflict files",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CollabConflictFile"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.collab.conflicts({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/collab/conflicts/{file}/resolve": {
+      "post": {
+        "operationId": "collab.conflictResolve",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "file",
+            "required": true
+          }
+        ],
+        "summary": "Resolve a conflict",
+        "description": "Resolve a single file conflict.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["success"]
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "resolution": {
+                    "type": "string",
+                    "enum": ["ours", "theirs", "custom"]
+                  },
+                  "customContent": {
+                    "type": "string"
+                  }
+                },
+                "required": ["resolution"]
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.collab.conflictResolve({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/collab/conflicts/abort": {
+      "post": {
+        "operationId": "collab.conflictAbort",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Abort merge",
+        "description": "Abort the current merge and return to pre-merge state.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["success"]
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.collab.conflictAbort({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/collab/conflicts/continue": {
+      "post": {
+        "operationId": "collab.conflictContinue",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Continue merge",
+        "description": "Finalize merge after all conflicts are resolved.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["success"]
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.collab.conflictContinue({\n  ...\n})"
           }
         ]
       }
@@ -281,7 +1055,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.pty.list({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.pty.list({\n  ...\n})"
           }
         ]
       },
@@ -358,7 +1132,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.pty.create({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.pty.create({\n  ...\n})"
           }
         ]
       }
@@ -410,7 +1184,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.pty.get({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.pty.get({\n  ...\n})"
           }
         ]
       },
@@ -486,7 +1260,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.pty.update({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.pty.update({\n  ...\n})"
           }
         ]
       },
@@ -536,7 +1310,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.pty.remove({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.pty.remove({\n  ...\n})"
           }
         ]
       }
@@ -588,7 +1362,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.pty.connect({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.pty.connect({\n  ...\n})"
           }
         ]
       }
@@ -622,7 +1396,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.config.get({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.config.get({\n  ...\n})"
           }
         ]
       },
@@ -673,7 +1447,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.config.update({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.config.update({\n  ...\n})"
           }
         ]
       }
@@ -717,7 +1491,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.tool.ids({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.tool.ids({\n  ...\n})"
           }
         ]
       }
@@ -777,7 +1551,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.tool.list({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.tool.list({\n  ...\n})"
           }
         ]
       }
@@ -811,7 +1585,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.instance.dispose({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.instance.dispose({\n  ...\n})"
           }
         ]
       }
@@ -845,7 +1619,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.path.get({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.path.get({\n  ...\n})"
           }
         ]
       }
@@ -898,7 +1672,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.worktree.create({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.worktree.create({\n  ...\n})"
           }
         ]
       },
@@ -933,7 +1707,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.worktree.list({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.worktree.list({\n  ...\n})"
           }
         ]
       }
@@ -967,7 +1741,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.vcs.get({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.vcs.get({\n  ...\n})"
           }
         ]
       }
@@ -1028,7 +1802,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.session.list({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.session.list({\n  ...\n})"
           }
         ]
       },
@@ -1091,7 +1865,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.session.create({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.session.create({\n  ...\n})"
           }
         ]
       }
@@ -1141,7 +1915,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.session.status({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.session.status({\n  ...\n})"
           }
         ]
       }
@@ -1205,7 +1979,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.session.get({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.session.get({\n  ...\n})"
           }
         ]
       },
@@ -1266,7 +2040,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.session.delete({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.session.delete({\n  ...\n})"
           }
         ]
       },
@@ -1348,7 +2122,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.session.update({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.session.update({\n  ...\n})"
           }
         ]
       }
@@ -1415,7 +2189,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.session.children({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.session.children({\n  ...\n})"
           }
         ]
       }
@@ -1481,7 +2255,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.session.todo({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.session.todo({\n  ...\n})"
           }
         ]
       }
@@ -1566,7 +2340,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.session.init({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.session.init({\n  ...\n})"
           }
         ]
       }
@@ -1624,7 +2398,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.session.fork({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.session.fork({\n  ...\n})"
           }
         ]
       }
@@ -1686,7 +2460,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.session.abort({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.session.abort({\n  ...\n})"
           }
         ]
       }
@@ -1748,7 +2522,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.session.share({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.session.share({\n  ...\n})"
           }
         ]
       },
@@ -1809,7 +2583,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.session.unshare({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.session.unshare({\n  ...\n})"
           }
         ]
       }
@@ -1883,7 +2657,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.session.diff({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.session.diff({\n  ...\n})"
           }
         ]
       }
@@ -1968,7 +2742,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.session.summarize({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.session.summarize({\n  ...\n})"
           }
         ]
       }
@@ -2053,7 +2827,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.session.messages({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.session.messages({\n  ...\n})"
           }
         ]
       },
@@ -2195,7 +2969,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.session.prompt({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.session.prompt({\n  ...\n})"
           }
         ]
       }
@@ -2279,7 +3053,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.session.message({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.session.message({\n  ...\n})"
           }
         ]
       }
@@ -2359,7 +3133,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.part.delete({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.part.delete({\n  ...\n})"
           }
         ]
       },
@@ -2446,7 +3220,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.part.update({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.part.update({\n  ...\n})"
           }
         ]
       }
@@ -2571,7 +3345,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.session.prompt_async({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.session.prompt_async({\n  ...\n})"
           }
         ]
       }
@@ -2709,7 +3483,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.session.command({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.session.command({\n  ...\n})"
           }
         ]
       }
@@ -2802,7 +3576,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.session.shell({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.session.shell({\n  ...\n})"
           }
         ]
       }
@@ -2884,7 +3658,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.session.revert({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.session.revert({\n  ...\n})"
           }
         ]
       }
@@ -2946,7 +3720,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.session.unrevert({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.session.unrevert({\n  ...\n})"
           }
         ]
       }
@@ -3033,7 +3807,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.permission.respond({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.permission.respond({\n  ...\n})"
           }
         ]
       }
@@ -3114,7 +3888,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.permission.reply({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.permission.reply({\n  ...\n})"
           }
         ]
       }
@@ -3151,7 +3925,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.permission.list({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.permission.list({\n  ...\n})"
           }
         ]
       }
@@ -3188,7 +3962,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.command.list({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.command.list({\n  ...\n})"
           }
         ]
       }
@@ -3240,7 +4014,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.config.providers({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.config.providers({\n  ...\n})"
           }
         ]
       }
@@ -3497,7 +4271,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.provider.list({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.provider.list({\n  ...\n})"
           }
         ]
       }
@@ -3540,7 +4314,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.provider.auth({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.provider.auth({\n  ...\n})"
           }
         ]
       }
@@ -3609,7 +4383,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.provider.oauth.authorize({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.provider.oauth.authorize({\n  ...\n})"
           }
         ]
       }
@@ -3682,7 +4456,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.provider.oauth.callback({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.provider.oauth.callback({\n  ...\n})"
           }
         ]
       }
@@ -3778,7 +4552,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.find.text({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.find.text({\n  ...\n})"
           }
         ]
       }
@@ -3848,7 +4622,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.find.files({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.find.files({\n  ...\n})"
           }
         ]
       }
@@ -3893,7 +4667,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.find.symbols({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.find.symbols({\n  ...\n})"
           }
         ]
       }
@@ -3938,7 +4712,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.file.list({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.file.list({\n  ...\n})"
           }
         ]
       }
@@ -3980,7 +4754,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.file.read({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.file.read({\n  ...\n})"
           }
         ]
       }
@@ -4017,7 +4791,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.file.status({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.file.status({\n  ...\n})"
           }
         ]
       }
@@ -4094,7 +4868,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.app.log({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.app.log({\n  ...\n})"
           }
         ]
       }
@@ -4131,7 +4905,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.app.agents({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.app.agents({\n  ...\n})"
           }
         ]
       }
@@ -4171,7 +4945,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.mcp.status({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.mcp.status({\n  ...\n})"
           }
         ]
       },
@@ -4244,7 +5018,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.mcp.add({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.mcp.add({\n  ...\n})"
           }
         ]
       }
@@ -4313,7 +5087,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.mcp.auth.start({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.mcp.auth.start({\n  ...\n})"
           }
         ]
       },
@@ -4370,7 +5144,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.mcp.auth.remove({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.mcp.auth.remove({\n  ...\n})"
           }
         ]
       }
@@ -4448,7 +5222,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.mcp.auth.callback({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.mcp.auth.callback({\n  ...\n})"
           }
         ]
       }
@@ -4510,7 +5284,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.mcp.auth.authenticate({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.mcp.auth.authenticate({\n  ...\n})"
           }
         ]
       }
@@ -4551,7 +5325,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.mcp.connect({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.mcp.connect({\n  ...\n})"
           }
         ]
       }
@@ -4592,7 +5366,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.mcp.disconnect({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.mcp.disconnect({\n  ...\n})"
           }
         ]
       }
@@ -4632,7 +5406,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.experimental.resource.list({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.experimental.resource.list({\n  ...\n})"
           }
         ]
       }
@@ -4669,7 +5443,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.lsp.status({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.lsp.status({\n  ...\n})"
           }
         ]
       }
@@ -4706,7 +5480,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.formatter.status({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.formatter.status({\n  ...\n})"
           }
         ]
       }
@@ -4765,7 +5539,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.tui.appendPrompt({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.tui.appendPrompt({\n  ...\n})"
           }
         ]
       }
@@ -4799,7 +5573,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.tui.openHelp({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.tui.openHelp({\n  ...\n})"
           }
         ]
       }
@@ -4833,7 +5607,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.tui.openSessions({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.tui.openSessions({\n  ...\n})"
           }
         ]
       }
@@ -4867,7 +5641,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.tui.openThemes({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.tui.openThemes({\n  ...\n})"
           }
         ]
       }
@@ -4901,7 +5675,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.tui.openModels({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.tui.openModels({\n  ...\n})"
           }
         ]
       }
@@ -4935,7 +5709,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.tui.submitPrompt({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.tui.submitPrompt({\n  ...\n})"
           }
         ]
       }
@@ -4969,7 +5743,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.tui.clearPrompt({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.tui.clearPrompt({\n  ...\n})"
           }
         ]
       }
@@ -5028,7 +5802,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.tui.executeCommand({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.tui.executeCommand({\n  ...\n})"
           }
         ]
       }
@@ -5089,7 +5863,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.tui.showToast({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.tui.showToast({\n  ...\n})"
           }
         ]
       }
@@ -5155,7 +5929,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.tui.publish({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.tui.publish({\n  ...\n})"
           }
         ]
       }
@@ -5226,7 +6000,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.tui.selectSession({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.tui.selectSession({\n  ...\n})"
           }
         ]
       }
@@ -5267,7 +6041,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.tui.control.next({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.tui.control.next({\n  ...\n})"
           }
         ]
       }
@@ -5308,7 +6082,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.tui.control.response({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.tui.control.response({\n  ...\n})"
           }
         ]
       }
@@ -5369,7 +6143,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.auth.set({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.auth.set({\n  ...\n})"
           }
         ]
       }
@@ -5403,7 +6177,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createOpencodeClient } from \"@opencode-ai/sdk\n\nconst client = createOpencodeClient()\nawait client.event.subscribe({\n  ...\n})"
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.event.subscribe({\n  ...\n})"
           }
         ]
       }
@@ -7392,6 +8166,254 @@
         },
         "required": ["type", "properties"]
       },
+      "CollabStatus": {
+        "type": "object",
+        "properties": {
+          "branch": {
+            "type": "string"
+          },
+          "isDirty": {
+            "type": "boolean"
+          },
+          "hasUnpushed": {
+            "type": "boolean"
+          },
+          "isOnline": {
+            "type": "boolean"
+          },
+          "isDetached": {
+            "type": "boolean"
+          },
+          "originalBranch": {
+            "type": "string"
+          },
+          "hasConflicts": {
+            "type": "boolean"
+          },
+          "conflictCount": {
+            "type": "number"
+          }
+        },
+        "required": ["branch", "isDirty", "hasUnpushed", "isOnline"]
+      },
+      "Event.collab.status.changed": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "collab.status.changed"
+          },
+          "properties": {
+            "$ref": "#/components/schemas/CollabStatus"
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "Event.collab.save.started": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "collab.save.started"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {}
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "Event.collab.save.completed": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "collab.save.completed"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "commitHash": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "pushed": {
+                "type": "boolean"
+              },
+              "skipped": {
+                "type": "boolean"
+              },
+              "pushError": {
+                "type": "string",
+                "enum": ["remote_ahead", "auth_failed", "network", "other"]
+              }
+            },
+            "required": ["commitHash", "message", "pushed", "skipped"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "Event.collab.save.failed": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "collab.save.failed"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "error": {
+                "type": "string"
+              },
+              "offline": {
+                "type": "boolean"
+              }
+            },
+            "required": ["error", "offline"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "CollabSyncResult": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "changes": {
+            "type": "number"
+          },
+          "conflicts": {
+            "type": "boolean"
+          },
+          "blocked": {
+            "type": "boolean"
+          },
+          "blockedFiles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["success", "changes", "conflicts"]
+      },
+      "Event.collab.sync.completed": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "collab.sync.completed"
+          },
+          "properties": {
+            "$ref": "#/components/schemas/CollabSyncResult"
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "Event.collab.team.updated": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "collab.team.updated"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "members": {
+                "type": "number"
+              }
+            },
+            "required": ["members"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "Event.collab.conflict.detected": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "collab.conflict.detected"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "files": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": ["files"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "Event.collab.conflict.resolved": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "collab.conflict.resolved"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "file": {
+                "type": "string"
+              }
+            },
+            "required": ["file"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "Event.collab.merge.blocked": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "collab.merge.blocked"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "reason": {
+                "type": "string",
+                "enum": ["uncommitted_changes", "untracked_files"]
+              },
+              "files": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": ["reason", "files"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "Event.collab.git.changed": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "collab.git.changed"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {}
+          }
+        },
+        "required": ["type", "properties"]
+      },
       "Event.file.watcher.updated": {
         "type": "object",
         "properties": {
@@ -7673,6 +8695,36 @@
             "$ref": "#/components/schemas/Event.session.error"
           },
           {
+            "$ref": "#/components/schemas/Event.collab.status.changed"
+          },
+          {
+            "$ref": "#/components/schemas/Event.collab.save.started"
+          },
+          {
+            "$ref": "#/components/schemas/Event.collab.save.completed"
+          },
+          {
+            "$ref": "#/components/schemas/Event.collab.save.failed"
+          },
+          {
+            "$ref": "#/components/schemas/Event.collab.sync.completed"
+          },
+          {
+            "$ref": "#/components/schemas/Event.collab.team.updated"
+          },
+          {
+            "$ref": "#/components/schemas/Event.collab.conflict.detected"
+          },
+          {
+            "$ref": "#/components/schemas/Event.collab.conflict.resolved"
+          },
+          {
+            "$ref": "#/components/schemas/Event.collab.merge.blocked"
+          },
+          {
+            "$ref": "#/components/schemas/Event.collab.git.changed"
+          },
+          {
             "$ref": "#/components/schemas/Event.file.watcher.updated"
           },
           {
@@ -7749,6 +8801,197 @@
           }
         },
         "required": ["name", "data"]
+      },
+      "CollabSaveResult": {
+        "type": "object",
+        "properties": {
+          "commitHash": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "pushed": {
+            "type": "boolean"
+          },
+          "skipped": {
+            "type": "boolean"
+          },
+          "pushError": {
+            "type": "string",
+            "enum": ["remote_ahead", "auth_failed", "network", "other"]
+          }
+        },
+        "required": ["commitHash", "message", "pushed", "skipped"]
+      },
+      "CollabAuthor": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          }
+        },
+        "required": ["name", "email"]
+      },
+      "CollabCommitInfo": {
+        "type": "object",
+        "properties": {
+          "hash": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "author": {
+            "$ref": "#/components/schemas/CollabAuthor"
+          },
+          "timestamp": {
+            "type": "number"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["hash", "message", "author", "timestamp"]
+      },
+      "CollabBrowseResult": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "originalBranch": {
+            "type": "string"
+          },
+          "isDetached": {
+            "type": "boolean"
+          }
+        },
+        "required": ["success", "originalBranch", "isDetached"]
+      },
+      "CollabFreshResult": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "newBranch": {
+            "type": "string"
+          },
+          "fromCommit": {
+            "type": "string"
+          }
+        },
+        "required": ["success", "newBranch", "fromCommit"]
+      },
+      "CollabReplaceResult": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "lostCommits": {
+            "type": "number"
+          },
+          "pushed": {
+            "type": "boolean"
+          }
+        },
+        "required": ["success", "lostCommits", "pushed"]
+      },
+      "CollabTeamMember": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "github": {
+            "type": "string"
+          },
+          "avatar": {
+            "type": "string"
+          },
+          "firstCommit": {
+            "type": "number"
+          },
+          "lastCommit": {
+            "type": "number"
+          },
+          "commitCount": {
+            "type": "number"
+          }
+        },
+        "required": ["id", "name", "email"]
+      },
+      "CollabTeamData": {
+        "type": "object",
+        "properties": {
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CollabTeamMember"
+            }
+          },
+          "lastUpdated": {
+            "type": "number"
+          },
+          "source": {
+            "type": "string",
+            "enum": ["git", "github", "manual"]
+          },
+          "currentUserEmail": {
+            "type": "string"
+          }
+        },
+        "required": ["members", "lastUpdated", "source"]
+      },
+      "CollabConflictSection": {
+        "type": "object",
+        "properties": {
+          "startLine": {
+            "type": "number"
+          },
+          "endLine": {
+            "type": "number"
+          },
+          "ours": {
+            "type": "string"
+          },
+          "theirs": {
+            "type": "string"
+          },
+          "base": {
+            "type": "string"
+          }
+        },
+        "required": ["startLine", "endLine", "ours", "theirs"]
+      },
+      "CollabConflictFile": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "conflicts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CollabConflictSection"
+            }
+          }
+        },
+        "required": ["path", "conflicts"]
       },
       "KeybindsConfig": {
         "description": "Custom keybind configurations",

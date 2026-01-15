@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>OpenCode</title>
+    <title>ANYON</title>
     <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="shortcut icon" href="/favicon.ico" />
@@ -13,6 +13,56 @@
     <meta name="theme-color" content="#131010" media="(prefers-color-scheme: dark)" />
     <meta property="og:image" content="/social-share.png" />
     <meta property="twitter:image" content="/social-share.png" />
+    <style>
+      /* Prevent ALL scrolling in Tauri webview - use clip not hidden */
+      * {
+        scroll-behavior: auto !important;
+      }
+      html,
+      body,
+      #root {
+        overflow: clip !important;
+        overscroll-behavior: none !important;
+      }
+    </style>
+    <script>
+      // Nuclear option: prevent ALL unwanted scrolling in Tauri
+      ;(function () {
+        // 1. Disable scrollIntoView completely
+        Element.prototype.scrollIntoView = function () {}
+
+        // 2. Disable focus scrolling - force preventScroll on all focus calls
+        var origFocus = HTMLElement.prototype.focus
+        HTMLElement.prototype.focus = function (options) {
+          origFocus.call(this, Object.assign({}, options, { preventScroll: true }))
+        }
+
+        // 3. Block scroll events on window/document level
+        window.addEventListener(
+          "scroll",
+          function (e) {
+            window.scrollTo(0, 0)
+          },
+          { capture: true, passive: false },
+        )
+
+        document.addEventListener(
+          "scroll",
+          function (e) {
+            if (e.target === document || e.target === document.documentElement || e.target === document.body) {
+              window.scrollTo(0, 0)
+            }
+          },
+          { capture: true, passive: false },
+        )
+      })()
+    </script>
+    <script>
+      // Dev mode: Set ANYON config for Tauri
+      // In production, this is set by Rust initialization_script
+      window.__ANYON__ = window.__ANYON__ || {}
+      window.__ANYON__.port = window.__ANYON__.port || 4096
+    </script>
     <script id="oc-theme-preload-script">
       ;(function () {
         var themeId = localStorage.getItem("opencode-theme-id")

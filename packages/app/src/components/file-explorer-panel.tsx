@@ -1,24 +1,38 @@
-import { onMount } from "solid-js"
+import { onMount, onCleanup } from "solid-js"
 import { useLocal } from "@/context/local"
+import { useFile } from "@/context/file"
 import FileTree from "./file-tree"
 
-export function FileExplorerPanel(props: { onFileOpen: (path: string) => void }) {
+export function FileExplorerPanel(props: { onFileOpen: (path: string) => void; activeFile?: string }) {
   const local = useLocal()
+  const file = useFile()
 
   // Load root directory on mount
   onMount(() => {
     local.file.expand("")
+
+    // Poll for file changes every 3 seconds as a fallback
+    // This ensures new files appear even if the file watcher events don't arrive
+    const interval = setInterval(() => {
+      local.file.refresh()
+    }, 3000)
+
+    onCleanup(() => clearInterval(interval))
   })
+
+  const openPreview = (localFile: { path: string }) => {
+    const previewTabValue = file.previewTab(localFile.path)
+    props.onFileOpen(previewTabValue)
+  }
 
   return (
     <div class="flex flex-col h-full overflow-hidden">
-      <div class="flex items-center px-4 py-2 border-b border-border-weak-base shrink-0">
-        <span class="text-12-medium text-text-strong">Files</span>
-      </div>
-      <div class="flex-1 overflow-auto py-2 px-2">
+      <div class="flex-1 overflow-auto py-1 px-1">
         <FileTree
           path=""
-          onFileClick={(file) => props.onFileOpen(`file://${file.path}`)}
+          activeFile={props.activeFile}
+          onFileClick={(f) => props.onFileOpen(`file://${f.path}`)}
+          onPreviewClick={openPreview}
         />
       </div>
     </div>

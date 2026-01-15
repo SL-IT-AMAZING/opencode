@@ -14,10 +14,11 @@ import type ParcelWatcher from "@parcel/watcher"
 import { $ } from "bun"
 import { Flag } from "@/flag/flag"
 import { readdir } from "fs/promises"
+import { Collab } from "../collab"
 
 const SUBSCRIBE_TIMEOUT_MS = 10_000
 
-declare const ANYON_LIBC: string | undefined
+declare const OPENCODE_LIBC: string | undefined
 
 export namespace FileWatcher {
   const log = Log.create({ service: "file.watcher" })
@@ -34,14 +35,13 @@ export namespace FileWatcher {
 
   const watcher = lazy(() => {
     const binding = require(
-      `@parcel/watcher-${process.platform}-${process.arch}${process.platform === "linux" ? `-${ANYON_LIBC || "glibc"}` : ""}`,
+      `@parcel/watcher-${process.platform}-${process.arch}${process.platform === "linux" ? `-${OPENCODE_LIBC || "glibc"}` : ""}`,
     )
     return createWrapper(binding) as typeof import("@parcel/watcher")
   })
 
   const state = Instance.state(
     async () => {
-      if (Instance.project.vcs !== "git") return {}
       log.info("init")
       const cfg = await Config.get()
       const backend = (() => {
@@ -66,18 +66,16 @@ export namespace FileWatcher {
       const subs: ParcelWatcher.AsyncSubscription[] = []
       const cfgIgnores = cfg.watcher?.ignore ?? []
 
-      if (Flag.ANYON_EXPERIMENTAL_FILEWATCHER) {
-        const pending = watcher().subscribe(Instance.directory, subscribe, {
-          ignore: [...FileIgnore.PATTERNS, ...cfgIgnores],
-          backend,
-        })
-        const sub = await withTimeout(pending, SUBSCRIBE_TIMEOUT_MS).catch((err) => {
-          log.error("failed to subscribe to Instance.directory", { error: err })
-          pending.then((s) => s.unsubscribe()).catch(() => {})
-          return undefined
-        })
-        if (sub) subs.push(sub)
-      }
+      const pending = watcher().subscribe(Instance.directory, subscribe, {
+        ignore: [...FileIgnore.PATTERNS, ...cfgIgnores],
+        backend,
+      })
+      const sub = await withTimeout(pending, SUBSCRIBE_TIMEOUT_MS).catch((err) => {
+        log.error("failed to subscribe to Instance.directory", { error: err })
+        pending.then((s) => s.unsubscribe()).catch(() => {})
+        return undefined
+      })
+      if (sub) subs.push(sub)
 
       const vcsDir = await $`git rev-parse --git-dir`
         .quiet()
@@ -88,8 +86,31 @@ export namespace FileWatcher {
         .catch(() => undefined)
       if (vcsDir && !cfgIgnores.includes(".git") && !cfgIgnores.includes(vcsDir)) {
         const gitDirContents = await readdir(vcsDir).catch(() => [])
-        const ignoreList = gitDirContents.filter((entry) => entry !== "HEAD")
-        const pending = watcher().subscribe(vcsDir, subscribe, {
+        // Watch HEAD, refs, and logs for git changes (commits, branch switches, etc.)
+        const ignoreList = gitDirContents.filter((entry) => !["HEAD", "refs", "logs"].includes(entry))
+
+        // Debounced collab git changed event emitter
+        let gitChangeTimeout: ReturnType<typeof setTimeout> | null = null
+        const emitGitChanged = () => {
+          if (gitChangeTimeout) clearTimeout(gitChangeTimeout)
+          gitChangeTimeout = setTimeout(() => {
+            Bus.publish(Collab.Event.GitChanged, {})
+            gitChangeTimeout = null
+          }, 500)
+        }
+
+        const gitSubscribe: ParcelWatcher.SubscribeCallback = (err, evts) => {
+          if (err) return
+          for (const evt of evts) {
+            if (evt.type === "create") Bus.publish(Event.Updated, { file: evt.path, event: "add" })
+            if (evt.type === "update") Bus.publish(Event.Updated, { file: evt.path, event: "change" })
+            if (evt.type === "delete") Bus.publish(Event.Updated, { file: evt.path, event: "unlink" })
+          }
+          // Also emit collab git changed event (debounced)
+          if (evts.length > 0) emitGitChanged()
+        }
+
+        const pending = watcher().subscribe(vcsDir, gitSubscribe, {
           ignore: ignoreList,
           backend,
         })

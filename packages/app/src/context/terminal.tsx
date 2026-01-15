@@ -1,6 +1,6 @@
 import { createStore, produce } from "solid-js/store"
 import { createSimpleContext } from "@anyon/ui/context"
-import { batch, createMemo } from "solid-js"
+import { batch, createMemo, createSignal, Accessor } from "solid-js"
 import { useParams } from "@solidjs/router"
 import { useSDK } from "./sdk"
 import { persisted } from "@/utils/persist"
@@ -12,6 +12,10 @@ export type LocalPTY = {
   cols?: number
   buffer?: string
   scrollY?: number
+}
+
+export type TerminalRef = {
+  write: (data: string) => void
 }
 
 export const { use: useTerminal, provider: TerminalProvider } = createSimpleContext({
@@ -31,10 +35,50 @@ export const { use: useTerminal, provider: TerminalProvider } = createSimpleCont
       }),
     )
 
+    const [activeRef, setActiveRef] = createSignal<TerminalRef | null>(null)
+
+    // Track ready state per PTY for writeWhenReady
+    const [readyPtys, setReadyPtys] = createSignal<Set<string>>(new Set())
+    const pendingCommands = new Map<string, string[]>()
+
+    function markReady(ptyId: string) {
+      setReadyPtys((prev) => new Set([...prev, ptyId]))
+      // Flush any pending commands for this PTY
+      const pending = pendingCommands.get(ptyId)
+      if (pending && pending.length > 0) {
+        const ref = activeRef()
+        if (ref?.write) {
+          pending.forEach((cmd) => ref.write(cmd))
+        }
+        pendingCommands.delete(ptyId)
+      }
+    }
+
+    function writeWhenReady(cmd: string) {
+      const activeId = store.active
+      if (!activeId) return false
+
+      if (readyPtys().has(activeId)) {
+        const ref = activeRef()
+        if (ref?.write) {
+          ref.write(cmd)
+          return true
+        }
+      }
+
+      // Queue for later
+      const pending = pendingCommands.get(activeId) ?? []
+      pending.push(cmd)
+      pendingCommands.set(activeId, pending)
+      return true
+    }
+
     return {
       ready,
       all: createMemo(() => Object.values(store.all)),
       active: createMemo(() => store.active),
+      activeRef: activeRef as Accessor<TerminalRef | null>,
+      setActiveRef,
       new() {
         sdk.client.pty
           .create({ title: `Terminal ${store.all.length + 1}` })
@@ -116,6 +160,8 @@ export const { use: useTerminal, provider: TerminalProvider } = createSimpleCont
           }),
         )
       },
+      markReady,
+      writeWhenReady,
     }
   },
 })

@@ -46,8 +46,12 @@ export function SessionContextUsage(props: SessionContextUsageProps) {
     }
   })
 
-  const openContext = () => {
+  const toggleContext = () => {
     if (!params.id) return
+    if (tabs().active() === "context") {
+      tabs().close("context")
+      return
+    }
     layout.review.open()
     tabs().open("context")
     tabs().setActive("context")
@@ -91,7 +95,7 @@ export function SessionContextUsage(props: SessionContextUsageProps) {
         <Switch>
           <Match when={variant() === "indicator"}>{circle()}</Match>
           <Match when={true}>
-            <Button type="button" variant="ghost" class="size-6" onClick={openContext}>
+            <Button type="button" variant="ghost" class="size-6" onClick={toggleContext}>
               {circle()}
             </Button>
           </Match>

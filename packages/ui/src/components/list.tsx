@@ -1,5 +1,5 @@
 import { type FilteredListProps, useFilteredList } from "@anyon/ui/hooks"
-import { createEffect, createSignal, For, onCleanup, type JSX, on, Show } from "solid-js"
+import { createEffect, createSignal, For, onCleanup, onMount, type JSX, on, Show } from "solid-js"
 import { createStore } from "solid-js/store"
 import { Icon, type IconProps } from "./icon"
 import { IconButton } from "./icon-button"
@@ -32,10 +32,19 @@ export function List<T>(props: ListProps<T> & { ref?: (ref: ListRef) => void }) 
   const [store, setStore] = createStore({
     mouseActive: false,
   })
+  let searchContainerRef: HTMLDivElement | undefined
 
   const { filter, grouped, flat, active, setActive, onKeyDown, onInput } = useFilteredList<T>(props)
 
   const searchProps = () => (typeof props.search === "object" ? props.search : {})
+
+  // Use preventScroll to avoid frame shift when focusing inside portals
+  onMount(() => {
+    if (searchProps().autofocus && searchContainerRef) {
+      const input = searchContainerRef.querySelector("input")
+      input?.focus({ preventScroll: true })
+    }
+  })
 
   createEffect(() => {
     if (props.filter !== undefined) {
@@ -147,10 +156,9 @@ export function List<T>(props: ListProps<T> & { ref?: (ref: ListRef) => void }) 
     <div data-component="list" classList={{ [props.class ?? ""]: !!props.class }}>
       <Show when={!!props.search}>
         <div data-slot="list-search">
-          <div data-slot="list-search-container">
+          <div data-slot="list-search-container" ref={searchContainerRef}>
             <Icon name="magnifying-glass" />
             <TextField
-              autofocus={searchProps().autofocus}
               variant="ghost"
               data-slot="list-search-input"
               type="text"

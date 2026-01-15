@@ -1,8 +1,9 @@
 import { Ghostty, Terminal as Term, FitAddon } from "ghostty-web"
 import { ComponentProps, createEffect, createSignal, onCleanup, onMount, splitProps } from "solid-js"
 import { useSDK } from "@/context/sdk"
+import { useSync } from "@/context/sync"
 import { SerializeAddon } from "@/addons/serialize"
-import { LocalPTY } from "@/context/terminal"
+import { LocalPTY, TerminalRef } from "@/context/terminal"
 import { resolveThemeVariant, useTheme } from "@anyon/ui/theme"
 
 export interface TerminalProps extends ComponentProps<"div"> {
@@ -10,6 +11,8 @@ export interface TerminalProps extends ComponentProps<"div"> {
   onSubmit?: () => void
   onCleanup?: (pty: LocalPTY) => void
   onConnectError?: (error: unknown) => void
+  onRef?: (ref: TerminalRef | null) => void
+  onLocalhostDetected?: (url: string) => void
 }
 
 type TerminalColors = {
@@ -18,24 +21,25 @@ type TerminalColors = {
   cursor: string
 }
 
-const DEFAULT_TERMINAL_COLORS: Record<"light" | "dark", TerminalColors> = {
-  light: {
-    background: "#fcfcfc",
-    foreground: "#211e1e",
-    cursor: "#211e1e",
-  },
-  dark: {
-    background: "#191515",
-    foreground: "#d4d4d4",
-    cursor: "#d4d4d4",
-  },
+const DEFAULT_TERMINAL_COLORS: TerminalColors = {
+  background: "#191515",
+  foreground: "#d4d4d4",
+  cursor: "#d4d4d4",
 }
 
 export const Terminal = (props: TerminalProps) => {
   const sdk = useSDK()
+  const sync = useSync()
   const theme = useTheme()
   let container!: HTMLDivElement
-  const [local, others] = splitProps(props, ["pty", "class", "classList", "onConnectError"])
+  const [local, others] = splitProps(props, [
+    "pty",
+    "class",
+    "classList",
+    "onConnectError",
+    "onRef",
+    "onLocalhostDetected",
+  ])
   let ws: WebSocket | undefined
   let term: Term | undefined
   let ghostty: Ghostty
@@ -44,17 +48,16 @@ export const Terminal = (props: TerminalProps) => {
   let handleResize: () => void
   let reconnect: number | undefined
   let disposed = false
+  let isRestoringBuffer = true // Flag to skip URL detection during buffer restore
 
   const getTerminalColors = (): TerminalColors => {
-    const mode = theme.mode()
-    const fallback = DEFAULT_TERMINAL_COLORS[mode]
     const currentTheme = theme.themes()[theme.themeId()]
-    if (!currentTheme) return fallback
-    const variant = mode === "dark" ? currentTheme.dark : currentTheme.light
-    if (!variant?.seeds) return fallback
-    const resolved = resolveThemeVariant(variant, mode === "dark")
-    const text = resolved["text-base"] ?? fallback.foreground
-    const background = resolved["background-stronger"] ?? fallback.background
+    if (!currentTheme) return DEFAULT_TERMINAL_COLORS
+    const variant = currentTheme.dark
+    if (!variant?.seeds) return DEFAULT_TERMINAL_COLORS
+    const resolved = resolveThemeVariant(variant, true)
+    const text = resolved["text-base"] ?? DEFAULT_TERMINAL_COLORS.foreground
+    const background = resolved["background-stronger"] ?? DEFAULT_TERMINAL_COLORS.background
     return {
       background,
       foreground: text,
@@ -73,7 +76,16 @@ export const Terminal = (props: TerminalProps) => {
     setOption("theme", colors)
   })
 
-  const focusTerminal = () => term?.focus()
+  const focusTerminal = () => {
+    if (!term) return
+    // Focus the underlying textarea with preventScroll to avoid page shift
+    const textarea = container.querySelector("textarea")
+    if (textarea) {
+      textarea.focus({ preventScroll: true })
+    } else {
+      term.focus()
+    }
+  }
   const copySelection = () => {
     if (!term || !term.hasSelection()) return false
     const selection = term.getSelection()
@@ -161,7 +173,14 @@ export const Terminal = (props: TerminalProps) => {
           t.scrollToLine(local.pty.scrollY)
         }
         fitAddon.fit()
+        // Mark buffer restore as complete after a delay
+        setTimeout(() => {
+          isRestoringBuffer = false
+        }, 500)
       })
+    } else {
+      // No buffer to restore, allow detection immediately
+      isRestoringBuffer = false
     }
 
     fitAddon.observeResize()
@@ -204,9 +223,49 @@ export const Terminal = (props: TerminalProps) => {
           },
         })
         .catch(() => {})
+      // Expose write method via ref
+      local.onRef?.({
+        write: (data: string) => {
+          if (socket.readyState === WebSocket.OPEN) {
+            socket.send(data)
+          }
+        },
+      })
     })
     socket.addEventListener("message", (event) => {
       t.write(event.data)
+
+      const data = typeof event.data === "string" ? event.data : ""
+
+      // Detect git push rejection and show sync dialog
+      if (data.includes("fetch first") || data.includes("non-fast-forward") || data.includes("remote contains work")) {
+        sync.set("showSyncRequiredDialog", true)
+      }
+
+      // Detect localhost URLs for dev servers (stricter patterns, skip buffer restore)
+      if (local.onLocalhostDetected && !isRestoringBuffer) {
+        // Only match URLs after server-ready keywords to avoid false positives
+        const serverReadyPatterns = [
+          /Local:\s*(https?:\/\/(?:localhost|127\.0\.0\.1):\d+)/i,
+          /Loopback:\s*(https?:\/\/(?:localhost|127\.0\.0\.1):\d+)/i,
+          /ready.*?(https?:\/\/(?:localhost|127\.0\.0\.1):\d+)/i,
+          /listening.*?(https?:\/\/(?:localhost|127\.0\.0\.1):\d+)/i,
+          /started.*?(https?:\/\/(?:localhost|127\.0\.0\.1):\d+)/i,
+          /running.*?(https?:\/\/(?:localhost|127\.0\.0\.1):\d+)/i,
+          /available.*?(https?:\/\/(?:localhost|127\.0\.0\.1):\d+)/i,
+        ]
+
+        for (const pattern of serverReadyPatterns) {
+          const match = data.match(pattern)
+          if (match && match[1]) {
+            // Delay before triggering to let server fully start
+            setTimeout(() => {
+              local.onLocalhostDetected!(match[1])
+            }, 500)
+            break
+          }
+        }
+      }
     })
     socket.addEventListener("error", (error) => {
       console.error("WebSocket error:", error)
@@ -234,6 +293,9 @@ export const Terminal = (props: TerminalProps) => {
         scrollY: t.getViewportY(),
       })
     }
+
+    // Clean up ref
+    local.onRef?.(null)
 
     ws?.close()
     t?.dispose()

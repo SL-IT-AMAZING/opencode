@@ -49,7 +49,7 @@ import { usePermission } from "@/context/permission"
 import { Binary } from "@anyon/util/binary"
 
 import { useDialog } from "@anyon/ui/context/dialog"
-import { useTheme, type ColorScheme } from "@anyon/ui/theme"
+import { useTheme } from "@anyon/ui/theme"
 import { DialogSelectProvider } from "@/components/dialog-select-provider"
 import { DialogEditProject } from "@/components/dialog-edit-project"
 import { DialogSelectServer } from "@/components/dialog-select-server"
@@ -92,12 +92,6 @@ export default function Layout(props: ParentProps) {
   const command = useCommand()
   const theme = useTheme()
   const availableThemeEntries = createMemo(() => Object.entries(theme.themes()))
-  const colorSchemeOrder: ColorScheme[] = ["system", "light", "dark"]
-  const colorSchemeLabel: Record<ColorScheme, string> = {
-    system: "System",
-    light: "Light",
-    dark: "Dark",
-  }
 
   function cycleTheme(direction = 1) {
     const ids = availableThemeEntries().map(([id]) => id)
@@ -113,19 +107,6 @@ export default function Layout(props: ParentProps) {
     })
   }
 
-  function cycleColorScheme(direction = 1) {
-    const current = theme.colorScheme()
-    const currentIndex = colorSchemeOrder.indexOf(current)
-    const nextIndex =
-      currentIndex === -1 ? 0 : (currentIndex + direction + colorSchemeOrder.length) % colorSchemeOrder.length
-    const next = colorSchemeOrder[nextIndex]
-    theme.setColorScheme(next)
-    showToast({
-      title: "Color scheme",
-      description: colorSchemeLabel[next],
-    })
-  }
-
   onMount(() => {
     if (!platform.checkUpdate || !platform.update || !platform.restart) return
 
@@ -138,7 +119,7 @@ export default function Layout(props: ParentProps) {
           persistent: true,
           icon: "download",
           title: "Update available",
-          description: `A new version of OpenCode (${version}) is now available to install.`,
+          description: `A new version of ANYON (${version}) is now available to install.`,
           actions: [
             {
               label: "Install and restart",
@@ -329,6 +310,16 @@ export default function Layout(props: ParentProps) {
     const index = sessions.findIndex((s) => s.id === session.id)
     const nextSession = sessions[index + 1] ?? sessions[index - 1]
 
+    // Close the session tab from openSessions and sessionTabs
+    const directoryKey = base64Encode(session.directory)
+    const sessionTab = `session-${session.id}`
+
+    // Remove from openSessions (sidebar tracking)
+    layout.sessions(directoryKey).close(session.id)
+
+    // Remove the tab from all sessionTabs entries (it could be in any of them)
+    layout.closeSessionTab(sessionTab)
+
     await globalSDK.client.session.update({
       directory: session.directory,
       sessionID: session.id,
@@ -357,6 +348,13 @@ export default function Layout(props: ParentProps) {
         category: "View",
         keybind: "mod+b",
         onSelect: () => layout.sidebar.toggle(),
+      },
+      {
+        id: "rightPanel.toggle",
+        title: "Toggle right panel",
+        category: "View",
+        keybind: "mod+shift+b",
+        onSelect: () => layout.rightPanel.toggle(),
       },
       {
         id: "project.open",
@@ -419,27 +417,6 @@ export default function Layout(props: ParentProps) {
         onSelect: () => theme.commitPreview(),
         onHighlight: () => {
           theme.previewTheme(id)
-          return () => theme.cancelPreview()
-        },
-      })
-    }
-
-    commands.push({
-      id: "theme.scheme.cycle",
-      title: "Cycle color scheme",
-      category: "Theme",
-      keybind: "mod+shift+s",
-      onSelect: () => cycleColorScheme(1),
-    })
-
-    for (const scheme of colorSchemeOrder) {
-      commands.push({
-        id: `theme.scheme.${scheme}`,
-        title: `Use color scheme: ${colorSchemeLabel[scheme]}`,
-        category: "Theme",
-        onSelect: () => theme.commitPreview(),
-        onHighlight: () => {
-          theme.previewColorScheme(scheme)
           return () => theme.cancelPreview()
         },
       })
@@ -981,7 +958,7 @@ export default function Layout(props: ParentProps) {
               <div class="rounded-md bg-background-stronger shadow-xs-border-base">
                 <div class="p-3 flex flex-col gap-2">
                   <div class="text-12-medium text-text-strong">Getting started</div>
-                  <div class="text-text-base">OpenCode includes free models so you can start immediately.</div>
+                  <div class="text-text-base">ANYON includes free models so you can start immediately.</div>
                   <div class="text-text-base">Connect any provider to use models, inc. Claude, GPT, Gemini etc.</div>
                 </div>
                 <Tooltip placement="right" value="Connect provider" inactive={expanded()}>
@@ -1057,6 +1034,7 @@ export default function Layout(props: ParentProps) {
           classList={{
             "hidden xl:block": true,
             "relative shrink-0": true,
+            "transition-[width] duration-200 ease-out overflow-hidden": true,
           }}
           style={{ width: layout.sidebar.opened() ? `${layout.sidebar.width()}px` : "48px" }}
         >
@@ -1078,6 +1056,11 @@ export default function Layout(props: ParentProps) {
               collapseThreshold={80}
               onResize={layout.sidebar.resize}
               onCollapse={layout.sidebar.close}
+              style={{
+                "inset-inline-start": "auto",
+                "inset-inline-end": "0",
+                transform: "translateX(50%)",
+              }}
             />
           </Show>
         </div>

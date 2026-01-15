@@ -183,14 +183,50 @@ export const BashTool = Tool.define("bash", async () => {
         }
       }
 
-      proc.stdout?.on("data", append)
-      proc.stderr?.on("data", append)
-
       let timedOut = false
       let aborted = false
       let exited = false
+      let idleReturned = false
 
       const kill = () => Shell.killTree(proc, { exited: () => exited })
+
+      // Idle timeout - return early if output stops but process still running
+      // This allows dev servers (npm run dev, etc.) to return quickly
+      const IDLE_TIMEOUT = 3000 // 3 seconds after last output
+      const STARTUP_TIMEOUT = 5000 // 5 seconds max wait if no output at all
+      let idleTimer: ReturnType<typeof setTimeout> | null = null
+      let startupTimer: ReturnType<typeof setTimeout> | null = null
+      let hasOutput = false
+
+      // Start a timer that fires even if no output is produced (for silent servers like python http.server)
+      startupTimer = setTimeout(() => {
+        if (!exited && !hasOutput) {
+          idleReturned = true
+        }
+      }, STARTUP_TIMEOUT)
+
+      const resetIdleTimer = () => {
+        hasOutput = true
+        // Cancel startup timer once we get output - idle timer takes over
+        if (startupTimer) {
+          clearTimeout(startupTimer)
+          startupTimer = null
+        }
+        if (idleTimer) clearTimeout(idleTimer)
+        idleTimer = setTimeout(() => {
+          if (!exited && hasOutput) {
+            idleReturned = true
+          }
+        }, IDLE_TIMEOUT)
+      }
+
+      const appendWithIdle = (chunk: Buffer) => {
+        append(chunk)
+        resetIdleTimer()
+      }
+
+      proc.stdout?.on("data", appendWithIdle)
+      proc.stderr?.on("data", appendWithIdle)
 
       if (ctx.abort.aborted) {
         aborted = true
@@ -212,17 +248,30 @@ export const BashTool = Tool.define("bash", async () => {
       await new Promise<void>((resolve, reject) => {
         const cleanup = () => {
           clearTimeout(timeoutTimer)
+          if (idleTimer) clearTimeout(idleTimer)
+          if (startupTimer) clearTimeout(startupTimer)
           ctx.abort.removeEventListener("abort", abortHandler)
         }
 
+        // Check idle timer periodically - allows early return for long-running processes
+        const checkIdle = setInterval(() => {
+          if (idleReturned) {
+            clearInterval(checkIdle)
+            cleanup()
+            resolve()
+          }
+        }, 100)
+
         proc.once("exit", () => {
           exited = true
+          clearInterval(checkIdle)
           cleanup()
           resolve()
         })
 
         proc.once("error", (error) => {
           exited = true
+          clearInterval(checkIdle)
           cleanup()
           reject(error)
         })
@@ -241,6 +290,10 @@ export const BashTool = Tool.define("bash", async () => {
 
       if (aborted) {
         resultMetadata.push("User aborted the command")
+      }
+
+      if (idleReturned) {
+        resultMetadata.push("Process still running in background (returned after idle timeout)")
       }
 
       if (resultMetadata.length > 1) {

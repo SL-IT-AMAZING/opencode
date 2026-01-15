@@ -8,6 +8,8 @@ export interface DialogProps extends ParentProps {
   action?: JSXElement
   class?: ComponentProps<"div">["class"]
   classList?: ComponentProps<"div">["classList"]
+  /** Prevent dialog from closing on Escape key or outside click */
+  preventClose?: boolean
 }
 
 export function Dialog(props: DialogProps) {
@@ -26,6 +28,16 @@ export function Dialog(props: DialogProps) {
             if (autofocusEl) {
               e.preventDefault()
               autofocusEl.focus()
+            }
+          }}
+          onEscapeKeyDown={(e) => {
+            if (props.preventClose) {
+              e.preventDefault()
+            }
+          }}
+          onPointerDownOutside={(e) => {
+            if (props.preventClose) {
+              e.preventDefault()
             }
           }}
         >

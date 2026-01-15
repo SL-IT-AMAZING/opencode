@@ -61,6 +61,8 @@ interface PromptInputProps {
   ref?: (el: HTMLDivElement) => void
   newSessionWorktree?: string
   onNewSessionWorktreeReset?: () => void
+  onMessageSent?: () => void
+  activeSessionId?: string // Active session from tabs (for multi-tab support)
 }
 
 const PLACEHOLDERS = [
@@ -157,13 +159,14 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     if (!tab) return
     return files.pathFromTab(tab)
   })
-  const info = createMemo(() => (params.id ? sync.session.get(params.id) : undefined))
-  const status = createMemo(
-    () =>
-      sync.data.session_status[params.id ?? ""] ?? {
-        type: "idle",
-      },
-  )
+  const info = createMemo(() => {
+    const sessionId = props.activeSessionId ?? params.id
+    return sessionId ? sync.session.get(sessionId) : undefined
+  })
+  const status = createMemo(() => {
+    const sessionId = props.activeSessionId ?? params.id ?? ""
+    return sync.data.session_status[sessionId] ?? { type: "idle" }
+  })
   const working = createMemo(() => status()?.type !== "idle")
   const imageAttachments = createMemo(
     () => prompt.current().filter((part) => part.type === "image") as ImageAttachmentPart[],
@@ -966,7 +969,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const images = imageAttachments().slice()
     const mode = store.mode
 
-    if (text.trim().length === 0 && images.length === 0) {
+    const hasElementContext = prompt.context.items().some((item) => item.type === "element")
+
+    if (text.trim().length === 0 && images.length === 0 && !hasElementContext) {
       if (working()) abort()
       return
     }
@@ -995,7 +1000,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     setStore("savedPrompt", null)
 
     const projectDirectory = sdk.directory
-    const isNewSession = !params.id
+    const isNewSession = !props.activeSessionId && !params.id
     const worktreeSelection = props.newSessionWorktree ?? "main"
 
     let sessionDirectory = projectDirectory
@@ -1194,10 +1199,49 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       addContextFile(activePath)
     }
 
+    // Add file context items
     for (const item of prompt.context.items()) {
-      if (item.type !== "file") continue
-      addContextFile(item.path, item.selection)
+      if (item.type === "file") {
+        addContextFile(item.path, item.selection)
+      }
     }
+
+    // Build element context as text parts
+    const elementContextParts = prompt.context
+      .items()
+      .filter((item) => item.type === "element")
+      .map((item) => {
+        const el = item as {
+          tagName?: string
+          id?: string
+          className?: string
+          html?: string
+          source?: string
+          sourceType?: "localhost" | "html-file"
+        }
+        const parts: string[] = []
+
+        // Add source info first so AI knows where element is from
+        if (el.source) {
+          if (el.sourceType === "localhost") {
+            parts.push(`[From localhost preview: ${el.source}]`)
+          } else if (el.sourceType === "html-file") {
+            parts.push(`[From HTML file: ${el.source}]`)
+          }
+        }
+
+        parts.push(`Selected element: <${el.tagName?.toLowerCase() || "element"}>`)
+        if (el.id) parts.push(`id="${el.id}"`)
+        if (el.className) parts.push(`class="${el.className}"`)
+        if (el.html) parts.push(`\nHTML:\n${el.html}`)
+
+        return {
+          id: Identifier.ascending("part"),
+          type: "text" as const,
+          text: parts.join(" "),
+          synthetic: true,
+        }
+      })
 
     const imageAttachmentParts = images.map((attachment) => ({
       id: Identifier.ascending("part"),
@@ -1219,6 +1263,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       ...contextFileParts,
       ...agentAttachmentParts,
       ...imageAttachmentParts,
+      ...elementContextParts,
     ]
 
     const optimisticParts = requestParts.map((part) => ({
@@ -1271,6 +1316,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
     clearInput()
     addOptimisticMessage()
+    props.onMessageSent?.()
 
     client.session
       .prompt({
@@ -1299,7 +1345,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             if (store.popover === "slash") slashPopoverRef = el
           }}
           class="absolute inset-x-0 -top-3 -translate-y-full origin-bottom-left max-h-80 min-h-10
-                 overflow-auto no-scrollbar flex flex-col p-2 rounded-md
+                 overflow-auto no-scrollbar flex flex-col p-2 rounded-xl
                  border border-border-base bg-surface-raised-stronger-non-alpha shadow-md"
         >
           <Switch>
@@ -1392,7 +1438,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         classList={{
           "group/prompt-input": true,
           "bg-surface-raised-stronger-non-alpha shadow-xs-border relative": true,
-          "rounded-md overflow-clip focus-within:shadow-xs-border": true,
+          "rounded-xl overflow-clip": true,
+          "focus-within:shadow-xs-border-focus": true,
+          "transition-shadow duration-200": true,
           "border-icon-info-active border-dashed": store.dragging,
           [props.class ?? ""]: !!props.class,
         }}
@@ -1405,11 +1453,11 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             </div>
           </div>
         </Show>
-        <Show when={false && (prompt.context.items().length > 0 || !!activeFile())}>
+        <Show when={prompt.context.items().length > 0 || !!activeFile()}>
           <div class="flex flex-wrap items-center gap-2 px-3 pt-3">
             <Show when={prompt.context.activeTab() ? activeFile() : undefined}>
               {(path) => (
-                <div class="flex items-center gap-2 px-2 py-1 rounded-md bg-surface-base border border-border-base max-w-full">
+                <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-surface-base border border-border-base max-w-full hover:bg-surface-raised-base-hover transition-colors duration-150">
                   <FileIcon node={{ path: path(), type: "file" }} class="shrink-0 size-4" />
                   <div class="flex items-center text-12-regular min-w-0">
                     <span class="text-text-weak whitespace-nowrap truncate min-w-0">{getDirectory(path())}</span>
@@ -1429,7 +1477,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             <Show when={!prompt.context.activeTab() && !!activeFile()}>
               <button
                 type="button"
-                class="flex items-center gap-2 px-2 py-1 rounded-md bg-surface-base border border-border-base text-12-regular text-text-weak hover:bg-surface-raised-base-hover"
+                class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-surface-base border border-border-base text-12-regular text-text-weak hover:bg-surface-raised-base-hover transition-colors duration-150"
                 onClick={() => prompt.context.addActive()}
               >
                 <Icon name="plus-small" size="small" />
@@ -1438,29 +1486,75 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             </Show>
             <For each={prompt.context.items()}>
               {(item) => (
-                <div class="flex items-center gap-2 px-2 py-1 rounded-md bg-surface-base border border-border-base max-w-full">
-                  <FileIcon node={{ path: item.path, type: "file" }} class="shrink-0 size-4" />
-                  <div class="flex items-center text-12-regular min-w-0">
-                    <span class="text-text-weak whitespace-nowrap truncate min-w-0">{getDirectory(item.path)}</span>
-                    <span class="text-text-strong whitespace-nowrap">{getFilename(item.path)}</span>
-                    <Show when={item.selection}>
-                      {(sel) => (
-                        <span class="text-text-weak whitespace-nowrap ml-1">
-                          {sel().startLine === sel().endLine
-                            ? `:${sel().startLine}`
-                            : `:${sel().startLine}-${sel().endLine}`}
-                        </span>
-                      )}
-                    </Show>
+                <Show
+                  when={item.type === "file"}
+                  fallback={
+                    /* Element context item */
+                    (() => {
+                      const el = item as {
+                        type: "element"
+                        tagName?: string
+                        id?: string
+                        className?: string
+                        key: string
+                      }
+                      return (
+                        <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-surface-info-base border border-border-base max-w-full hover:bg-surface-raised-base-hover transition-colors duration-150">
+                          <Icon name="window-cursor" class="shrink-0 size-4 text-text-info" />
+                          <div class="flex items-center text-12-regular min-w-0">
+                            <span class="text-text-strong whitespace-nowrap">
+                              {el.tagName ? `<${el.tagName.toLowerCase()}>` : "Element"}
+                            </span>
+                            <Show when={el.id}>
+                              <span class="text-text-weak whitespace-nowrap ml-1">#{el.id}</span>
+                            </Show>
+                            <Show when={el.className}>
+                              <span class="text-text-weak whitespace-nowrap ml-1 truncate max-w-32">
+                                .{el.className?.split(" ")[0]}
+                              </span>
+                            </Show>
+                          </div>
+                          <IconButton
+                            type="button"
+                            icon="close"
+                            variant="ghost"
+                            class="h-6 w-6"
+                            onClick={() => prompt.context.remove(el.key)}
+                          />
+                        </div>
+                      )
+                    })()
+                  }
+                >
+                  {/* File context item */}
+                  <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-surface-base border border-border-base max-w-full hover:bg-surface-raised-base-hover transition-colors duration-150">
+                    <FileIcon node={{ path: (item as { path: string }).path, type: "file" }} class="shrink-0 size-4" />
+                    <div class="flex items-center text-12-regular min-w-0">
+                      <span class="text-text-weak whitespace-nowrap truncate min-w-0">
+                        {getDirectory((item as { path: string }).path)}
+                      </span>
+                      <span class="text-text-strong whitespace-nowrap">
+                        {getFilename((item as { path: string }).path)}
+                      </span>
+                      <Show when={"selection" in item && item.selection}>
+                        {(sel) => (
+                          <span class="text-text-weak whitespace-nowrap ml-1">
+                            {sel().startLine === sel().endLine
+                              ? `:${sel().startLine}`
+                              : `:${sel().startLine}-${sel().endLine}`}
+                          </span>
+                        )}
+                      </Show>
+                    </div>
+                    <IconButton
+                      type="button"
+                      icon="close"
+                      variant="ghost"
+                      class="h-6 w-6"
+                      onClick={() => prompt.context.remove(item.key)}
+                    />
                   </div>
-                  <IconButton
-                    type="button"
-                    icon="close"
-                    variant="ghost"
-                    class="h-6 w-6"
-                    onClick={() => prompt.context.remove(item.key)}
-                  />
-                </div>
+                </Show>
               )}
             </For>
           </div>
@@ -1487,7 +1581,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                   <button
                     type="button"
                     onClick={() => removeImageAttachment(attachment.id)}
-                    class="absolute -top-1.5 -right-1.5 size-5 rounded-full bg-surface-raised-stronger-non-alpha border border-border-base flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-surface-raised-base-hover"
+                    class="absolute -top-1.5 -right-1.5 size-5 rounded-full bg-surface-raised-stronger-non-alpha border border-border-base flex items-center justify-center opacity-0 scale-90 group-hover:opacity-100 group-hover:scale-100 transition-all duration-150 hover:bg-surface-raised-base-hover active:scale-95"
                   >
                     <Icon name="close" class="size-3 text-text-weak" />
                   </button>
@@ -1655,7 +1749,8 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                 disabled={!prompt.dirty() && !working()}
                 icon={working() ? "stop" : "arrow-up"}
                 variant="primary"
-                class="h-6 w-4.5"
+                size="large"
+                class="rounded-full! hover:scale-110 active:scale-90 transition-transform duration-150"
               />
             </Tooltip>
           </div>

@@ -19,6 +19,7 @@ import { TextField } from "@anyon/ui/text-field"
 import { DialogSelectServer } from "@/components/dialog-select-server"
 import { SessionLspIndicator } from "@/components/session-lsp-indicator"
 import { SessionMcpIndicator } from "@/components/session-mcp-indicator"
+import { SessionCollabStatus } from "@/components/session-collab-status"
 import type { Session } from "@anyon/sdk/v2/client"
 import { same } from "@/utils/same"
 
@@ -161,6 +162,7 @@ export function SessionHeader() {
               <Icon name="server" size="small" class="text-icon-weak" />
               <span class="text-12-regular text-text-weak truncate max-w-[200px]">{server.name}</span>
             </Button>
+            <SessionCollabStatus />
             <SessionLspIndicator />
             <SessionMcpIndicator />
           </div>
@@ -215,6 +217,15 @@ export function SessionHeader() {
                     class="hidden group-active/terminal-toggle:inline-block"
                   />
                 </div>
+              </Button>
+            </TooltipKeybind>
+            <TooltipKeybind
+              class="hidden md:block shrink-0"
+              title="Toggle right panel"
+              keybind={command.keybind("rightPanel.toggle")}
+            >
+              <Button variant="ghost" class="group/panel-toggle size-6 p-0" onClick={layout.rightPanel.toggle}>
+                <Icon name="layout-right-partial" size="small" />
               </Button>
             </TooltipKeybind>
           </div>
