@@ -11,6 +11,7 @@ interface PreviewToolbarProps {
   onToggleSelectionMode?: () => void
   isFilePreview?: boolean
   isLocalhostPreview?: boolean
+  scriptReady?: boolean
 }
 
 export function PreviewToolbar(props: PreviewToolbarProps) {
@@ -38,14 +39,16 @@ export function PreviewToolbar(props: PreviewToolbarProps) {
 
       {/* Select Element button - shown for file and localhost previews */}
       <Show when={(props.isFilePreview || props.isLocalhostPreview) && props.onToggleSelectionMode}>
-        <Tooltip value={props.selectionMode ? "Cancel selection" : "Select element"}>
+        <Tooltip value={props.scriptReady ? (props.selectionMode ? "Cancel selection" : "Select element") : "Loading..."}>
           <button
             type="button"
             onClick={props.onToggleSelectionMode}
+            disabled={!props.scriptReady}
             classList={{
-              "w-7 h-7 flex items-center justify-center rounded transition-colors": true,
-              "bg-blue-500/30 hover:bg-blue-500/40 active:bg-blue-500/50": props.selectionMode,
-              "hover:bg-white/10 active:bg-white/20": !props.selectionMode,
+              "w-7 h-7 flex items-center justify-center rounded transition-all duration-100": true,
+              "bg-blue-500/30 hover:bg-blue-500/40 active:bg-blue-500/50 active:scale-90": props.selectionMode,
+              "hover:bg-white/10 active:bg-white/20 active:scale-90": !props.selectionMode && props.scriptReady,
+              "opacity-50 cursor-not-allowed": !props.scriptReady,
             }}
             aria-label={props.selectionMode ? "Cancel selection" : "Select element"}
           >
@@ -66,7 +69,7 @@ export function PreviewToolbar(props: PreviewToolbarProps) {
         <button
           type="button"
           onClick={props.onRefresh}
-          class="w-7 h-7 flex items-center justify-center rounded hover:bg-white/10 active:bg-white/20 transition-colors"
+          class="w-7 h-7 flex items-center justify-center rounded hover:bg-white/10 active:bg-white/20 active:scale-90 transition-all duration-100"
           aria-label="Refresh"
         >
           <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" class="text-text-weak">

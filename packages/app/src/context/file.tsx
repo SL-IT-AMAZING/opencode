@@ -130,11 +130,7 @@ export const { use: useFile, provider: FileProvider } = createSimpleContext({
     }
 
     function previewTab(input: string) {
-      // For localhost URLs, route through proxy to enable selector script injection
-      if (input.startsWith("http://localhost") || input.startsWith("http://127.0.0.1")) {
-        return `preview://url:${sdk.url}/proxy?url=${encodeURIComponent(input)}`
-      }
-      // For other http/https URLs, use url type directly
+      // For all HTTP/HTTPS URLs, store the original URL (proxy constructed dynamically in preview-pane)
       if (input.startsWith("http://") || input.startsWith("https://")) {
         return `preview://url:${input}`
       }
@@ -174,8 +170,10 @@ export const { use: useFile, provider: FileProvider } = createSimpleContext({
 
     const [store, setStore] = createStore<{
       file: Record<string, FileState>
+      selectionMode: boolean
     }>({
       file: {},
+      selectionMode: false,
     })
 
     const viewKey = createMemo(() => `${params.dir}/file${params.id ? "/" + params.id : ""}.v1`)
@@ -321,6 +319,8 @@ export const { use: useFile, provider: FileProvider } = createSimpleContext({
       setScrollLeft,
       selectedLines,
       setSelectedLines,
+      selectionMode: () => store.selectionMode,
+      setSelectionMode: (mode: boolean) => setStore("selectionMode", mode),
       searchFiles: (query: string) =>
         sdk.client.find.files({ query, dirs: "false" }).then((x) => (x.data ?? []).map(normalize)),
       searchFilesAndDirectories: (query: string) =>

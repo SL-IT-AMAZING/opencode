@@ -7,7 +7,7 @@
   "scripts": {
     "typecheck": "tsgo -b",
     "predev": "bun ./scripts/predev.ts",
-    "dev": "bunx @react-grab/claude-code@latest && vite",
+    "dev": "vite",
     "build": "bun run typecheck && vite build",
     "preview": "vite preview",
     "tauri": "tauri"
@@ -29,8 +29,6 @@
     "solid-js": "catalog:"
   },
   "devDependencies": {
-    "react-grab": "latest",
-    "@react-grab/claude-code": "latest",
     "@actions/artifact": "4.0.0",
     "@tauri-apps/cli": "^2",
     "@types/bun": "catalog:",

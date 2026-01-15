@@ -67,11 +67,11 @@ export const PreviewRoute = new Hono().get("/*", async (c) => {
   // For HTML files, inject selector script
   if (ext === ".html" || ext === ".htm") {
     let html = await file.text()
-    // Inject selector script before </head> or at start of <body>
-    if (html.includes("</head>")) {
-      html = html.replace("</head>", `<script>${SELECTOR_SCRIPT}</script></head>`)
-    } else if (html.includes("<body")) {
-      html = html.replace(/<body([^>]*)>/, `<body$1><script>${SELECTOR_SCRIPT}</script>`)
+    // Inject selector script before </head> or at start of <body> (case-insensitive)
+    if (/<\/head>/i.test(html)) {
+      html = html.replace(/<\/head>/i, `<script>${SELECTOR_SCRIPT}</script></head>`)
+    } else if (/<body[\s>]/i.test(html)) {
+      html = html.replace(/(<body[^>]*>)/i, `$1<script>${SELECTOR_SCRIPT}</script>`)
     } else {
       // Fallback: prepend script
       html = `<script>${SELECTOR_SCRIPT}</script>` + html

@@ -9,11 +9,10 @@ import { SELECTOR_SCRIPT } from "./selector-script"
  * Usage: /proxy?url=http://localhost:3000/path
  */
 export const ProxyRoute = new Hono().get("/", async (c) => {
-  const targetUrl = c.req.query("url")
-  console.log("[Proxy] Request received for URL:", targetUrl)
+  try {
+    const targetUrl = c.req.query("url")
 
   if (!targetUrl) {
-    console.log("[Proxy] ERROR: No URL parameter provided")
     return c.json({ error: "url parameter required" }, 400)
   }
 
@@ -48,7 +47,6 @@ export const ProxyRoute = new Hono().get("/", async (c) => {
     }
 
     const contentType = response.headers.get("content-type") || "text/plain"
-    console.log("[Proxy] Fetched successfully, content-type:", contentType)
 
     // Set CORS header
     c.header("Access-Control-Allow-Origin", "*")
@@ -56,19 +54,15 @@ export const ProxyRoute = new Hono().get("/", async (c) => {
     // For HTML responses, inject selector script
     if (contentType.includes("text/html")) {
       let html = await response.text()
-      console.log("[Proxy] HTML response, length:", html.length)
 
-      // Inject selector script before </head> or at start of <body>
-      if (html.includes("</head>")) {
-        html = html.replace("</head>", `<script>${SELECTOR_SCRIPT}</script></head>`)
-        console.log("[Proxy] Injected selector script before </head>")
-      } else if (html.includes("<body")) {
-        html = html.replace(/<body([^>]*)>/, `<body$1><script>${SELECTOR_SCRIPT}</script>`)
-        console.log("[Proxy] Injected selector script after <body>")
+      // Inject selector script before </head> or at start of <body> (case-insensitive)
+      if (/<\/head>/i.test(html)) {
+        html = html.replace(/<\/head>/i, `<script>${SELECTOR_SCRIPT}</script></head>`)
+      } else if (/<body[\s>]/i.test(html)) {
+        html = html.replace(/(<body[^>]*>)/i, `$1<script>${SELECTOR_SCRIPT}</script>`)
       } else {
         // Fallback: prepend script
         html = `<script>${SELECTOR_SCRIPT}</script>` + html
-        console.log("[Proxy] Prepended selector script (fallback)")
       }
 
       c.header("Content-Type", "text/html; charset=utf-8")
@@ -83,7 +77,10 @@ export const ProxyRoute = new Hono().get("/", async (c) => {
     return c.body(arrayBuffer)
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error"
-    console.log("[Proxy] ERROR fetching:", message)
     return c.json({ error: `Failed to fetch localhost URL: ${message}` }, 502)
+  }
+  } catch (outerErr) {
+    const message = outerErr instanceof Error ? outerErr.message : "Unknown error"
+    return c.json({ error: `Proxy error: ${message}` }, 500)
   }
 })

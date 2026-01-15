@@ -21,9 +21,12 @@ export function PreviewVisual(props: {
   preview: { type: "url" | "file"; value: string }
   active?: boolean
 }): JSX.Element {
+  const file = useFile()
   const label = createMemo(() => {
     if (props.preview.type === "url") {
-      return getHostname(props.preview.value)
+      // Extract original localhost URL from proxy URL for display
+      const originalUrl = file.getOriginalUrl(props.preview.value)
+      return getHostname(originalUrl)
     }
     return getFilename(props.preview.value)
   })
@@ -106,7 +109,8 @@ export function SortableTab(props: {
   const tooltipValue = createMemo(() => {
     const p = preview()
     if (p) {
-      return p.value
+      // Extract original localhost URL from proxy URL for display
+      return file.getOriginalUrl(p.value)
     }
     return path() ?? props.tab
   })

@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js"
+import { createEffect, createMemo, createSignal, onCleanup, onMount, untrack } from "solid-js"
 import { useSDK } from "@/context/sdk"
 import { useFile } from "@/context/file"
 import { usePrompt } from "@/context/prompt"
@@ -14,8 +14,12 @@ export function PreviewPane(props: PreviewPaneProps) {
   const file = useFile()
   const prompt = usePrompt()
   const [refreshKey, setRefreshKey] = createSignal(0)
-  const [selectionMode, setSelectionMode] = createSignal(false)
+  // Use global selection mode from file context so it persists across tab switches
+  const selectionMode = () => file.selectionMode()
+  const setSelectionMode = (mode: boolean) => file.setSelectionMode(mode)
+  const [scriptReady, setScriptReady] = createSignal(false)
   let iframeRef: HTMLIFrameElement | undefined
+  let overlaysRestored = false
 
   // Determine preview type
   const isFilePreview = createMemo(() => props.preview.type === "file")
@@ -23,13 +27,19 @@ export function PreviewPane(props: PreviewPaneProps) {
   // Base URL without cache buster
   const baseUrl = createMemo(() => {
     if (props.preview.type === "url") {
-      const url = props.preview.value
-      // Auto-convert direct localhost URLs to proxy (for old persisted tabs)
-      if (url.startsWith("http://localhost") || url.startsWith("http://127.0.0.1")) {
-        if (!url.includes("/proxy?url=")) {
-          return `${sdk.url}/proxy?url=${encodeURIComponent(url)}`
-        }
+      let url = props.preview.value
+
+      // Handle legacy persisted proxy URLs - extract original and rebuild with current sdk.url
+      if (url.includes("/proxy?url=")) {
+        const originalUrl = file.getOriginalUrl(url)
+        return `${sdk.url}/proxy?url=${encodeURIComponent(originalUrl)}`
       }
+
+      // Route localhost URLs through proxy for script injection (http AND https)
+      if (/^https?:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(url)) {
+        return `${sdk.url}/proxy?url=${encodeURIComponent(url)}`
+      }
+
       return url
     }
     // For file previews, construct URL using server's preview route
@@ -96,12 +106,17 @@ export function PreviewPane(props: PreviewPaneProps) {
       case "anyon-component-selector-deactivated":
         setSelectionMode(false)
         break
+      case "anyon-component-selector-ready":
+        console.log("[PreviewPane] Selector script is ready")
+        setScriptReady(true)
+        // Note: overlay restoration is handled by effect that watches scriptReady + prompt.ready
+        break
     }
   }
 
-  onMount(() => {
-    window.addEventListener("message", handleMessage)
-  })
+  // Add message listener immediately (not in onMount) to avoid race condition
+  // where iframe loads and sends ready message before listener is attached
+  window.addEventListener("message", handleMessage)
 
   onCleanup(() => {
     window.removeEventListener("message", handleMessage)
@@ -110,11 +125,15 @@ export function PreviewPane(props: PreviewPaneProps) {
   // Toggle selection mode - send message to iframe
   const handleToggleSelectionMode = () => {
     console.log("[PreviewPane] handleToggleSelectionMode called")
-    console.log("[PreviewPane] iframeRef:", iframeRef)
-    console.log("[PreviewPane] iframeRef?.contentWindow:", iframeRef?.contentWindow)
+    console.log("[PreviewPane] scriptReady:", scriptReady())
 
     if (!iframeRef?.contentWindow) {
       console.log("[PreviewPane] EARLY RETURN - no contentWindow!")
+      return
+    }
+
+    if (!scriptReady()) {
+      console.log("[PreviewPane] EARLY RETURN - script not ready yet!")
       return
     }
 
@@ -127,10 +146,74 @@ export function PreviewPane(props: PreviewPaneProps) {
     console.log("[PreviewPane] selectionMode set to:", newMode)
   }
 
-  // Deactivate selection mode when iframe src changes (navigation/refresh)
+  // Reset state when iframe src changes (navigation/refresh)
+  // Note: selectionMode is NOT reset - it persists across tab switches
   createEffect(() => {
     iframeSrc() // Subscribe to changes
-    setSelectionMode(false)
+    setScriptReady(false)
+    overlaysRestored = false
+  })
+
+  // Auto-activate selection mode in new iframe when it loads (if selection mode is ON)
+  createEffect(() => {
+    if (scriptReady() && selectionMode() && iframeRef?.contentWindow) {
+      console.log("[PreviewPane] Auto-activating selection mode in new tab")
+      iframeRef.contentWindow.postMessage({ type: "activate-anyon-component-selector" }, "*")
+    }
+  })
+
+  // Restore overlays ONCE when BOTH script is ready AND prompt context is loaded
+  createEffect(() => {
+    if (overlaysRestored) return
+    if (!scriptReady() || !prompt.ready() || !iframeRef?.contentWindow) return
+
+    // Use untrack to read items without subscribing to changes
+    const items = untrack(() => prompt.context.items())
+    const elementItems = items.filter((i): i is ElementContextItem & { key: string } => i.type === "element")
+
+    if (elementItems.length > 0) {
+      console.log("[PreviewPane] Restoring overlays for", elementItems.length, "elements")
+      elementItems.forEach((el) => {
+        if (el.cssSelector) {
+          iframeRef!.contentWindow!.postMessage(
+            { type: "highlight-anyon-element", cssSelector: el.cssSelector },
+            "*",
+          )
+        }
+      })
+    }
+
+    overlaysRestored = true
+  })
+
+  // Track element context items to sync overlays with iframe
+  let prevElementKeys = new Set<string>()
+
+  // Sync overlays when element context items change (add/remove)
+  createEffect(() => {
+    const items = prompt.context.items()
+    const elementItems = items.filter((i): i is ElementContextItem & { key: string } => i.type === "element")
+    const currentKeys = new Set(elementItems.map((i) => i.key))
+
+    // Detect if any elements were removed
+    const hasRemovals = [...prevElementKeys].some((k) => !currentKeys.has(k))
+
+    if (hasRemovals && iframeRef?.contentWindow) {
+      // Clear all overlays first
+      iframeRef.contentWindow.postMessage({ type: "clear-anyon-component-overlays" }, "*")
+
+      // Re-highlight remaining elements
+      elementItems.forEach((el) => {
+        if (el.cssSelector) {
+          iframeRef!.contentWindow!.postMessage(
+            { type: "highlight-anyon-element", cssSelector: el.cssSelector },
+            "*",
+          )
+        }
+      })
+    }
+
+    prevElementKeys = currentKeys
   })
 
   const handleRefresh = () => {
@@ -147,6 +230,7 @@ export function PreviewPane(props: PreviewPaneProps) {
         onToggleSelectionMode={handleToggleSelectionMode}
         isFilePreview={isFilePreview()}
         isLocalhostPreview={isLocalhostPreview()}
+        scriptReady={scriptReady()}
       />
       <div class="flex-1 relative">
         <iframe
@@ -155,6 +239,10 @@ export function PreviewPane(props: PreviewPaneProps) {
           sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
           class="absolute inset-0 w-full h-full border-0"
           style={{ "background-color": "#ffffff" }}
+          onLoad={() => {
+            console.log("[PreviewPane] iframe onload fired")
+            // Note: scriptReady and restoreOverlays are handled by anyon-component-selector-ready message
+          }}
         />
       </div>
     </div>
