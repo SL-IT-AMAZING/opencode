@@ -109,6 +109,20 @@ export const ProxyRoute = new Hono().get("/", async (c) => {
           return originalUrl
         }
 
+        // Skip bare module specifiers (let Vite resolve them)
+        // Bare specifiers don't start with /, ./, ../, or protocol
+        // Examples: "solid-js", "solid-js/web", "@scope/package"
+        if (
+          !trimmed.startsWith("/") &&
+          !trimmed.startsWith("./") &&
+          !trimmed.startsWith("../") &&
+          !trimmed.startsWith("http://") &&
+          !trimmed.startsWith("https://") &&
+          !trimmed.startsWith("//")
+        ) {
+          return originalUrl
+        }
+
         try {
           // Handle protocol-relative URLs
           const urlToResolve = trimmed.startsWith("//")
@@ -129,8 +143,12 @@ export const ProxyRoute = new Hono().get("/", async (c) => {
         return originalUrl
       }
 
-      // Process HTML responses
-      if (contentType.includes("text/html")) {
+      // Check if URL looks like JavaScript - used by multiple checks below
+      const isJsByUrl = isJavaScriptUrl(urlPath)
+
+      // Process HTML responses - BUT skip if URL looks like JavaScript
+      // This prevents injecting selector script into error pages for JS URLs
+      if (contentType.includes("text/html") && !isJsByUrl) {
         let html = await response.text()
 
         // Rewrite src attributes (script, img, iframe, source, video, audio, embed)
@@ -243,11 +261,11 @@ export const ProxyRoute = new Hono().get("/", async (c) => {
         })
       }
 
-      // Determine if this is JavaScript by content-type header, URL pattern, or content inspection
+      // Determine if this is JavaScript by content-type header or content inspection
       const isJsByContentType =
         contentType.includes("javascript") ||
         contentType.includes("ecmascript")
-      const isJsByUrl = isJavaScriptUrl(urlPath)
+      // Note: isJsByUrl already defined above
 
       // For text content that might be JS, we need to read it first
       if (

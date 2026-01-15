@@ -174,6 +174,9 @@ export default function Page() {
     return dir ? layout.terminalFor(dir) : layout.terminal
   })
 
+  // Track opened preview URLs to avoid duplicates
+  const openedPreviewUrls = new Set<string>()
+
   // Derive current session from active tab (for multi-tab support)
   const activeSessionId = createMemo(() => {
     const active = tabs().active()
@@ -252,6 +255,42 @@ export default function Page() {
 
     document.addEventListener("click", handler, true)
     onCleanup(() => document.removeEventListener("click", handler, true))
+  })
+
+  // Detect localhost URLs in AI tool output (e.g., when AI runs `bun dev`)
+  createEffect(() => {
+    const sessionId = activeSessionId()
+    if (!sessionId) return
+
+    const messages = sync.data.message[sessionId] ?? []
+
+    for (const msg of messages) {
+      const parts = sync.data.part[msg.id] ?? []
+
+      // Check tool parts for localhost URLs in completed state
+      for (const part of parts) {
+        if (part.type !== "tool") continue
+        if (part.state.status !== "completed") continue
+
+        const output = part.state.output ?? ""
+
+        const serverReadyPatterns = [
+          /Local:\s*(https?:\/\/(?:localhost|127\.0\.0\.1):\d+)/i,
+          /listening.*?(https?:\/\/(?:localhost|127\.0\.0\.1):\d+)/i,
+          /started.*?(https?:\/\/(?:localhost|127\.0\.0\.1):\d+)/i,
+          /running.*?(https?:\/\/(?:localhost|127\.0\.0\.1):\d+)/i,
+        ]
+
+        for (const pattern of serverReadyPatterns) {
+          const match = output.match(pattern)
+          if (match && match[1] && !openedPreviewUrls.has(match[1])) {
+            openedPreviewUrls.add(match[1])
+            tabs().open(`preview://url:${match[1]}`)
+            break
+          }
+        }
+      }
+    }
   })
 
   createEffect(() => {
@@ -1473,7 +1512,7 @@ export default function Page() {
             </Tabs>
 
             {/* Quick Action Bar - Always visible above terminal */}
-            <QuickActionBar />
+            <QuickActionBar activeSessionId={activeSessionId()} />
 
             {/* Terminal - Bottom */}
             <div
@@ -1588,6 +1627,13 @@ export default function Page() {
                                     if (ref && terminal.active() === pty.id) {
                                       terminal.setActiveRef(ref)
                                       terminal.markReady(pty.id)
+                                    }
+                                  }}
+                                  onLocalhostDetected={(url) => {
+                                    // Debounce: only open each URL once per session
+                                    if (!openedPreviewUrls.has(url)) {
+                                      openedPreviewUrls.add(url)
+                                      tabs().open(`preview://url:${url}`)
                                     }
                                   }}
                                 />
