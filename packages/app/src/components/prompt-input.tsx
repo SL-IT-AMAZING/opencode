@@ -969,7 +969,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const images = imageAttachments().slice()
     const mode = store.mode
 
-    if (text.trim().length === 0 && images.length === 0) {
+    const hasElementContext = prompt.context.items().some((item) => item.type === "element")
+
+    if (text.trim().length === 0 && images.length === 0 && !hasElementContext) {
       if (working()) abort()
       return
     }
@@ -1209,15 +1211,35 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       .items()
       .filter((item) => item.type === "element")
       .map((item) => {
-        const el = item as { tagName?: string; id?: string; className?: string; html?: string }
-        const parts = [`Selected element: <${el.tagName?.toLowerCase() || "element"}>`]
+        const el = item as {
+          tagName?: string
+          id?: string
+          className?: string
+          html?: string
+          source?: string
+          sourceType?: "localhost" | "html-file"
+        }
+        const parts: string[] = []
+
+        // Add source info first so AI knows where element is from
+        if (el.source) {
+          if (el.sourceType === "localhost") {
+            parts.push(`[From localhost preview: ${el.source}]`)
+          } else if (el.sourceType === "html-file") {
+            parts.push(`[From HTML file: ${el.source}]`)
+          }
+        }
+
+        parts.push(`Selected element: <${el.tagName?.toLowerCase() || "element"}>`)
         if (el.id) parts.push(`id="${el.id}"`)
         if (el.className) parts.push(`class="${el.className}"`)
         if (el.html) parts.push(`\nHTML:\n${el.html}`)
+
         return {
           id: Identifier.ascending("part"),
           type: "text" as const,
           text: parts.join(" "),
+          synthetic: true,
         }
       })
 

@@ -1362,10 +1362,19 @@ export default function Page() {
                 newSessionWorktree={newSessionWorktree()}
                 onNewSessionWorktreeReset={() => setStore("newSessionWorktree", "main")}
                 onMessageSent={() => {
-                  // Track the current session as last active when a message is sent
                   const active = tabs().active()
+
+                  // Track the current session as last active when a message is sent
                   if (active?.startsWith("session-")) {
                     setLastActiveSession(active)
+                  }
+
+                  // Switch back to session tab if on preview/file tab
+                  if (active?.startsWith("preview://") || active?.startsWith("file://")) {
+                    const sessionTab = lastActiveSession() || `session-${info()?.id}`
+                    if (sessionTab) {
+                      tabs().setActive(sessionTab)
+                    }
                   }
                 }}
               />

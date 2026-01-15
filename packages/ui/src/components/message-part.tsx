@@ -321,6 +321,14 @@ export function UserMessageDisplay(props: { message: UserMessage; parts: PartTyp
 
   const agents = createMemo(() => (props.parts?.filter((p) => p.type === "agent") as AgentPart[]) ?? [])
 
+  // Element context parts (synthetic text parts starting with [From)
+  const elementContextParts = createMemo(
+    () =>
+      (props.parts?.filter(
+        (p) => p.type === "text" && (p as TextPart).synthetic && (p as TextPart).text?.startsWith("[From "),
+      ) as TextPart[]) ?? [],
+  )
+
   const openImagePreview = (url: string, alt?: string) => {
     dialog.show(() => <ImagePreview src={url} alt={alt} />)
   }
@@ -354,6 +362,11 @@ export function UserMessageDisplay(props: { message: UserMessage; parts: PartTyp
               </div>
             )}
           </For>
+        </div>
+      </Show>
+      <Show when={elementContextParts().length > 0}>
+        <div data-slot="user-message-elements">
+          <For each={elementContextParts()}>{(part) => <ElementContextBadge part={part} />}</For>
         </div>
       </Show>
       <Show when={text()}>
@@ -414,6 +427,35 @@ function HighlightedText(props: { text: string; references: FilePart[]; agents: 
         </span>
       )}
     </For>
+  )
+}
+
+function ElementContextBadge(props: { part: TextPart }) {
+  const [expanded, setExpanded] = createSignal(false)
+
+  const source = createMemo(() => {
+    const match = props.part.text?.match(/\[From (?:localhost preview|HTML file): ([^\]]+)\]/)
+    return match?.[1] || "element"
+  })
+
+  const html = createMemo(() => {
+    const match = props.part.text?.match(/HTML:\n([\s\S]+)$/)
+    return match?.[1] || ""
+  })
+
+  return (
+    <div data-component="element-context-badge" data-expanded={expanded()}>
+      <button data-slot="element-badge-button" onClick={() => setExpanded(!expanded())}>
+        <span data-slot="element-badge-icon">📍</span>
+        <span data-slot="element-badge-label">Element from {source()}</span>
+        <span data-slot="element-badge-chevron" data-expanded={expanded()}>
+          <Icon name="chevron-down" size="small" />
+        </span>
+      </button>
+      <Show when={expanded() && html()}>
+        <pre data-slot="element-context-html">{html()}</pre>
+      </Show>
+    </div>
   )
 }
 

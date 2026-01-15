@@ -89,6 +89,19 @@ export function PreviewPane(props: PreviewPaneProps) {
     switch (event.data.type) {
       case "anyon-component-selected": {
         const data = event.data.data as ElementContextItem
+
+        // Determine source info
+        let source: string | undefined
+        let sourceType: "localhost" | "html-file" | undefined
+
+        if (props.preview.type === "url") {
+          source = props.preview.value
+          sourceType = "localhost"
+        } else if (props.preview.type === "file") {
+          source = props.preview.value
+          sourceType = "html-file"
+        }
+
         prompt.context.add({
           type: "element",
           tagName: data.tagName,
@@ -97,6 +110,8 @@ export function PreviewPane(props: PreviewPaneProps) {
           html: data.html,
           cssSelector: data.cssSelector,
           textContent: data.textContent,
+          source,
+          sourceType,
         })
         break
       }
@@ -120,6 +135,15 @@ export function PreviewPane(props: PreviewPaneProps) {
 
   onCleanup(() => {
     window.removeEventListener("message", handleMessage)
+  })
+
+  // Auto-enable selection mode when script is ready (for HTML/localhost previews)
+  createEffect(() => {
+    if (scriptReady() && iframeRef?.contentWindow) {
+      // Enable selection mode automatically
+      setSelectionMode(true)
+      iframeRef.contentWindow.postMessage({ type: "activate-anyon-component-selector" }, "*")
+    }
   })
 
   // Toggle selection mode - send message to iframe

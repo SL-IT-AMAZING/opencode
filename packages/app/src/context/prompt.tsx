@@ -51,6 +51,8 @@ export type ElementContextItem = {
   html?: string
   cssSelector?: string
   textContent?: string
+  source?: string
+  sourceType?: "localhost" | "html-file"
 }
 
 export type ContextItem = FileContextItem | ElementContextItem
