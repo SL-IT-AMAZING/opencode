@@ -26,7 +26,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM4RDM3MThCRUYyMjgyODIKUldTQ2dpTHZpM0hUT05seCtRelNtNVJmTlhqbDhoNXArd2xydGphblkzRzRvOE5iNkNCMFVqbHoK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDFDMzQzRUNBQTRBNDgxQjAKUldTd2dhU2t5ajQwSE5vYVRFU2Q4UmY2bE9tdEl0cDNpcVN3R0V6R1VzM2NmZFhBZzM5Y3E1NFgK",
       "endpoints": ["https://github.com/SL-IT-AMAZING/opencode/releases/latest/download/latest.json"]
     }
   }
