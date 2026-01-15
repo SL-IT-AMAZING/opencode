@@ -13,11 +13,7 @@ interface QuickActionBarProps {
   activeSessionId?: string
 }
 
-function ActionButton(props: {
-  icon: IconProps["name"]
-  label: string
-  onClick: () => void
-}) {
+function ActionButton(props: { icon: IconProps["name"]; label: string; onClick: () => void }) {
   return (
     <Tooltip value={props.label}>
       <Button
@@ -164,27 +160,31 @@ If none exist -> run "npx vite" or "npx next dev" based on dependencies`
     const messageID = Identifier.ascending("message")
 
     // Send prompt with correct API structure
-    await sdk.client.session.prompt({
-      sessionID: sessionId,
-      agent: currentAgent.name,
-      model: {
-        modelID: currentModel.id,
-        providerID: currentModel.provider.id,
-      },
-      messageID,
-      system: promptText,  // Full instructions (hidden from UI)
-      parts: [{
-        id: Identifier.ascending("part"),
-        type: "text" as const,
-        text: "Start the development server",  // Short visible message
-      }],
-      variant,
-    }).catch((err) => {
-      showToast({
-        title: "Failed to send prompt",
-        description: String(err),
+    await sdk.client.session
+      .prompt({
+        sessionID: sessionId,
+        agent: currentAgent.name,
+        model: {
+          modelID: currentModel.id,
+          providerID: currentModel.provider.id,
+        },
+        messageID,
+        system: promptText, // Full instructions (hidden from UI)
+        parts: [
+          {
+            id: Identifier.ascending("part"),
+            type: "text" as const,
+            text: "Start the development server", // Short visible message
+          },
+        ],
+        variant,
       })
-    })
+      .catch((err) => {
+        showToast({
+          title: "Failed to send prompt",
+          description: String(err),
+        })
+      })
   }
 
   return (

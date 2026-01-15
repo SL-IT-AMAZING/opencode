@@ -39,7 +39,9 @@ export function PreviewToolbar(props: PreviewToolbarProps) {
 
       {/* Select Element button - shown for file and localhost previews */}
       <Show when={(props.isFilePreview || props.isLocalhostPreview) && props.onToggleSelectionMode}>
-        <Tooltip value={props.scriptReady ? (props.selectionMode ? "Cancel selection" : "Select element") : "Loading..."}>
+        <Tooltip
+          value={props.scriptReady ? (props.selectionMode ? "Cancel selection" : "Select element") : "Loading..."}
+        >
           <button
             type="button"
             onClick={props.onToggleSelectionMode}

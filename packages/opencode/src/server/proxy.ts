@@ -125,16 +125,12 @@ export const ProxyRoute = new Hono().get("/", async (c) => {
 
         try {
           // Handle protocol-relative URLs
-          const urlToResolve = trimmed.startsWith("//")
-            ? `${url.protocol}${trimmed}`
-            : trimmed
+          const urlToResolve = trimmed.startsWith("//") ? `${url.protocol}${trimmed}` : trimmed
 
           const absoluteUrl = new URL(urlToResolve, baseUrl).href
 
           // Only proxy localhost URLs
-          if (
-            /^https?:\/\/(localhost|127\.0\.0\.1|::1)(:|\/|$)/.test(absoluteUrl)
-          ) {
+          if (/^https?:\/\/(localhost|127\.0\.0\.1|::1)(:|\/|$)/.test(absoluteUrl)) {
             return `/proxy?url=${encodeURIComponent(absoluteUrl)}`
           }
         } catch {
@@ -154,94 +150,83 @@ export const ProxyRoute = new Hono().get("/", async (c) => {
         // Rewrite src attributes (script, img, iframe, source, video, audio, embed)
         html = html.replace(
           /(<(?:script|img|iframe|source|video|audio|embed)[^>]*?\s)src\s*=\s*(["'])([^"']*)\2/gi,
-          (_, prefix, quote, srcUrl) =>
-            `${prefix}src=${quote}${rewriteUrl(srcUrl)}${quote}`,
+          (_, prefix, quote, srcUrl) => `${prefix}src=${quote}${rewriteUrl(srcUrl)}${quote}`,
         )
 
         // Rewrite href in stylesheet/preload link tags only
         html = html.replace(
           /(<link[^>]*?rel\s*=\s*["'](?:stylesheet|preload)["'][^>]*?\s)href\s*=\s*(["'])([^"']*)\2/gi,
-          (_, prefix, quote, hrefUrl) =>
-            `${prefix}href=${quote}${rewriteUrl(hrefUrl)}${quote}`,
+          (_, prefix, quote, hrefUrl) => `${prefix}href=${quote}${rewriteUrl(hrefUrl)}${quote}`,
         )
         html = html.replace(
           /(<link[^>]*?\s)href\s*=\s*(["'])([^"']*)\2([^>]*?rel\s*=\s*["'](?:stylesheet|preload)["'])/gi,
-          (_, prefix, quote, hrefUrl, suffix) =>
-            `${prefix}href=${quote}${rewriteUrl(hrefUrl)}${quote}${suffix}`,
+          (_, prefix, quote, hrefUrl, suffix) => `${prefix}href=${quote}${rewriteUrl(hrefUrl)}${quote}${suffix}`,
         )
 
         // Rewrite poster attribute (video)
         html = html.replace(
           /(<video[^>]*?\s)poster\s*=\s*(["'])([^"']*)\2/gi,
-          (_, prefix, quote, posterUrl) =>
-            `${prefix}poster=${quote}${rewriteUrl(posterUrl)}${quote}`,
+          (_, prefix, quote, posterUrl) => `${prefix}poster=${quote}${rewriteUrl(posterUrl)}${quote}`,
         )
 
         // Rewrite srcset attributes
-        html = html.replace(
-          /srcset\s*=\s*(["'])([^"']*)\1/gi,
-          (_, quote, srcset) => {
-            const rewritten = srcset
-              .split(",")
-              .map((entry: string) => {
-                const parts = entry.trim().split(/\s+/)
-                if (parts[0]) parts[0] = rewriteUrl(parts[0])
-                return parts.join(" ")
-              })
-              .join(", ")
-            return `srcset=${quote}${rewritten}${quote}`
-          },
-        )
+        html = html.replace(/srcset\s*=\s*(["'])([^"']*)\1/gi, (_, quote, srcset) => {
+          const rewritten = srcset
+            .split(",")
+            .map((entry: string) => {
+              const parts = entry.trim().split(/\s+/)
+              if (parts[0]) parts[0] = rewriteUrl(parts[0])
+              return parts.join(" ")
+            })
+            .join(", ")
+          return `srcset=${quote}${rewritten}${quote}`
+        })
 
         // Rewrite imports in inline scripts (for Vite's injected preamble)
-        html = html.replace(
-          /<script\b([^>]*)>([\s\S]*?)<\/script>/gi,
-          (match, attrs, scriptContent) => {
-            // Skip if it's an external script (has src attribute)
-            if (/\bsrc\s*=/i.test(attrs)) {
-              return match
-            }
+        html = html.replace(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi, (match, attrs, scriptContent) => {
+          // Skip if it's an external script (has src attribute)
+          if (/\bsrc\s*=/i.test(attrs)) {
+            return match
+          }
 
-            // Skip empty scripts
-            if (!scriptContent.trim()) {
-              return match
-            }
+          // Skip empty scripts
+          if (!scriptContent.trim()) {
+            return match
+          }
 
-            // Rewrite import statements in inline script content
-            // Match FULL import/export syntax to avoid matching strings like ["from","./path"]
-            let rewritten = scriptContent
+          // Rewrite import statements in inline script content
+          // Match FULL import/export syntax to avoid matching strings like ["from","./path"]
+          let rewritten = scriptContent
 
-            // 1. Named/default imports: import x from "url", import { x } from "url"
-            rewritten = rewritten.replace(
-              /\b(import\s+[\w$_*{},\s]+\s+from\s*)(["'])([^"']+)\2/g,
-              (_: string, prefix: string, quote: string, importUrl: string) =>
-                `${prefix}${quote}${rewriteUrl(importUrl)}${quote}`,
-            )
+          // 1. Named/default imports: import x from "url", import { x } from "url"
+          rewritten = rewritten.replace(
+            /\b(import\s+[\w$_*{},\s]+\s+from\s*)(["'])([^"']+)\2/g,
+            (_: string, prefix: string, quote: string, importUrl: string) =>
+              `${prefix}${quote}${rewriteUrl(importUrl)}${quote}`,
+          )
 
-            // 2. Side-effect imports at line start: import "url"
-            rewritten = rewritten.replace(
-              /^(\s*import\s*)(["'])([^"']+)\2/gm,
-              (_: string, prefix: string, quote: string, importUrl: string) =>
-                `${prefix}${quote}${rewriteUrl(importUrl)}${quote}`,
-            )
+          // 2. Side-effect imports at line start: import "url"
+          rewritten = rewritten.replace(
+            /^(\s*import\s*)(["'])([^"']+)\2/gm,
+            (_: string, prefix: string, quote: string, importUrl: string) =>
+              `${prefix}${quote}${rewriteUrl(importUrl)}${quote}`,
+          )
 
-            // 3. Re-exports: export { x } from "url", export * from "url"
-            rewritten = rewritten.replace(
-              /\b(export\s+[\w$_*{},\s]+\s+from\s*)(["'])([^"']+)\2/g,
-              (_: string, prefix: string, quote: string, importUrl: string) =>
-                `${prefix}${quote}${rewriteUrl(importUrl)}${quote}`,
-            )
+          // 3. Re-exports: export { x } from "url", export * from "url"
+          rewritten = rewritten.replace(
+            /\b(export\s+[\w$_*{},\s]+\s+from\s*)(["'])([^"']+)\2/g,
+            (_: string, prefix: string, quote: string, importUrl: string) =>
+              `${prefix}${quote}${rewriteUrl(importUrl)}${quote}`,
+          )
 
-            // 4. Dynamic imports: import("url")
-            rewritten = rewritten.replace(
-              /\bimport\s*\(\s*(["'])([^"']+)\1\s*\)/g,
-              (_: string, quote: string, importUrl: string) =>
-                `import(${quote}${rewriteUrl(importUrl)}${quote})`,
-            )
+          // 4. Dynamic imports: import("url")
+          rewritten = rewritten.replace(
+            /\bimport\s*\(\s*(["'])([^"']+)\1\s*\)/g,
+            (_: string, quote: string, importUrl: string) => `import(${quote}${rewriteUrl(importUrl)}${quote})`,
+          )
 
-            return `<script${attrs}>${rewritten}</script>`
-          },
-        )
+          return `<script${attrs}>${rewritten}</script>`
+        })
 
         // Inject selector script before </head>
         const scriptTag = `<script>${SELECTOR_SCRIPT}</script>`
@@ -262,18 +247,11 @@ export const ProxyRoute = new Hono().get("/", async (c) => {
       }
 
       // Determine if this is JavaScript by content-type header or content inspection
-      const isJsByContentType =
-        contentType.includes("javascript") ||
-        contentType.includes("ecmascript")
+      const isJsByContentType = contentType.includes("javascript") || contentType.includes("ecmascript")
       // Note: isJsByUrl already defined above
 
       // For text content that might be JS, we need to read it first
-      if (
-        isJsByContentType ||
-        isJsByUrl ||
-        contentType.includes("text/plain") ||
-        contentType === ""
-      ) {
+      if (isJsByContentType || isJsByUrl || contentType.includes("text/plain") || contentType === "") {
         const text = await response.text()
 
         // Check if it's JavaScript (by header, URL, or content)
@@ -287,29 +265,25 @@ export const ProxyRoute = new Hono().get("/", async (c) => {
           // 1. Named/default imports: import x from "url", import { x } from "url"
           js = js.replace(
             /\b(import\s+[\w$_*{},\s]+\s+from\s*)(["'])([^"']+)\2/g,
-            (_, prefix, quote, importUrl) =>
-              `${prefix}${quote}${rewriteUrl(importUrl)}${quote}`,
+            (_, prefix, quote, importUrl) => `${prefix}${quote}${rewriteUrl(importUrl)}${quote}`,
           )
 
           // 2. Side-effect imports at line start: import "url"
           js = js.replace(
             /^(\s*import\s*)(["'])([^"']+)\2/gm,
-            (_, prefix, quote, importUrl) =>
-              `${prefix}${quote}${rewriteUrl(importUrl)}${quote}`,
+            (_, prefix, quote, importUrl) => `${prefix}${quote}${rewriteUrl(importUrl)}${quote}`,
           )
 
           // 3. Re-exports: export { x } from "url", export * from "url"
           js = js.replace(
             /\b(export\s+[\w$_*{},\s]+\s+from\s*)(["'])([^"']+)\2/g,
-            (_, prefix, quote, importUrl) =>
-              `${prefix}${quote}${rewriteUrl(importUrl)}${quote}`,
+            (_, prefix, quote, importUrl) => `${prefix}${quote}${rewriteUrl(importUrl)}${quote}`,
           )
 
           // 4. Dynamic imports: import("url")
           js = js.replace(
             /\bimport\s*\(\s*(["'])([^"']+)\1\s*\)/g,
-            (_, quote, importUrl) =>
-              `import(${quote}${rewriteUrl(importUrl)}${quote})`,
+            (_, quote, importUrl) => `import(${quote}${rewriteUrl(importUrl)}${quote})`,
           )
 
           // FORCE correct MIME type for JavaScript
@@ -361,8 +335,7 @@ export const ProxyRoute = new Hono().get("/", async (c) => {
       return c.json({ error: `Failed to fetch localhost URL: ${message}` }, 502)
     }
   } catch (outerErr) {
-    const message =
-      outerErr instanceof Error ? outerErr.message : "Unknown error"
+    const message = outerErr instanceof Error ? outerErr.message : "Unknown error"
     return c.json({ error: `Proxy error: ${message}` }, 500)
   }
 })

@@ -199,10 +199,7 @@ export function PreviewPane(props: PreviewPaneProps) {
       console.log("[PreviewPane] Restoring overlays for", elementItems.length, "elements")
       elementItems.forEach((el) => {
         if (el.cssSelector) {
-          iframeRef!.contentWindow!.postMessage(
-            { type: "highlight-anyon-element", cssSelector: el.cssSelector },
-            "*",
-          )
+          iframeRef!.contentWindow!.postMessage({ type: "highlight-anyon-element", cssSelector: el.cssSelector }, "*")
         }
       })
     }
@@ -229,10 +226,7 @@ export function PreviewPane(props: PreviewPaneProps) {
       // Re-highlight remaining elements
       elementItems.forEach((el) => {
         if (el.cssSelector) {
-          iframeRef!.contentWindow!.postMessage(
-            { type: "highlight-anyon-element", cssSelector: el.cssSelector },
-            "*",
-          )
+          iframeRef!.contentWindow!.postMessage({ type: "highlight-anyon-element", cssSelector: el.cssSelector }, "*")
         }
       })
     }

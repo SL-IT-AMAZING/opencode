@@ -42,13 +42,13 @@ export const { use: useTerminal, provider: TerminalProvider } = createSimpleCont
     const pendingCommands = new Map<string, string[]>()
 
     function markReady(ptyId: string) {
-      setReadyPtys(prev => new Set([...prev, ptyId]))
+      setReadyPtys((prev) => new Set([...prev, ptyId]))
       // Flush any pending commands for this PTY
       const pending = pendingCommands.get(ptyId)
       if (pending && pending.length > 0) {
         const ref = activeRef()
         if (ref?.write) {
-          pending.forEach(cmd => ref.write(cmd))
+          pending.forEach((cmd) => ref.write(cmd))
         }
         pendingCommands.delete(ptyId)
       }

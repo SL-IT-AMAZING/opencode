@@ -32,7 +32,14 @@ export const Terminal = (props: TerminalProps) => {
   const sync = useSync()
   const theme = useTheme()
   let container!: HTMLDivElement
-  const [local, others] = splitProps(props, ["pty", "class", "classList", "onConnectError", "onRef", "onLocalhostDetected"])
+  const [local, others] = splitProps(props, [
+    "pty",
+    "class",
+    "classList",
+    "onConnectError",
+    "onRef",
+    "onLocalhostDetected",
+  ])
   let ws: WebSocket | undefined
   let term: Term | undefined
   let ghostty: Ghostty
@@ -231,11 +238,7 @@ export const Terminal = (props: TerminalProps) => {
       const data = typeof event.data === "string" ? event.data : ""
 
       // Detect git push rejection and show sync dialog
-      if (
-        data.includes("fetch first") ||
-        data.includes("non-fast-forward") ||
-        data.includes("remote contains work")
-      ) {
+      if (data.includes("fetch first") || data.includes("non-fast-forward") || data.includes("remote contains work")) {
         sync.set("showSyncRequiredDialog", true)
       }
 

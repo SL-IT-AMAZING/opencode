@@ -3,6 +3,7 @@
 ## Problem
 
 The element selection feature in the preview pane is completely broken:
+
 - React Grab loads from CDN ✓
 - Bridge script (`/preview/__opencode_bridge__.js`) returns 404 or doesn't execute ✗
 - No `[OpenCode]` logs in iframe console
@@ -12,13 +13,14 @@ The element selection feature in the preview pane is completely broken:
 ## Root Cause: Relative Bridge Script URL
 
 The injection uses a relative script URL:
+
 ```html
 <script src="/preview/__opencode_bridge__.js"></script>
 ```
 
 This fails because:
 
-1. **For file previews**: The browser resolves `/preview/__opencode_bridge__.js` relative to the iframe's origin. This *should* work, but if there's any issue with the route or CSP, the separate file doesn't load.
+1. **For file previews**: The browser resolves `/preview/__opencode_bridge__.js` relative to the iframe's origin. This _should_ work, but if there's any issue with the route or CSP, the separate file doesn't load.
 
 2. **For proxied localhost** (the real problem): The request goes to the **wrong server**. When previewing `http://localhost:3000`, the browser sends `/preview/__opencode_bridge__.js` to port 3000 (the dev server), not to OpenCode's server. The dev server returns 404.
 
@@ -27,6 +29,7 @@ This fails because:
 Instead of loading the bridge as a separate file, inline it directly in the injected HTML.
 
 This eliminates:
+
 - Path resolution issues
 - Extra network request
 - CSP blocking external scripts from `/preview/`
@@ -38,11 +41,11 @@ This eliminates:
 
 ### Key Risks Identified
 
-| Risk | Severity | Likelihood | Mitigation |
-|------|----------|------------|------------|
-| **CSP HTTP Headers Block Inline Script** | Medium | Medium | Strip `Content-Security-Policy` response header in `proxy.ts` |
-| **CDN Unavailable (unpkg)** | High | Low | Consider version pinning for stability |
-| **React Grab API Changes** | Medium | Low | Pin to specific version |
+| Risk                                     | Severity | Likelihood | Mitigation                                                    |
+| ---------------------------------------- | -------- | ---------- | ------------------------------------------------------------- |
+| **CSP HTTP Headers Block Inline Script** | Medium   | Medium     | Strip `Content-Security-Policy` response header in `proxy.ts` |
+| **CDN Unavailable (unpkg)**              | High     | Low        | Consider version pinning for stability                        |
+| **React Grab API Changes**               | Medium   | Low        | Pin to specific version                                       |
 
 ### Hidden Requirements Found
 
@@ -150,12 +153,14 @@ export const REACT_GRAB_INJECTION = `
 Strip `Content-Security-Policy` HTTP headers from proxied responses in **both** the HTML path (lines 44-56) and the non-HTML passthrough path (lines 60-70). CSP headers on any response type can affect the iframe's security context.
 
 **In HTML response block (after line 49, before setting content-type):**
+
 ```typescript
 responseHeaders.delete("content-security-policy")
 responseHeaders.delete("content-security-policy-report-only")
 ```
 
 **In non-HTML passthrough block (after line 65, before setting CORS):**
+
 ```typescript
 passthroughHeaders.delete("content-security-policy")
 passthroughHeaders.delete("content-security-policy-report-only")
@@ -182,11 +187,11 @@ prompt.context.add({
 
 ## Files to Modify
 
-| File | Change |
-|------|--------|
-| `packages/opencode/src/server/preview.ts` | Inline bridge script, remove separate file handling |
-| `packages/opencode/src/server/proxy.ts` | Strip CSP HTTP headers from proxied responses |
-| `packages/app/src/components/preview/preview-pane.tsx` | Forward `textContent` to context |
+| File                                                   | Change                                              |
+| ------------------------------------------------------ | --------------------------------------------------- |
+| `packages/opencode/src/server/preview.ts`              | Inline bridge script, remove separate file handling |
+| `packages/opencode/src/server/proxy.ts`                | Strip CSP HTTP headers from proxied responses       |
+| `packages/app/src/components/preview/preview-pane.tsx` | Forward `textContent` to context                    |
 
 ---
 
