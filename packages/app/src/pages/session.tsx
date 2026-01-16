@@ -368,11 +368,12 @@ export default function Page() {
 
     // Delay to wait for terminal WebSocket connection
     setTimeout(() => {
-      sdk.client.file
-        .list({ path: "." })
+      sdk.client.project
+        .current()
         .then((res) => {
-          const hasGit = res.data?.some((f) => f.name === ".git")
-          if (!hasGit) {
+          // Backend detects git repos and sets vcs: "git"
+          const isGitRepo = res.data?.vcs === "git"
+          if (!isGitRepo) {
             // Show dialog to choose git init or clone
             dialog.show(() => (
               <DialogGitInit
@@ -1001,7 +1002,9 @@ export default function Page() {
     setActiveMessage(message)
 
     const el = document.getElementById(anchor(message.id))
-    if (el) el.scrollIntoView({ behavior, block: "start" })
+    if (el && scroller) {
+      scroller.scrollTo({ top: el.offsetTop, behavior })
+    }
     updateHash(message.id)
   }
 
