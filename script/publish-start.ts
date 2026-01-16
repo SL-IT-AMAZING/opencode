@@ -37,6 +37,17 @@ console.log("\n=== building CLI (no npm publish) ===\n")
 // Build CLI binaries for Desktop sidecar
 await $`bun run build`.cwd("./packages/opencode")
 
+// Create archives for GitHub release
+const distPath = "./packages/opencode/dist"
+const distDirs = await Array.fromAsync(new Bun.Glob("anyon-*").scan({ cwd: distPath, onlyFiles: false }))
+for (const name of distDirs) {
+  if (name.includes("linux")) {
+    await $`tar -czf ../../${name}.tar.gz *`.cwd(`${distPath}/${name}/bin`)
+  } else {
+    await $`zip -r ../../${name}.zip *`.cwd(`${distPath}/${name}/bin`)
+  }
+}
+
 const dir = new URL("..", import.meta.url).pathname
 process.chdir(dir)
 
