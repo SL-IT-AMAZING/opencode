@@ -55,7 +55,12 @@ export type ElementContextItem = {
   sourceType?: "localhost" | "html-file"
 }
 
-export type ContextItem = FileContextItem | ElementContextItem
+export type TextSnippetContextItem = {
+  type: "snippet"
+  text: string
+}
+
+export type ContextItem = FileContextItem | ElementContextItem | TextSnippetContextItem
 
 export const DEFAULT_PROMPT: Prompt = [{ type: "text", content: "", start: 0, end: 0 }]
 
@@ -136,18 +141,23 @@ export const { use: usePrompt, provider: PromptProvider } = createSimpleContext(
       }),
     )
 
-    function keyForItem(item: ContextItem) {
+    function keyForItem(item: ContextItem): string {
       if (item.type === "file") {
         const start = item.selection?.startLine
         const end = item.selection?.endLine
         return `file:${item.path}:${start}:${end}`
       }
-      // Generate unique key for elements using cssSelector (most unique) or combination of properties
-      if (item.cssSelector) {
-        return `element:${item.cssSelector}`
+      if (item.type === "element") {
+        // Generate unique key for elements using cssSelector (most unique) or combination of properties
+        if (item.cssSelector) {
+          return `element:${item.cssSelector}`
+        }
+        const parts = [item.tagName, item.id, item.className, item.html?.slice(0, 50)]
+        return `element:${parts.filter(Boolean).join(":")}`
       }
-      const parts = [item.tagName, item.id, item.className, item.html?.slice(0, 50)]
-      return `element:${parts.filter(Boolean).join(":")}`
+      // item.type === "snippet"
+      const hash = item.text.slice(0, 50).replace(/\s+/g, "_")
+      return `snippet:${hash}`
     }
 
     return {

@@ -642,13 +642,13 @@ export default function Layout(props: ParentProps) {
       <>
         <div
           data-session-id={props.session.id}
-          class="group/session relative w-full rounded-md cursor-default transition-colors
+          class="group/session relative w-full rounded-lg cursor-default transition-colors
                  hover:bg-surface-raised-base-hover focus-within:bg-surface-raised-base-hover has-[.active]:bg-surface-raised-base-hover"
         >
           <Tooltip placement={props.mobile ? "bottom" : "right"} value={props.session.title} gutter={10}>
             <A
               href={`${props.slug}/session/${props.session.id}`}
-              class="flex flex-col min-w-0 text-left w-full focus:outline-none pl-4 pr-2 py-1"
+              class="flex flex-col min-w-0 text-left w-full focus:outline-none px-3 py-2"
             >
               <div class="flex items-center self-stretch gap-6 justify-between transition-[padding] group-hover/session:pr-7 group-focus-within/session:pr-7 group-active/session:pr-7">
                 <span
@@ -759,7 +759,7 @@ export default function Layout(props: ParentProps) {
                 as={"div"}
                 variant="ghost"
                 classList={{
-                  "group/session flex items-center justify-between gap-3 w-full px-1.5 self-stretch h-auto border-none rounded-lg": true,
+                  "group/session flex items-center justify-between gap-3 w-full px-3 py-1 self-stretch h-auto border-none rounded-lg": true,
                   "bg-surface-raised-base-hover": isActive() && !isExpanded(),
                 }}
               >
@@ -807,7 +807,7 @@ export default function Layout(props: ParentProps) {
                   </For>
                   <Show when={rootSessions().length === 0}>
                     <div
-                      class="group/session relative w-full pl-4 pr-2 py-1 rounded-md cursor-default transition-colors
+                      class="group/session relative w-full pl-4 pr-2 py-1 rounded-lg cursor-default transition-colors
                              hover:bg-surface-raised-base-hover focus-within:bg-surface-raised-base-hover has-[.active]:bg-surface-raised-base-hover"
                     >
                       <div class="flex items-center self-stretch w-full">
@@ -859,7 +859,7 @@ export default function Layout(props: ParentProps) {
     return (
       <Show when={project()}>
         {(p) => (
-          <div class="bg-background-base rounded-md">
+          <div class="bg-background-base rounded-lg">
             <ProjectVisual project={p()} />
           </div>
         )}
@@ -955,7 +955,7 @@ export default function Layout(props: ParentProps) {
         <div class="flex flex-col gap-1.5 self-stretch items-start shrink-0 px-2 py-3">
           <Switch>
             <Match when={providers.all().length > 0 && !providers.paid().length && expanded()}>
-              <div class="rounded-md bg-background-stronger shadow-xs-border-base">
+              <div class="rounded-lg bg-background-stronger shadow-xs-border-base">
                 <div class="p-3 flex flex-col gap-2">
                   <div class="text-12-medium text-text-strong">Getting started</div>
                   <div class="text-text-base">ANYON includes free models so you can start immediately.</div>
@@ -1029,7 +1029,7 @@ export default function Layout(props: ParentProps) {
 
   return (
     <div class="relative flex-1 min-h-0 flex flex-col select-none [&_input]:select-text [&_textarea]:select-text [&_[contenteditable]]:select-text">
-      <div class="flex-1 min-h-0 flex">
+      <div class="flex-1 min-h-0 flex gap-3 p-3 bg-[#0a0a0e]">
         <div
           classList={{
             "hidden xl:block": true,
@@ -1040,9 +1040,9 @@ export default function Layout(props: ParentProps) {
         >
           <div
             classList={{
-              "@container w-full h-full pb-5 bg-background-base": true,
+              "@container w-full h-full pb-5 bg-[#0c0c10]": true,
               "flex flex-col gap-5.5 items-start self-stretch justify-between": true,
-              "border-r border-border-weak-base contain-strict": true,
+              "rounded-[22px] border border-border-weak-base contain-strict": true,
             }}
           >
             <SidebarContent />
@@ -1077,7 +1077,7 @@ export default function Layout(props: ParentProps) {
           />
           <div
             classList={{
-              "@container fixed inset-y-0 left-0 z-50 w-72 bg-background-base border-r border-border-weak-base flex flex-col gap-5.5 items-start self-stretch justify-between pb-5 transition-transform duration-200 ease-out": true,
+              "@container fixed inset-y-0 left-0 z-50 w-72 bg-background-base border-r border-white/8 flex flex-col gap-5.5 items-start self-stretch justify-between pb-5 transition-transform duration-200 ease-out": true,
               "translate-x-0": layout.mobileSidebar.opened(),
               "-translate-x-full": !layout.mobileSidebar.opened(),
             }}
@@ -1096,7 +1096,7 @@ export default function Layout(props: ParentProps) {
           </div>
         </div>
 
-        <main class="size-full overflow-x-hidden flex flex-col items-start contain-strict">{props.children}</main>
+        <main class="size-full overflow-x-hidden flex flex-col items-start contain-strict bg-[#0a0a0e]">{props.children}</main>
       </div>
       <Toast.Region />
     </div>
