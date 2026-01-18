@@ -28,11 +28,14 @@
   pointer-events: auto;
   transition: all 150ms ease-out;
 
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border-weak-base);
-  background: var(--surface-float-base);
+  /* Glassmorphism with elevated floating effect */
+  background: var(--glass-background-elevated);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-float);  /* Stronger floating shadow */
   color: var(--text-invert-base);
-  box-shadow: var(--shadow-md);
 
   [data-slot="toast-inner"] {
     display: flex;

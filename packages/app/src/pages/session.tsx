@@ -31,6 +31,7 @@ import { FileExplorerPanel } from "@/components/file-explorer-panel"
 import { CollabTimeline } from "@/components/collab-timeline"
 import { CollabTeam } from "@/components/collab-team"
 import { FileViewer } from "@/components/file-viewer"
+import { TextSelectionPopup } from "@/components/text-selection-popup"
 import { checksum, base64Encode, base64Decode } from "@anyon/util/encode"
 import { useDialog } from "@anyon/ui/context/dialog"
 import { DialogSelectFile } from "@/components/dialog-select-file"
@@ -368,11 +369,12 @@ export default function Page() {
 
     // Delay to wait for terminal WebSocket connection
     setTimeout(() => {
-      sdk.client.file
-        .list({ path: "." })
+      sdk.client.project
+        .current()
         .then((res) => {
-          const hasGit = res.data?.some((f) => f.name === ".git")
-          if (!hasGit) {
+          // Backend detects git repos and sets vcs: "git"
+          const isGitRepo = res.data?.vcs === "git"
+          if (!isGitRepo) {
             // Show dialog to choose git init or clone
             dialog.show(() => (
               <DialogGitInit
@@ -1001,7 +1003,9 @@ export default function Page() {
     setActiveMessage(message)
 
     const el = document.getElementById(anchor(message.id))
-    if (el) el.scrollIntoView({ behavior, block: "start" })
+    if (el && scroller) {
+      scroller.scrollTo({ top: el.offsetTop, behavior })
+    }
     updateHash(message.id)
   }
 
@@ -1066,7 +1070,7 @@ export default function Page() {
 
   return (
     <div class="relative bg-background-base size-full overflow-hidden flex flex-col">
-      <div class="flex-1 min-h-0 flex flex-col md:flex-row">
+      <div class="flex-1 min-h-0 flex flex-col md:flex-row md:gap-3">
         {/* Mobile tab bar - only shown on mobile when there are diffs */}
         <Show when={!isDesktop() && diffs().length > 0}>
           <Tabs class="h-auto">
@@ -1095,7 +1099,7 @@ export default function Page() {
         <div
           classList={{
             "@container relative flex flex-col min-h-0 h-full bg-background-stronger": true,
-            "flex-1": true,
+            "flex-1 rounded-[26px] border border-border-weak-base overflow-hidden": true,
           }}
           style={{
             "min-width": isDesktop() ? "400px" : undefined,
@@ -1112,7 +1116,7 @@ export default function Page() {
               >
                 <Button
                   variant="ghost"
-                  class="group/panel-toggle shrink-0 size-8 p-0 rounded-lg"
+                  class="group/panel-toggle shrink-0 size-8 p-0 rounded-xl"
                   onClick={layout.rightPanel.toggle}
                 >
                   <Icon name="layout-right-partial" size="small" />
@@ -1308,52 +1312,54 @@ export default function Page() {
                         onClick={autoScroll.handleInteraction}
                         class="relative min-w-0 w-full h-full overflow-y-auto no-scrollbar"
                       >
-                        <div
-                          ref={autoScroll.contentRef}
-                          class="flex flex-col gap-32 items-start justify-start pb-[calc(var(--prompt-height,8rem)+64px)] md:pb-[calc(var(--prompt-height,10rem)+64px)] transition-[margin]"
-                          classList={{
-                            "mt-0.5": !showTabs(),
-                            "mt-0": showTabs(),
-                          }}
-                        >
-                          <For each={visibleUserMessages()}>
-                            {(message) => (
-                              <div
-                                id={anchor(message.id)}
-                                data-message-id={message.id}
-                                classList={{
-                                  "min-w-0 w-full max-w-full": true,
-                                  "last:min-h-[calc(100vh-5.5rem-var(--prompt-height,8rem)-64px)] md:last:min-h-[calc(100vh-4.5rem-var(--prompt-height,10rem)-64px)]":
-                                    platform.platform !== "desktop",
-                                  "last:min-h-[calc(100vh-7rem-var(--prompt-height,8rem)-64px)] md:last:min-h-[calc(100vh-6rem-var(--prompt-height,10rem)-64px)]":
-                                    platform.platform === "desktop",
-                                }}
-                              >
-                                <SessionTurn
-                                  sessionID={activeSessionId()!}
-                                  messageID={message.id}
-                                  lastUserMessageID={lastUserMessage()?.id}
-                                  stepsExpanded={store.expanded[message.id] ?? false}
-                                  onStepsExpandedToggle={() =>
-                                    setStore("expanded", message.id, (open: boolean | undefined) => !open)
-                                  }
-                                  classes={{
-                                    root: "min-w-0 w-full relative",
-                                    content:
-                                      "flex flex-col justify-between !overflow-visible [&_[data-slot=session-turn-message-header]]:top-[-32px]",
-                                    container:
-                                      "px-4 md:px-6 " +
-                                      (!showTabs()
-                                        ? "md:max-w-200 md:mx-auto"
-                                        : visibleUserMessages().length > 1
-                                          ? "md:pr-6 md:pl-18"
-                                          : ""),
+                        <TextSelectionPopup>
+                          <div
+                            ref={autoScroll.contentRef}
+                            class="flex flex-col gap-32 items-start justify-start pb-[calc(var(--prompt-height,8rem)+64px)] md:pb-[calc(var(--prompt-height,10rem)+64px)] transition-[margin]"
+                            classList={{
+                              "mt-0.5": !showTabs(),
+                              "mt-0": showTabs(),
+                            }}
+                          >
+                            <For each={visibleUserMessages()}>
+                              {(message) => (
+                                <div
+                                  id={anchor(message.id)}
+                                  data-message-id={message.id}
+                                  classList={{
+                                    "min-w-0 w-full max-w-full": true,
+                                    "last:min-h-[calc(100vh-5.5rem-var(--prompt-height,8rem)-64px)] md:last:min-h-[calc(100vh-4.5rem-var(--prompt-height,10rem)-64px)]":
+                                      platform.platform !== "desktop",
+                                    "last:min-h-[calc(100vh-7rem-var(--prompt-height,8rem)-64px)] md:last:min-h-[calc(100vh-6rem-var(--prompt-height,10rem)-64px)]":
+                                      platform.platform === "desktop",
                                   }}
-                                />
-                              </div>
-                            )}
-                          </For>
-                        </div>
+                                >
+                                  <SessionTurn
+                                    sessionID={activeSessionId()!}
+                                    messageID={message.id}
+                                    lastUserMessageID={lastUserMessage()?.id}
+                                    stepsExpanded={store.expanded[message.id] ?? false}
+                                    onStepsExpandedToggle={() =>
+                                      setStore("expanded", message.id, (open: boolean | undefined) => !open)
+                                    }
+                                    classes={{
+                                      root: "min-w-0 w-full relative",
+                                      content:
+                                        "flex flex-col justify-between !overflow-visible [&_[data-slot=session-turn-message-header]]:top-[-32px]",
+                                      container:
+                                        "px-4 md:px-6 " +
+                                        (!showTabs()
+                                          ? "md:max-w-200 md:mx-auto"
+                                          : visibleUserMessages().length > 1
+                                            ? "md:pr-6 md:pl-18"
+                                            : ""),
+                                    }}
+                                  />
+                                </div>
+                              )}
+                            </For>
+                          </div>
+                        </TextSelectionPopup>
                       </div>
                     </div>
                   </Show>
@@ -1435,7 +1441,7 @@ export default function Page() {
           <div
             classList={{
               "relative flex flex-col h-full ml-auto": true,
-              "border-l border-border-weak-base": layout.rightPanel.opened(),
+              "rounded-[22px] border border-border-weak-base overflow-hidden": layout.rightPanel.opened(),
               "transition-[width] duration-200 ease-out overflow-y-clip": true,
             }}
             style={{ width: layout.rightPanel.opened() ? `${layout.rightPanel.width()}px` : "0px" }}
@@ -1532,7 +1538,7 @@ export default function Page() {
                   "grid-template-rows": projectTerminal().opened() ? "1fr" : "0fr",
                 }}
               >
-                <div class="min-h-0 flex flex-col overflow-hidden border-t border-border-weak-base">
+                <div class="min-h-0 flex flex-col overflow-hidden">
                   {/* Resize handle - INSIDE animated container, moves with terminal */}
                   <ResizeHandle
                     direction="vertical"

@@ -1243,6 +1243,20 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         }
       })
 
+    // Build snippet context as text parts
+    const snippetContextParts = prompt.context
+      .items()
+      .filter((item) => item.type === "snippet")
+      .map((item) => {
+        const snippet = item as { text: string }
+        return {
+          id: Identifier.ascending("part"),
+          type: "text" as const,
+          text: `Selected text from conversation:\n"${snippet.text}"`,
+          synthetic: true,
+        }
+      })
+
     const imageAttachmentParts = images.map((attachment) => ({
       id: Identifier.ascending("part"),
       type: "file" as const,
@@ -1264,6 +1278,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       ...agentAttachmentParts,
       ...imageAttachmentParts,
       ...elementContextParts,
+      ...snippetContextParts,
     ]
 
     const optimisticParts = requestParts.map((part) => ({
@@ -1358,7 +1373,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                   {(item) => (
                     <button
                       classList={{
-                        "w-full flex items-center gap-x-2 rounded-md px-2 py-0.5": true,
+                        "w-full flex items-center gap-x-2 rounded-xl px-2 py-0.5": true,
                         "bg-surface-raised-base-hover": atActive() === atKey(item),
                       }}
                       onClick={() => handleAtSelect(item)}
@@ -1404,7 +1419,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                     <button
                       data-slash-id={cmd.id}
                       classList={{
-                        "w-full flex items-center justify-between gap-4 rounded-md px-2 py-1": true,
+                        "w-full flex items-center justify-between gap-4 rounded-xl px-2 py-1": true,
                         "bg-surface-raised-base-hover": slashActive() === cmd.id,
                       }}
                       onClick={() => handleSlashSelect(cmd)}
@@ -1457,7 +1472,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           <div class="flex flex-wrap items-center gap-2 px-3 pt-3">
             <Show when={prompt.context.activeTab() ? activeFile() : undefined}>
               {(path) => (
-                <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-surface-base border border-border-base max-w-full hover:bg-surface-raised-base-hover transition-colors duration-150">
+                <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-surface-base border border-border-base max-w-full hover:bg-surface-raised-base-hover transition-colors duration-150">
                   <FileIcon node={{ path: path(), type: "file" }} class="shrink-0 size-4" />
                   <div class="flex items-center text-12-regular min-w-0">
                     <span class="text-text-weak whitespace-nowrap truncate min-w-0">{getDirectory(path())}</span>
@@ -1477,7 +1492,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             <Show when={!prompt.context.activeTab() && !!activeFile()}>
               <button
                 type="button"
-                class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-surface-base border border-border-base text-12-regular text-text-weak hover:bg-surface-raised-base-hover transition-colors duration-150"
+                class="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-surface-base border border-border-base text-12-regular text-text-weak hover:bg-surface-raised-base-hover transition-colors duration-150"
                 onClick={() => prompt.context.addActive()}
               >
                 <Icon name="plus-small" size="small" />
@@ -1486,11 +1501,40 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             </Show>
             <For each={prompt.context.items()}>
               {(item) => (
-                <Show
-                  when={item.type === "file"}
-                  fallback={
-                    /* Element context item */
-                    (() => {
+                <Switch>
+                  <Match when={item.type === "file"}>
+                    {/* File context item */}
+                    <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-surface-base border border-border-base max-w-full hover:bg-surface-raised-base-hover transition-colors duration-150">
+                      <FileIcon node={{ path: (item as { path: string }).path, type: "file" }} class="shrink-0 size-4" />
+                      <div class="flex items-center text-12-regular min-w-0">
+                        <span class="text-text-weak whitespace-nowrap truncate min-w-0">
+                          {getDirectory((item as { path: string }).path)}
+                        </span>
+                        <span class="text-text-strong whitespace-nowrap">
+                          {getFilename((item as { path: string }).path)}
+                        </span>
+                        <Show when={"selection" in item && item.selection}>
+                          {(sel) => (
+                            <span class="text-text-weak whitespace-nowrap ml-1">
+                              {sel().startLine === sel().endLine
+                                ? `:${sel().startLine}`
+                                : `:${sel().startLine}-${sel().endLine}`}
+                            </span>
+                          )}
+                        </Show>
+                      </div>
+                      <IconButton
+                        type="button"
+                        icon="close"
+                        variant="ghost"
+                        class="h-6 w-6"
+                        onClick={() => prompt.context.remove(item.key)}
+                      />
+                    </div>
+                  </Match>
+                  <Match when={item.type === "element"}>
+                    {/* Element context item */}
+                    {(() => {
                       const el = item as {
                         type: "element"
                         tagName?: string
@@ -1499,7 +1543,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                         key: string
                       }
                       return (
-                        <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-surface-info-base border border-border-base max-w-full hover:bg-surface-raised-base-hover transition-colors duration-150">
+                        <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-surface-info-base border border-border-base max-w-full hover:bg-surface-raised-base-hover transition-colors duration-150">
                           <Icon name="window-cursor" class="shrink-0 size-4 text-text-info" />
                           <div class="flex items-center text-12-regular min-w-0">
                             <span class="text-text-strong whitespace-nowrap">
@@ -1523,38 +1567,32 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                           />
                         </div>
                       )
-                    })()
-                  }
-                >
-                  {/* File context item */}
-                  <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-surface-base border border-border-base max-w-full hover:bg-surface-raised-base-hover transition-colors duration-150">
-                    <FileIcon node={{ path: (item as { path: string }).path, type: "file" }} class="shrink-0 size-4" />
-                    <div class="flex items-center text-12-regular min-w-0">
-                      <span class="text-text-weak whitespace-nowrap truncate min-w-0">
-                        {getDirectory((item as { path: string }).path)}
-                      </span>
-                      <span class="text-text-strong whitespace-nowrap">
-                        {getFilename((item as { path: string }).path)}
-                      </span>
-                      <Show when={"selection" in item && item.selection}>
-                        {(sel) => (
-                          <span class="text-text-weak whitespace-nowrap ml-1">
-                            {sel().startLine === sel().endLine
-                              ? `:${sel().startLine}`
-                              : `:${sel().startLine}-${sel().endLine}`}
-                          </span>
-                        )}
-                      </Show>
-                    </div>
-                    <IconButton
-                      type="button"
-                      icon="close"
-                      variant="ghost"
-                      class="h-6 w-6"
-                      onClick={() => prompt.context.remove(item.key)}
-                    />
-                  </div>
-                </Show>
+                    })()}
+                  </Match>
+                  <Match when={item.type === "snippet"}>
+                    {(() => {
+                      const snippet = item as { type: "snippet"; text: string; key: string }
+                      const preview = snippet.text.length > 40 ? snippet.text.slice(0, 40) + "..." : snippet.text
+                      return (
+                        <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-surface-info-base border border-border-base max-w-full hover:bg-surface-raised-base-hover transition-colors duration-150">
+                          <Icon name="bubble-5" class="shrink-0 size-4 text-text-info" />
+                          <div class="flex items-center text-12-regular min-w-0">
+                            <span class="text-text-strong whitespace-nowrap truncate max-w-48">
+                              "{preview}"
+                            </span>
+                          </div>
+                          <IconButton
+                            type="button"
+                            icon="close"
+                            variant="ghost"
+                            class="h-6 w-6"
+                            onClick={() => prompt.context.remove(snippet.key)}
+                          />
+                        </div>
+                      )
+                    })()}
+                  </Match>
+                </Switch>
               )}
             </For>
           </div>
@@ -1567,7 +1605,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                   <Show
                     when={attachment.mime.startsWith("image/")}
                     fallback={
-                      <div class="size-16 rounded-md bg-surface-base flex items-center justify-center border border-border-base">
+                      <div class="size-16 rounded-xl bg-surface-base flex items-center justify-center border border-border-base">
                         <Icon name="folder" class="size-6 text-text-weak" />
                       </div>
                     }
@@ -1575,7 +1613,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                     <img
                       src={attachment.dataUrl}
                       alt={attachment.filename}
-                      class="size-16 rounded-md object-cover border border-border-base"
+                      class="size-16 rounded-xl object-cover border border-border-base"
                     />
                   </Show>
                   <button
@@ -1585,7 +1623,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                   >
                     <Icon name="close" class="size-3 text-text-weak" />
                   </button>
-                  <div class="absolute bottom-0 left-0 right-0 px-1 py-0.5 bg-black/50 rounded-b-md">
+                  <div class="absolute bottom-0 left-0 right-0 px-1 py-0.5 bg-black/50 rounded-b-xl">
                     <span class="text-10-regular text-white truncate block">{attachment.filename}</span>
                   </div>
                 </div>

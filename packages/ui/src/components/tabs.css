@@ -252,6 +252,11 @@
         margin-right: 11px;
       }
     }
+
+    /* Allow tabs to compress when panel is narrow */
+    [data-slot="tabs-trigger-wrapper"] {
+      min-width: 0;
+    }
   }
 
   &[data-orientation="vertical"] {

@@ -6,10 +6,14 @@
   z-index: 50;
   min-width: 200px;
   max-width: 320px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-weak-base);
-  background-color: var(--surface-raised-stronger-non-alpha);
-  box-shadow: var(--shadow-md);
+
+  /* Glassmorphism */
+  background: var(--glass-background-elevated);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-elevated);
   transform-origin: var(--kb-popover-content-transform-origin);
 
   &:focus-within {
@@ -68,7 +72,7 @@
   }
 
   [data-slot="popover-arrow"] {
-    fill: var(--surface-raised-stronger-non-alpha);
+    fill: var(--background-stronger);  /* Match glass background */
   }
 }
 
