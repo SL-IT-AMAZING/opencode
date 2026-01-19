@@ -3,6 +3,8 @@ import { Portal } from "solid-js/web"
 import { useFile } from "@/context/file"
 import { Markdown } from "@anyon/ui/markdown"
 import { Button } from "@anyon/ui/button"
+import { Icon } from "@anyon/ui/icon"
+import { usePrompt } from "@/context/prompt"
 
 // Lazy load Monaco - won't crash app if it fails
 const MonacoEditor = lazy(() => import("./monaco-editor"))
@@ -14,10 +16,13 @@ interface FileViewerProps {
 
 export function FileViewer(props: FileViewerProps) {
   const file = useFile()
+  const prompt = usePrompt()
   const [selection, setSelection] = createSignal<{
     text: string
     startLine: number
     endLine: number
+    top: number
+    left: number
   } | null>(null)
 
   const normalizedPath = createMemo(() => file.normalize(props.path))
@@ -42,16 +47,33 @@ export function FileViewer(props: FileViewerProps) {
 
   const handleSelect = (text: string, startLine: number, endLine: number) => {
     if (text.trim()) {
-      setSelection({ text, startLine, endLine })
+      // Get position from browser selection for popup positioning
+      const browserSel = window.getSelection()
+      if (browserSel && !browserSel.isCollapsed) {
+        const range = browserSel.getRangeAt(0)
+        const rect = range.getBoundingClientRect()
+        setSelection({
+          text,
+          startLine,
+          endLine,
+          top: rect.top,
+          left: rect.right + 8,
+        })
+      } else {
+        setSelection({ text, startLine, endLine, top: 0, left: 0 })
+      }
     } else {
       setSelection(null)
     }
   }
 
-  const handleAskAI = () => {
+  const handleAddToContext = () => {
     const sel = selection()
     if (!sel) return
-    props.onAskAboutSelection?.(sel)
+    prompt.context.add({
+      type: "snippet",
+      text: sel.text,
+    })
     setSelection(null)
   }
 
@@ -119,15 +141,27 @@ export function FileViewer(props: FileViewerProps) {
         </div>
       </Show>
 
-      {/* Ask AI button */}
+      {/* Add to Context button - positioned next to selection */}
       <Show when={selection()}>
-        <Portal>
-          <div class="fixed z-[9999] bottom-20 left-1/2 -translate-x-1/2 animate-in fade-in slide-in-from-bottom-2">
-            <Button variant="primary" size="small" onClick={handleAskAI}>
-              Ask AI about selection
-            </Button>
-          </div>
-        </Portal>
+        {(sel) => (
+          <Portal>
+            <div
+              data-component="file-selection-popup"
+              style={{
+                position: "fixed",
+                top: `${sel().top}px`,
+                left: `${sel().left}px`,
+                "z-index": "9999",
+              }}
+              class="flex items-center gap-1 px-1.5 py-1 rounded-lg bg-surface-elevated border border-border-base shadow-lg"
+            >
+              <Button size="small" onClick={handleAddToContext}>
+                <Icon name="plus-small" size="small" />
+                <span class="text-12-regular">Add to Context</span>
+              </Button>
+            </div>
+          </Portal>
+        )}
       </Show>
     </div>
   )

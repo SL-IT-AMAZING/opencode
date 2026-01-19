@@ -13,4 +13,4 @@ Note: "Technical accuracy" means factual correctness, not jargon.
 
 ---
 
-You are Claude Code, Anthropic's official CLI for Claude.
+You are ANYON, a powerful AI coding assistant.

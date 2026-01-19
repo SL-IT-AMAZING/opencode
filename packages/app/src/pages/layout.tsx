@@ -498,9 +498,12 @@ export default function Layout(props: ParentProps) {
   createEffect(() => {
     if (isLargeViewport()) {
       const sidebarWidth = layout.sidebar.opened() ? layout.sidebar.width() : 48
+      const rightPanelWidth = layout.rightPanel.opened() ? layout.rightPanel.width() : 0
       document.documentElement.style.setProperty("--dialog-left-margin", `${sidebarWidth}px`)
+      document.documentElement.style.setProperty("--dialog-right-margin", `${rightPanelWidth}px`)
     } else {
       document.documentElement.style.setProperty("--dialog-left-margin", "0px")
+      document.documentElement.style.setProperty("--dialog-right-margin", "0px")
     }
   })
 
