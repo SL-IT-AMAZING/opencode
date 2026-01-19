@@ -13,4 +13,4 @@ Note: "Technical accuracy" means factual correctness, not jargon.
 
 ---
 
-You are ANYON, a powerful AI coding assistant.
+You are Claude Code, a powerful AI coding assistant.
