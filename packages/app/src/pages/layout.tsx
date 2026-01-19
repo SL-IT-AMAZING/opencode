@@ -498,9 +498,12 @@ export default function Layout(props: ParentProps) {
   createEffect(() => {
     if (isLargeViewport()) {
       const sidebarWidth = layout.sidebar.opened() ? layout.sidebar.width() : 48
+      const rightPanelWidth = layout.rightPanel.opened() ? layout.rightPanel.width() : 0
       document.documentElement.style.setProperty("--dialog-left-margin", `${sidebarWidth}px`)
+      document.documentElement.style.setProperty("--dialog-right-margin", `${rightPanelWidth}px`)
     } else {
       document.documentElement.style.setProperty("--dialog-left-margin", "0px")
+      document.documentElement.style.setProperty("--dialog-right-margin", "0px")
     }
   })
 
@@ -648,7 +651,7 @@ export default function Layout(props: ParentProps) {
           <Tooltip placement={props.mobile ? "bottom" : "right"} value={props.session.title} gutter={10}>
             <A
               href={`${props.slug}/session/${props.session.id}`}
-              class="flex flex-col min-w-0 text-left w-full focus:outline-none px-3 py-2"
+              class="flex flex-col min-w-0 text-left w-full focus:outline-none px-3 py-1.5"
             >
               <div class="flex items-center self-stretch gap-6 justify-between transition-[padding] group-hover/session:pr-7 group-focus-within/session:pr-7 group-active/session:pr-7">
                 <span
@@ -759,7 +762,7 @@ export default function Layout(props: ParentProps) {
                 as={"div"}
                 variant="ghost"
                 classList={{
-                  "group/session flex items-center justify-between gap-3 w-full px-3 py-1 self-stretch h-auto border-none rounded-lg": true,
+                  "group/session flex items-center justify-between gap-3 w-full px-2 py-1.5 self-stretch h-auto border-none rounded-lg": true,
                   "bg-surface-raised-base-hover": isActive() && !isExpanded(),
                 }}
               >
@@ -807,7 +810,7 @@ export default function Layout(props: ParentProps) {
                   </For>
                   <Show when={rootSessions().length === 0}>
                     <div
-                      class="group/session relative w-full pl-4 pr-2 py-1 rounded-lg cursor-default transition-colors
+                      class="group/session relative w-full px-3 py-1.5 rounded-lg cursor-default transition-colors
                              hover:bg-surface-raised-base-hover focus-within:bg-surface-raised-base-hover has-[.active]:bg-surface-raised-base-hover"
                     >
                       <div class="flex items-center self-stretch w-full">
@@ -832,7 +835,7 @@ export default function Layout(props: ParentProps) {
                     <div class="relative w-full py-1">
                       <Button
                         variant="ghost"
-                        class="flex w-full text-left justify-start text-12-medium opacity-50 px-3.5"
+                        class="flex w-full text-left justify-start text-12-medium opacity-50 px-3 py-1.5 rounded-lg"
                         size="large"
                         onClick={loadMoreSessions}
                       >
@@ -1096,7 +1099,9 @@ export default function Layout(props: ParentProps) {
           </div>
         </div>
 
-        <main class="size-full overflow-x-hidden flex flex-col items-start contain-strict bg-[#0a0a0e]">{props.children}</main>
+        <main class="size-full overflow-x-hidden flex flex-col items-start contain-strict bg-[#0a0a0e]">
+          {props.children}
+        </main>
       </div>
       <Toast.Region />
     </div>

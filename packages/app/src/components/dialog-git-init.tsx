@@ -43,7 +43,7 @@ export function DialogGitInit(props: DialogGitInitProps) {
             <span>GitHub에서 Clone</span>
           </div>
         ) : (
-          <span class="w-full text-center">프로젝트 시작</span>
+          <span class="block text-center">프로젝트 시작</span>
         )
       }
       action={showClone() ? undefined : <></>}

@@ -19,6 +19,7 @@
   position: fixed;
   inset: 0;
   margin-left: var(--dialog-left-margin);
+  margin-right: var(--dialog-right-margin);
   z-index: 50;
   display: flex;
   align-items: center;
@@ -73,6 +74,7 @@
         align-self: stretch;
 
         [data-slot="dialog-title"] {
+          flex: 1;
           color: var(--text-strong);
 
           /* text-16-medium */
