@@ -355,7 +355,17 @@ export default function Page() {
       localStorage.setItem(GIT_INIT_ASKED_KEY, JSON.stringify([...asked, dir]))
     }
   }
-  const isUserFolder = (path: string) => path.startsWith("/Users/") || path.startsWith("/home/")
+  const isUserFolder = (path: string) => {
+    // Mac: /Users/username/...
+    // Linux: /home/username/...
+    // Windows: C:\Users\username\... or C:/Users/username/...
+    const normalized = path.replace(/\\/g, "/")
+    return (
+      normalized.startsWith("/Users/") ||
+      normalized.startsWith("/home/") ||
+      /^[A-Za-z]:\/Users\//i.test(normalized)
+    )
+  }
 
   createEffect(() => {
     // Use sync.directory (from URL) instead of sync.project?.worktree
@@ -409,7 +419,7 @@ export default function Page() {
           // If file.list fails, still mark as asked to avoid repeated attempts
           markAsked(directory)
         })
-    }, 500)
+    }, 100)
   })
 
   const info = createMemo(() => (activeSessionId() ? sync.session.get(activeSessionId()!) : undefined))
