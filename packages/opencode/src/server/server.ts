@@ -117,7 +117,8 @@ export namespace Server {
       .use(
         cors({
           origin(input) {
-            if (!input) return
+            // Allow requests without Origin header (localhost sidecar is trusted)
+            if (!input) return "*"
 
             if (input.startsWith("http://localhost:")) return input
             if (input.startsWith("http://127.0.0.1:")) return input
