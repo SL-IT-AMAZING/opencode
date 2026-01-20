@@ -1248,11 +1248,29 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       .items()
       .filter((item) => item.type === "snippet")
       .map((item) => {
-        const snippet = item as { text: string }
+        const snippet = item as { text: string; source?: string; startLine?: number; endLine?: number }
+        const parts: string[] = []
+
+        // Add source info first so AI knows where snippet is from
+        if (snippet.source) {
+          let location = `[From file: ${snippet.source}`
+          if (snippet.startLine) {
+            location += `:${snippet.startLine}`
+            if (snippet.endLine && snippet.endLine !== snippet.startLine) {
+              location += `-${snippet.endLine}`
+            }
+          }
+          location += "]"
+          parts.push(location)
+          parts.push(`\n${snippet.text}`)
+        } else {
+          parts.push(`Selected text from conversation:\n"${snippet.text}"`)
+        }
+
         return {
           id: Identifier.ascending("part"),
           type: "text" as const,
-          text: `Selected text from conversation:\n"${snippet.text}"`,
+          text: parts.join(""),
           synthetic: true,
         }
       })
@@ -1571,15 +1589,34 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                   </Match>
                   <Match when={item.type === "snippet"}>
                     {(() => {
-                      const snippet = item as { type: "snippet"; text: string; key: string }
+                      const snippet = item as {
+                        type: "snippet"
+                        text: string
+                        source?: string
+                        startLine?: number
+                        endLine?: number
+                        key: string
+                      }
                       const preview = snippet.text.length > 40 ? snippet.text.slice(0, 40) + "..." : snippet.text
+                      const filename = snippet.source?.split("/").pop()
                       return (
                         <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-surface-info-base border border-border-base max-w-full hover:bg-surface-raised-base-hover transition-colors duration-150">
-                          <Icon name="bubble-5" class="shrink-0 size-4 text-text-info" />
+                          <Icon name={snippet.source ? "code" : "bubble-5"} class="shrink-0 size-4 text-text-info" />
                           <div class="flex items-center text-12-regular min-w-0">
-                            <span class="text-text-strong whitespace-nowrap truncate max-w-48">
-                              "{preview}"
-                            </span>
+                            <Show
+                              when={snippet.source}
+                              fallback={
+                                <span class="text-text-strong whitespace-nowrap truncate max-w-48">"{preview}"</span>
+                              }
+                            >
+                              <span class="text-text-strong whitespace-nowrap truncate max-w-32">{filename}</span>
+                              <Show when={snippet.startLine}>
+                                <span class="text-text-weak whitespace-nowrap">:{snippet.startLine}</span>
+                                <Show when={snippet.endLine && snippet.endLine !== snippet.startLine}>
+                                  <span class="text-text-weak whitespace-nowrap">-{snippet.endLine}</span>
+                                </Show>
+                              </Show>
+                            </Show>
                           </div>
                           <IconButton
                             type="button"

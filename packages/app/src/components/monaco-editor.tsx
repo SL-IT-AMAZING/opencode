@@ -5,7 +5,7 @@ import type * as Monaco from "monaco-editor"
 interface MonacoEditorProps {
   content: string
   path?: string
-  onSelect?: (text: string, startLine: number, endLine: number) => void
+  onSelect?: (text: string, startLine: number, endLine: number, position: { top: number; left: number } | null) => void
 }
 
 function detectLanguage(path?: string): string {
@@ -103,12 +103,26 @@ export default function MonacoEditor(props: MonacoEditorProps) {
         if (!editor) return
         const selection = editor.getSelection()
         if (!selection || selection.isEmpty()) {
-          props.onSelect?.("", 0, 0)
+          props.onSelect?.("", 0, 0, null)
           return
         }
         const text = editor.getModel()?.getValueInRange(selection) || ""
         if (text.trim()) {
-          props.onSelect?.(text, selection.startLineNumber, selection.endLineNumber)
+          // Calculate screen position for popup
+          const endPosition = selection.getEndPosition()
+          const scrolledPos = editor.getScrolledVisiblePosition(endPosition)
+          const editorDom = editor.getDomNode()
+          const editorRect = editorDom?.getBoundingClientRect()
+
+          let popupPosition: { top: number; left: number } | null = null
+          if (scrolledPos && editorRect) {
+            popupPosition = {
+              top: editorRect.top + scrolledPos.top,
+              left: editorRect.left + scrolledPos.left + 10,
+            }
+          }
+
+          props.onSelect?.(text, selection.startLineNumber, selection.endLineNumber, popupPosition)
         }
       })
     } catch (e: any) {
