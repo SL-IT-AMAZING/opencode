@@ -73,7 +73,7 @@ export namespace Project {
 
         // generate id from root commit
         if (!id) {
-          const roots = await $`git rev-list --max-parents=0 --all`
+          const roots = await $`git rev-list --max-parents=0 HEAD`
             .quiet()
             .nothrow()
             .cwd(sandbox)
