@@ -1,5 +1,22 @@
+use tauri::{path::BaseDirectory, AppHandle, Manager};
+use tauri_plugin_shell::{process::Command, ShellExt};
+
 const CLI_INSTALL_DIR: &str = ".anyon/bin";
 const CLI_BINARY_NAME: &str = "anyon";
+
+fn get_target_triple() -> &'static str {
+    #[cfg(all(target_arch = "x86_64", target_os = "macos"))]
+    return "x86_64-apple-darwin";
+
+    #[cfg(all(target_arch = "aarch64", target_os = "macos"))]
+    return "aarch64-apple-darwin";
+
+    #[cfg(all(target_arch = "x86_64", target_os = "windows"))]
+    return "x86_64-pc-windows-msvc";
+
+    #[cfg(all(target_arch = "x86_64", target_os = "linux"))]
+    return "x86_64-unknown-linux-gnu";
+}
 
 fn get_cli_install_path() -> Option<std::path::PathBuf> {
     std::env::var("HOME").ok().map(|home| {
@@ -9,12 +26,33 @@ fn get_cli_install_path() -> Option<std::path::PathBuf> {
     })
 }
 
-pub fn get_sidecar_path() -> std::path::PathBuf {
-    tauri::utils::platform::current_exe()
-        .expect("Failed to get current exe")
+pub fn get_sidecar_path(app: &AppHandle) -> std::path::PathBuf {
+    // Use current_binary which properly resolves symlinks and handles App Translocation
+    // The sidecar is named with the target triple suffix (e.g., anyon-cli-aarch64-apple-darwin)
+    tauri::process::current_binary(&app.env())
+        .expect("Failed to get current binary")
         .parent()
         .expect("Failed to get parent dir")
-        .join("anyon-cli")
+        .join(format!("anyon-cli-{}", get_target_triple()))
+}
+
+pub fn create_command(app: &AppHandle, args: &str) -> Command {
+    let state_dir = app
+        .path()
+        .resolve("", BaseDirectory::AppLocalData)
+        .expect("Failed to resolve app local data dir");
+
+    // Use Tauri's sidecar() on all platforms - it automatically handles:
+    // - Target suffix (anyon-cli-aarch64-apple-darwin)
+    // - App bundle paths
+    // - App Translocation on macOS
+    app.shell()
+        .sidecar("anyon-cli")
+        .unwrap()
+        .args(args.split_whitespace())
+        .env("ANYON_EXPERIMENTAL_ICON_DISCOVERY", "true")
+        .env("ANYON_CLIENT", "desktop")
+        .env("XDG_STATE_HOME", &state_dir)
 }
 
 fn is_cli_installed() -> bool {
@@ -24,12 +62,12 @@ fn is_cli_installed() -> bool {
 }
 
 #[tauri::command]
-pub fn install_cli() -> Result<String, String> {
+pub fn install_cli(app: AppHandle) -> Result<String, String> {
     if cfg!(not(unix)) {
         return Err("CLI installation is only supported on macOS & Linux".to_string());
     }
 
-    let sidecar = get_sidecar_path();
+    let sidecar = get_sidecar_path(&app);
     if !sidecar.exists() {
         return Err("Sidecar binary not found".to_string());
     }
@@ -37,17 +75,14 @@ pub fn install_cli() -> Result<String, String> {
     let install_path =
         get_cli_install_path().ok_or_else(|| "Could not determine install path".to_string())?;
 
-    // Create install directory
     if let Some(parent) = install_path.parent() {
         std::fs::create_dir_all(parent)
             .map_err(|e| format!("Failed to create install directory: {}", e))?;
     }
 
-    // Copy sidecar binary to install path
     std::fs::copy(&sidecar, &install_path)
         .map_err(|e| format!("Failed to copy binary: {}", e))?;
 
-    // Set executable permissions
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -100,7 +135,7 @@ pub fn sync_cli(app: tauri::AppHandle) -> Result<(), String> {
         cli_version, app_version
     );
 
-    install_cli()?;
+    install_cli(app)?;
 
     println!("Synced installed CLI");
 
