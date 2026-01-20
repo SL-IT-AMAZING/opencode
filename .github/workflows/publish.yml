@@ -170,6 +170,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GITHUB_RUN_ID: ${{ github.run_id }}
 
+      - name: Sign sidecar binary (macOS only)
+        if: ${{ runner.os == 'macOS' }}
+        run: |
+          SIDECAR_PATH="packages/desktop/src-tauri/sidecars/anyon-cli-${{ matrix.settings.target }}"
+          echo "Signing sidecar at: $SIDECAR_PATH"
+          codesign --force --options runtime --sign "${{ env.CERT_ID }}" --entitlements packages/desktop/src-tauri/entitlements.plist "$SIDECAR_PATH"
+          echo "Verifying signature..."
+          codesign -dv --verbose=4 "$SIDECAR_PATH"
+
       # Fixes AppImage build issues, can be removed when https://github.com/tauri-apps/tauri/pull/12491 is released
       - name: Install tauri-cli from portable appimage branch
         if: contains(matrix.settings.host, 'ubuntu')
