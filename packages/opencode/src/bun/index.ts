@@ -71,7 +71,10 @@ export namespace BunProc {
       await Bun.write(pkgjson.name!, JSON.stringify(result, null, 2))
       return result
     })
-    if (parsed.dependencies[pkg] === version) return mod
+    const dependencies = parsed.dependencies ?? {}
+    if (!parsed.dependencies) parsed.dependencies = dependencies
+    const modExists = await Bun.file(path.join(mod, "package.json")).exists()
+    if (dependencies[pkg] === version && modExists) return mod
 
     const proxied = !!(
       process.env.HTTP_PROXY ||

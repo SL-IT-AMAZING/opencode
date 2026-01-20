@@ -7,6 +7,8 @@ import { Server } from "../server/server"
 import { BunProc } from "../bun"
 import { Instance } from "../project/instance"
 import { Flag } from "../flag/flag"
+import { Session } from "../session"
+import { NamedError } from "@anyon/util/error"
 
 export namespace Plugin {
   const log = Log.create({ service: "plugin" })
@@ -41,15 +43,25 @@ export namespace Plugin {
         const version = lastAtIndex > 0 ? plugin.substring(lastAtIndex + 1) : "latest"
         const builtin = BUILTIN.some((x) => x.startsWith(pkg + "@"))
         plugin = await BunProc.install(pkg, version).catch((err) => {
-          if (builtin) return ""
-          throw err
+          if (!builtin) throw err
+
+          const message = err instanceof Error ? err.message : String(err)
+          log.error("failed to install builtin plugin", {
+            pkg,
+            version,
+            error: message,
+          })
+          Bus.publish(Session.Event.Error, {
+            error: new NamedError.Unknown({
+              message: `Failed to install built-in plugin ${pkg}@${version}: ${message}`,
+            }).toObject(),
+          })
+
+          return ""
         })
         if (!plugin) continue
       }
       const mod = await import(plugin)
-      // Prevent duplicate initialization when plugins export the same function
-      // as both a named export and default export (e.g., `export const X` and `export default X`).
-      // Object.entries(mod) would return both entries pointing to the same function reference.
       const seen = new Set<PluginInstance>()
       for (const [_name, fn] of Object.entries<PluginInstance>(mod)) {
         if (seen.has(fn)) continue
@@ -74,9 +86,7 @@ export namespace Plugin {
     for (const hook of await state().then((x) => x.hooks)) {
       const fn = hook[name]
       if (!fn) continue
-      // @ts-expect-error if you feel adventurous, please fix the typing, make sure to bump the try-counter if you
-      // give up.
-      // try-counter: 2
+      // @ts-expect-error
       await fn(input, output)
     }
     return output
@@ -90,7 +100,7 @@ export namespace Plugin {
     const hooks = await state().then((x) => x.hooks)
     const config = await Config.get()
     for (const hook of hooks) {
-      // @ts-expect-error this is because we haven't moved plugin to sdk v2
+      // @ts-expect-error
       await hook.config?.(config)
     }
     Bus.subscribeAll(async (input) => {
