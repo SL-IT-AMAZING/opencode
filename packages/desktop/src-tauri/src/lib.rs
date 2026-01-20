@@ -1,7 +1,7 @@
 mod cli;
 mod window_customizer;
 
-use cli::{get_sidecar_path, install_cli, sync_cli};
+use cli::{install_cli, sync_cli};
 use std::{
     collections::VecDeque,
     net::SocketAddr,
@@ -87,10 +87,6 @@ fn get_sidecar_port() -> u32 {
         .unwrap_or(19876)  // Fixed port for OAuth callback
 }
 
-fn get_user_shell() -> String {
-    std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string())
-}
-
 fn spawn_sidecar(app: &AppHandle, port: u32) -> CommandChild {
     let log_state = app.state::<LogState>();
     let log_state_clone = log_state.inner().clone();
@@ -100,7 +96,8 @@ fn spawn_sidecar(app: &AppHandle, port: u32) -> CommandChild {
         .resolve("", BaseDirectory::AppLocalData)
         .expect("Failed to resolve app local data dir");
 
-    #[cfg(target_os = "windows")]
+    // Use Tauri's built-in sidecar() on all platforms
+    // This correctly resolves the binary path in both dev and deployed app bundles
     let (mut rx, child) = app
         .shell()
         .sidecar("anyon-cli")
@@ -111,24 +108,6 @@ fn spawn_sidecar(app: &AppHandle, port: u32) -> CommandChild {
         .args(["serve", &format!("--port={port}")])
         .spawn()
         .expect("Failed to spawn ANYON");
-
-    #[cfg(not(target_os = "windows"))]
-    let (mut rx, child) = {
-        let sidecar = get_sidecar_path();
-        let shell = get_user_shell();
-        app.shell()
-            .command(&shell)
-            .env("ANYON_EXPERIMENTAL_ICON_DISCOVERY", "true")
-            .env("ANYON_CLIENT", "desktop")
-            .env("XDG_STATE_HOME", &state_dir)
-            .args([
-                "-il",
-                "-c",
-                &format!("\"{}\" serve --port={}", sidecar.display(), port),
-            ])
-            .spawn()
-            .expect("Failed to spawn ANYON")
-    };
 
     tauri::async_runtime::spawn(async move {
         while let Some(event) = rx.recv().await {
