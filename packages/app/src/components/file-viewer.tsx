@@ -45,9 +45,22 @@ export function FileViewer(props: FileViewerProps) {
   const isLoaded = createMemo(() => fileData()?.loaded ?? false)
   const error = createMemo(() => fileData()?.error)
 
-  const handleSelect = (text: string, startLine: number, endLine: number) => {
-    if (text.trim()) {
-      // Get position from browser selection for popup positioning
+  const handleSelect = (
+    text: string,
+    startLine: number,
+    endLine: number,
+    position: { top: number; left: number } | null,
+  ) => {
+    if (text.trim() && position) {
+      setSelection({
+        text,
+        startLine,
+        endLine,
+        top: position.top,
+        left: position.left,
+      })
+    } else if (text.trim()) {
+      // Fallback for non-Monaco (markdown)
       const browserSel = window.getSelection()
       if (browserSel && !browserSel.isCollapsed) {
         const range = browserSel.getRangeAt(0)
@@ -60,7 +73,7 @@ export function FileViewer(props: FileViewerProps) {
           left: rect.right + 8,
         })
       } else {
-        setSelection({ text, startLine, endLine, top: 0, left: 0 })
+        setSelection(null)
       }
     } else {
       setSelection(null)
@@ -73,6 +86,9 @@ export function FileViewer(props: FileViewerProps) {
     prompt.context.add({
       type: "snippet",
       text: sel.text,
+      source: normalizedPath() ?? undefined,
+      startLine: sel.startLine,
+      endLine: sel.endLine,
     })
     setSelection(null)
   }

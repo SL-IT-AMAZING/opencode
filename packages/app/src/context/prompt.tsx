@@ -58,6 +58,9 @@ export type ElementContextItem = {
 export type TextSnippetContextItem = {
   type: "snippet"
   text: string
+  source?: string
+  startLine?: number
+  endLine?: number
 }
 
 export type ContextItem = FileContextItem | ElementContextItem | TextSnippetContextItem
@@ -156,6 +159,9 @@ export const { use: usePrompt, provider: PromptProvider } = createSimpleContext(
         return `element:${parts.filter(Boolean).join(":")}`
       }
       // item.type === "snippet"
+      if (item.source) {
+        return `snippet:${item.source}:${item.startLine}:${item.endLine}`
+      }
       const hash = item.text.slice(0, 50).replace(/\s+/g, "_")
       return `snippet:${hash}`
     }
