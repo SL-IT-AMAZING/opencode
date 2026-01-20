@@ -1,20 +1,18 @@
 mod cli;
 mod window_customizer;
 
-use cli::{install_cli, sync_cli};
+use cli::{create_command, install_cli, sync_cli};
 use std::{
     collections::VecDeque,
     net::SocketAddr,
     sync::{Arc, Mutex},
     time::{Duration, Instant},
 };
-use tauri::{
-    path::BaseDirectory, AppHandle, LogicalSize, Manager, RunEvent, WebviewUrl, WebviewWindow,
-};
+use tauri::{AppHandle, LogicalSize, Manager, RunEvent, WebviewUrl, WebviewWindow};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogResult};
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
-use tauri_plugin_shell::ShellExt;
+
 use tokio::net::TcpSocket;
 
 use crate::window_customizer::PinchZoomDisablePlugin;
@@ -91,21 +89,9 @@ fn spawn_sidecar(app: &AppHandle, port: u32) -> CommandChild {
     let log_state = app.state::<LogState>();
     let log_state_clone = log_state.inner().clone();
 
-    let state_dir = app
-        .path()
-        .resolve("", BaseDirectory::AppLocalData)
-        .expect("Failed to resolve app local data dir");
+    println!("spawning sidecar on port {port}");
 
-    // Use Tauri's built-in sidecar() on all platforms
-    // This correctly resolves the binary path in both dev and deployed app bundles
-    let (mut rx, child) = app
-        .shell()
-        .sidecar("anyon-cli")
-        .unwrap()
-        .env("ANYON_EXPERIMENTAL_ICON_DISCOVERY", "true")
-        .env("ANYON_CLIENT", "desktop")
-        .env("XDG_STATE_HOME", &state_dir)
-        .args(["serve", &format!("--port={port}")])
+    let (mut rx, child) = create_command(app, &format!("serve --port={port}"))
         .spawn()
         .expect("Failed to spawn ANYON");
 
@@ -157,6 +143,53 @@ async fn is_server_running(port: u32) -> bool {
         .is_ok()
 }
 
+/// Kill any existing process using the specified port.
+/// This prevents stale servers from previous sessions causing CORS/404 errors.
+async fn kill_existing_server_on_port(port: u32) {
+    #[cfg(unix)]
+    {
+        let output = std::process::Command::new("lsof")
+            .args(["-ti", &format!(":{}", port)])
+            .output();
+
+        if let Ok(output) = output {
+            let pid_str = String::from_utf8_lossy(&output.stdout);
+            for pid in pid_str.lines() {
+                if pid.trim().parse::<i32>().is_ok() {
+                    println!("Killing existing process on port {}: PID {}", port, pid.trim());
+                    let _ = std::process::Command::new("kill")
+                        .args(["-9", pid.trim()])
+                        .output();
+                }
+            }
+        }
+    }
+
+    #[cfg(windows)]
+    {
+        // Find and kill process using the port on Windows
+        let output = std::process::Command::new("netstat")
+            .args(["-ano"])
+            .output();
+
+        if let Ok(output) = output {
+            let output_str = String::from_utf8_lossy(&output.stdout);
+            for line in output_str.lines() {
+                if line.contains(&format!(":{}", port)) && line.contains("LISTENING") {
+                    if let Some(pid) = line.split_whitespace().last() {
+                        if pid.parse::<i32>().is_ok() {
+                            println!("Killing existing process on port {}: PID {}", port, pid);
+                            let _ = std::process::Command::new("taskkill")
+                                .args(["/F", "/PID", pid])
+                                .output();
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let updater_enabled = option_env!("TAURI_SIGNING_PRIVATE_KEY").is_some();
@@ -190,48 +223,48 @@ pub fn run() {
               tauri::async_runtime::spawn(async move {
                   let port = get_sidecar_port();
 
-                  let should_spawn_sidecar = !is_server_running(port).await;
+                  // Always kill any existing process on the port and spawn fresh.
+                  // This prevents stale servers from previous sessions (crash/force-quit/update)
+                  // from causing CORS/404 errors due to version mismatch.
+                  kill_existing_server_on_port(port).await;
+                  tokio::time::sleep(Duration::from_millis(100)).await;
 
-                  let child = if should_spawn_sidecar {
-                      let child = spawn_sidecar(&app, port);
+                  let child = spawn_sidecar(&app, port);
 
-                      let timestamp = Instant::now();
-                      loop {
-                          if timestamp.elapsed() > Duration::from_secs(7) {
-                              let res = app.dialog()
-                                .message("Failed to spawn ANYON Server. Copy logs using the button below and send them to the team for assistance.")
-                                .title("Startup Failed")
-                                .buttons(MessageDialogButtons::OkCancelCustom("Copy Logs And Exit".to_string(), "Exit".to_string()))
-                                .blocking_show_with_result();
+                  let timestamp = Instant::now();
+                  loop {
+                      if timestamp.elapsed() > Duration::from_secs(7) {
+                          let res = app.dialog()
+                            .message("Failed to spawn ANYON Server. Copy logs using the button below and send them to the team for assistance.")
+                            .title("Startup Failed")
+                            .buttons(MessageDialogButtons::OkCancelCustom("Copy Logs And Exit".to_string(), "Exit".to_string()))
+                            .blocking_show_with_result();
 
-                              if matches!(&res, MessageDialogResult::Custom(name) if name == "Copy Logs And Exit") {
-                                  match copy_logs_to_clipboard(app.clone()).await {
-                                      Ok(()) => println!("Logs copied to clipboard successfully"),
-                                      Err(e) => println!("Failed to copy logs to clipboard: {}", e),
-                                  }
+                          if matches!(&res, MessageDialogResult::Custom(name) if name == "Copy Logs And Exit") {
+                              match copy_logs_to_clipboard(app.clone()).await {
+                                  Ok(()) => println!("Logs copied to clipboard successfully"),
+                                  Err(e) => println!("Failed to copy logs to clipboard: {}", e),
                               }
-
-                              app.exit(1);
-
-                              return;
                           }
 
-                          tokio::time::sleep(Duration::from_millis(10)).await;
+                          app.exit(1);
 
-                          if is_server_running(port).await {
-                              // give the server a little bit more time to warm up
-                              tokio::time::sleep(Duration::from_millis(10)).await;
-
-                              break;
-                          }
+                          return;
                       }
 
-                      println!("Server ready after {:?}", timestamp.elapsed());
+                      tokio::time::sleep(Duration::from_millis(10)).await;
 
-                      Some(child)
-                  } else {
-                      None
-                  };
+                      if is_server_running(port).await {
+                          // give the server a little bit more time to warm up
+                          tokio::time::sleep(Duration::from_millis(100)).await;
+
+                          break;
+                      }
+                  }
+
+                  println!("Server ready after {:?}", timestamp.elapsed());
+
+                  let child = Some(child);
 
                   let primary_monitor = app.primary_monitor().ok().flatten();
                   let size = primary_monitor
