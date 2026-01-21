@@ -52,7 +52,8 @@ export namespace Bus {
     const pending = []
     for (const key of [def.type, "*"]) {
       const match = state().subscriptions.get(key)
-      for (const sub of match ?? []) {
+      // Copy array before iteration - subscribers may unsubscribe during callback (e.g., Bus.once)
+      for (const sub of [...(match ?? [])]) {
         pending.push(sub(payload))
       }
     }

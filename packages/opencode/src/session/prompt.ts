@@ -245,12 +245,16 @@ export namespace SessionPrompt {
     const s = state()
     const match = s[sessionID]
     if (!match) return
+
+    // Update UI immediately - abort signal is the real control mechanism
+    SessionStatus.set(sessionID, { type: "idle" })
+
+    // Then trigger abort and cleanup
     match.abort.abort()
     for (const item of match.callbacks) {
       item.reject()
     }
     delete s[sessionID]
-    SessionStatus.set(sessionID, { type: "idle" })
     return
   }
 
