@@ -773,12 +773,25 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     setStore("popover", null)
   }
 
-  const abort = () =>
-    sdk.client.session
-      .abort({
-        sessionID: params.id!,
+  let abortDebounceId: ReturnType<typeof setTimeout> | null = null
+
+  const abort = () => {
+    // Optimistic update FIRST - immediate UI feedback
+    sync.set(
+      produce((draft) => {
+        draft.session_status[params.id!] = { type: "idle" }
+      }),
+    )
+
+    // Debounce actual API call (prevents rapid-click spam)
+    if (abortDebounceId) clearTimeout(abortDebounceId)
+    abortDebounceId = setTimeout(async () => {
+      await sdk.client.session.abort({ sessionID: params.id! }).catch((e) => {
+        console.error("Abort request failed:", e)
       })
-      .catch(() => {})
+      abortDebounceId = null
+    }, 50)
+  }
 
   const addToHistory = (prompt: Prompt, mode: "normal" | "shell") => {
     const text = prompt
