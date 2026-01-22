@@ -239,13 +239,12 @@ export default function Page() {
       const href = anchor.getAttribute("href")
       if (!href) return
 
-      // Check if localhost URL
+      // Check if HTTP/HTTPS URL - open in preview tab
       try {
         const url = new URL(href)
-        const isLocalhost =
-          url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname.endsWith(".localhost")
+        const isHttpUrl = url.protocol === "http:" || url.protocol === "https:"
 
-        if (isLocalhost) {
+        if (isHttpUrl) {
           e.preventDefault()
           e.stopPropagation()
           const previewTabValue = file.previewTab(href)

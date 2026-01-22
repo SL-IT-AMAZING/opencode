@@ -633,6 +633,71 @@ export namespace MessageV2 {
           },
           { cause: e },
         ).toObject()
+      // Network errors - common on Windows but apply to all OS
+      case (e as SystemError)?.code === "ENOTFOUND":
+        return new MessageV2.APIError(
+          {
+            message: "DNS lookup failed - cannot resolve API hostname. Check your internet connection or DNS settings.",
+            isRetryable: true,
+            metadata: {
+              code: "ENOTFOUND",
+              hostname: (e as any).hostname ?? "",
+            },
+          },
+          { cause: e },
+        ).toObject()
+      case (e as SystemError)?.code === "ETIMEDOUT":
+        return new MessageV2.APIError(
+          {
+            message: "Connection timed out. This may be caused by a firewall, proxy, or slow network.",
+            isRetryable: true,
+            metadata: { code: "ETIMEDOUT" },
+          },
+          { cause: e },
+        ).toObject()
+      case (e as SystemError)?.code === "ECONNREFUSED":
+        return new MessageV2.APIError(
+          {
+            message: "Connection refused. The API server may be blocked by your firewall or proxy.",
+            isRetryable: true,
+            metadata: { code: "ECONNREFUSED" },
+          },
+          { cause: e },
+        ).toObject()
+      // Bun uses different error code format
+      case (e as any)?.code === "ConnectionRefused":
+        return new MessageV2.APIError(
+          {
+            message: "Connection refused. The API server may be blocked by your firewall or proxy.",
+            isRetryable: true,
+            metadata: { code: "ConnectionRefused" },
+          },
+          { cause: e },
+        ).toObject()
+      // SSL/TLS certificate errors
+      case (e as Error)?.message?.includes("CERTIFICATE_VERIFY_FAILED"):
+      case (e as Error)?.message?.includes("UNABLE_TO_GET_ISSUER_CERT"):
+        return new MessageV2.APIError(
+          {
+            message:
+              "SSL certificate verification failed. If you're behind a corporate proxy, set NODE_EXTRA_CA_CERTS to your CA certificate path.",
+            isRetryable: false,
+            metadata: { code: "SSL_ERROR" },
+          },
+          { cause: e },
+        ).toObject()
+      // Generic fetch failure (common on Windows with Bun)
+      case e instanceof TypeError && (e as Error).message?.includes("fetch failed"): {
+        const fetchCause = (e as any).cause
+        return new MessageV2.APIError(
+          {
+            message: `Network request failed: ${fetchCause?.message || e.message}. Check your internet connection, firewall, or proxy settings.`,
+            isRetryable: true,
+            metadata: { code: fetchCause?.code || "FETCH_FAILED" },
+          },
+          { cause: e },
+        ).toObject()
+      }
       case APICallError.isInstance(e):
         const message = iife(() => {
           let msg = e.message
