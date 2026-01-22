@@ -4757,6 +4757,68 @@
             "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.file.read({\n  ...\n})"
           }
         ]
+      },
+      "post": {
+        "operationId": "file.write",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Write file",
+        "description": "Write content to a specified file.",
+        "responses": {
+          "200": {
+            "description": "File written successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "description": "Path to the file relative to project directory",
+                    "type": "string"
+                  },
+                  "content": {
+                    "description": "Content to write to the file",
+                    "type": "string"
+                  }
+                },
+                "required": ["path", "content"]
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createOpencodeClient } from \"@anyon/sdk\n\nconst client = createOpencodeClient()\nawait client.file.write({\n  ...\n})"
+          }
+        ]
       }
     },
     "/file/status": {

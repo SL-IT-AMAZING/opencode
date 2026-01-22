@@ -369,6 +369,18 @@ export namespace File {
     })
   }
 
+  export async function write(file: string, content: string): Promise<void> {
+    using _ = log.time("write", { file })
+    const full = path.join(Instance.directory, file)
+
+    // Security: Ensure path doesn't escape project directory
+    if (!Filesystem.contains(Instance.directory, full)) {
+      throw new Error(`Access denied: path escapes project directory`)
+    }
+
+    await Bun.write(full, content)
+  }
+
   export async function search(input: { query: string; limit?: number; dirs?: boolean; type?: "file" | "directory" }) {
     const query = input.query.trim()
     const limit = input.limit ?? 100

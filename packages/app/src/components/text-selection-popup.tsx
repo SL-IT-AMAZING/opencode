@@ -29,8 +29,7 @@ export function TextSelectionPopup(props: ParentProps) {
       // Exclude selections in editable areas (prompt input, textareas, inputs)
       const anchorNode = sel.anchorNode
       if (anchorNode) {
-        const element =
-          anchorNode.nodeType === Node.ELEMENT_NODE ? (anchorNode as Element) : anchorNode.parentElement
+        const element = anchorNode.nodeType === Node.ELEMENT_NODE ? (anchorNode as Element) : anchorNode.parentElement
         if (element) {
           const isInEditableArea =
             element.closest('[data-component="prompt-input"]') ||

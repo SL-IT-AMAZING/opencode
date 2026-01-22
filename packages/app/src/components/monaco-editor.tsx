@@ -6,6 +6,8 @@ interface MonacoEditorProps {
   content: string
   path?: string
   onSelect?: (text: string, startLine: number, endLine: number, position: { top: number; left: number } | null) => void
+  onChange?: (content: string) => void
+  onSave?: () => void
 }
 
 function detectLanguage(path?: string): string {
@@ -79,7 +81,7 @@ export default function MonacoEditor(props: MonacoEditorProps) {
         value: props.content,
         language: detectLanguage(props.path),
         theme: "opencode-dark",
-        readOnly: true,
+        readOnly: false,
         automaticLayout: true,
         minimap: { enabled: false },
         fontSize: 13,
@@ -124,6 +126,17 @@ export default function MonacoEditor(props: MonacoEditorProps) {
 
           props.onSelect?.(text, selection.startLineNumber, selection.endLineNumber, popupPosition)
         }
+      })
+
+      // Content change handler
+      editor.onDidChangeModelContent(() => {
+        if (!editor) return
+        props.onChange?.(editor.getValue())
+      })
+
+      // Save handler (Ctrl/Cmd+S)
+      editor.addCommand(monacoInstance.KeyMod.CtrlCmd | monacoInstance.KeyCode.KeyS, () => {
+        props.onSave?.()
       })
     } catch (e: any) {
       console.error("Monaco failed:", e)

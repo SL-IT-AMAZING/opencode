@@ -1536,7 +1536,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                   <Match when={item.type === "file"}>
                     {/* File context item */}
                     <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-surface-base border border-border-base max-w-full hover:bg-surface-raised-base-hover transition-colors duration-150">
-                      <FileIcon node={{ path: (item as { path: string }).path, type: "file" }} class="shrink-0 size-4" />
+                      <FileIcon
+                        node={{ path: (item as { path: string }).path, type: "file" }}
+                        class="shrink-0 size-4"
+                      />
                       <div class="flex items-center text-12-regular min-w-0">
                         <span class="text-text-weak whitespace-nowrap truncate min-w-0">
                           {getDirectory((item as { path: string }).path)}

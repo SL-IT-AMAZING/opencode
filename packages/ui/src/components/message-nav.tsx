@@ -23,7 +23,11 @@ export function MessageNav(
             <li data-slot="message-nav-item">
               <Switch>
                 <Match when={local.size === "compact"}>
-                  <button data-slot="message-nav-tick-button" data-active={message.id === local.current?.id || undefined} onClick={handleClick}>
+                  <button
+                    data-slot="message-nav-tick-button"
+                    data-active={message.id === local.current?.id || undefined}
+                    onClick={handleClick}
+                  >
                     <div data-slot="message-nav-tick-line" />
                   </button>
                 </Match>

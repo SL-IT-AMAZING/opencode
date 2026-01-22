@@ -97,7 +97,7 @@
   }
 
   [data-slot="dropdown-menu-arrow"] {
-    fill: var(--background-stronger);  /* Match glass background */
+    fill: var(--background-stronger); /* Match glass background */
   }
 }
 

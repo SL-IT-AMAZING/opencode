@@ -71,11 +71,11 @@
 
   /* GHOST VARIANT - MUST STAY TRANSPARENT for sidebar project lists */
   &[data-variant="ghost"] {
-    background-color: transparent;  /* UNCHANGED */
+    background-color: transparent; /* UNCHANGED */
     background: transparent;
-    backdrop-filter: none;  /* No blur on ghost */
+    backdrop-filter: none; /* No blur on ghost */
     -webkit-backdrop-filter: none;
-    border: none;  /* UNCHANGED */
+    border: none; /* UNCHANGED */
 
     > [data-slot="collapsible-trigger"] {
       background-color: transparent;

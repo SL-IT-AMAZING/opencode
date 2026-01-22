@@ -14,16 +14,16 @@
   box-shadow: var(--shadow-elevated);
 
   padding: 6px 12px;
-  overflow: clip;  /* Preserved for rounded corner clipping */
-  transition: background-color 0.15s ease;  /* Preserved timing */
+  overflow: clip; /* Preserved for rounded corner clipping */
+  transition: background-color 0.15s ease; /* Preserved timing */
 
   /* ERROR VARIANT - overrides glassmorphism with solid critical colors */
   &[data-variant="error"] {
-    background-color: var(--surface-critical-weak);  /* Override glass */
-    backdrop-filter: none;  /* Disable blur for error state */
+    background-color: var(--surface-critical-weak); /* Override glass */
+    backdrop-filter: none; /* Disable blur for error state */
     -webkit-backdrop-filter: none;
     border: 1px solid var(--border-critical-base);
-    box-shadow: none;  /* No elevation on error cards */
+    box-shadow: none; /* No elevation on error cards */
     color: rgba(218, 51, 25, 0.6);
 
     /* text-12-regular */
