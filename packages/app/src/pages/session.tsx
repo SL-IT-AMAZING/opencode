@@ -356,15 +356,29 @@ export default function Page() {
     }
   }
   const isUserFolder = (path: string) => {
-    // Mac: /Users/username/...
-    // Linux: /home/username/...
-    // Windows: C:\Users\username\... or C:/Users/username/...
-    const normalized = path.replace(/\\/g, "/")
-    return (
-      normalized.startsWith("/Users/") ||
-      normalized.startsWith("/home/") ||
-      /^[A-Za-z]:\/Users\//i.test(normalized)
-    )
+    const normalized = path.replace(/\\/g, "/").toLowerCase()
+
+    // macOS user folders
+    if (normalized.startsWith("/users/")) return true
+
+    // Linux user/home folders
+    if (normalized.startsWith("/home/")) return true
+
+    // Windows: Allow any drive letter path that's not a system folder
+    if (/^[a-z]:\//.test(normalized)) {
+      // Exclude Windows system folders where projects shouldn't be created
+      const systemPaths = [
+        "/windows/",
+        "/program files/",
+        "/program files (x86)/",
+        "/programdata/",
+        "/$recycle.bin/",
+        "/system volume information/",
+      ]
+      return !systemPaths.some((sys) => normalized.includes(sys))
+    }
+
+    return false
   }
 
   createEffect(() => {

@@ -19,9 +19,11 @@ export function createOpencodeClient(config?: Config & { directory?: string }) {
   }
 
   if (config?.directory) {
+    // Encode directory to handle non-ASCII characters (e.g., Korean, Chinese paths)
+    // HTTP Headers require ISO-8859-1 compatible strings
     config.headers = {
       ...config.headers,
-      "x-opencode-directory": config.directory,
+      "x-opencode-directory": encodeURIComponent(config.directory),
     }
   }
 

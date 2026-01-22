@@ -254,7 +254,9 @@ export namespace Server {
         },
       )
       .use(async (c, next) => {
-        const directory = c.req.query("directory") || c.req.header("x-opencode-directory") || process.cwd()
+        // Decode directory header/query since it may be URI-encoded to handle non-ASCII characters
+        const rawDirectory = c.req.query("directory") || c.req.header("x-opencode-directory") || process.cwd()
+        const directory = decodeURIComponent(rawDirectory)
         return Instance.provide({
           directory,
           init: InstanceBootstrap,
