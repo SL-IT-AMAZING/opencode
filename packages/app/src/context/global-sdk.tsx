@@ -66,29 +66,49 @@ export const { use: useGlobalSDK, provider: GlobalSDKProvider } = createSimpleCo
     }
 
     void (async () => {
-      const events = await eventSdk.global.event()
-      let yielded = Date.now()
-      for await (const event of events.stream) {
-        const directory = event.directory ?? "global"
-        const payload = event.payload
-        const k = key(directory, payload)
-        if (k) {
-          const i = coalesced.get(k)
-          if (i !== undefined) {
-            queue[i] = undefined
-          }
-          coalesced.set(k, queue.length)
-        }
-        queue.push({ directory, payload })
-        schedule()
+      const maxRetries = 10
+      const baseDelay = 1000
+      let retries = 0
 
-        if (Date.now() - yielded < 8) continue
-        yielded = Date.now()
-        await new Promise<void>((resolve) => setTimeout(resolve, 0))
+      while (retries < maxRetries && !abort.signal.aborted) {
+        try {
+          const events = await eventSdk.global.event()
+          retries = 0 // Reset on successful connection
+          let yielded = Date.now()
+
+          for await (const event of events.stream) {
+            if (abort.signal.aborted) break
+            const directory = event.directory ?? "global"
+            const payload = event.payload
+            const k = key(directory, payload)
+            if (k) {
+              const i = coalesced.get(k)
+              if (i !== undefined) {
+                queue[i] = undefined
+              }
+              coalesced.set(k, queue.length)
+            }
+            queue.push({ directory, payload })
+            schedule()
+
+            if (Date.now() - yielded < 8) continue
+            yielded = Date.now()
+            await new Promise<void>((resolve) => setTimeout(resolve, 0))
+          }
+        } catch (err) {
+          if (abort.signal.aborted) break
+          retries++
+          console.error(`SSE connection error (attempt ${retries}/${maxRetries}):`, err)
+          if (retries < maxRetries) {
+            const delay = Math.min(baseDelay * Math.pow(2, retries - 1), 30000)
+            await new Promise((r) => setTimeout(r, delay))
+          }
+        }
       }
-    })()
-      .finally(stop)
-      .catch(() => undefined)
+      if (retries >= maxRetries) {
+        console.error("SSE connection failed after max retries")
+      }
+    })().finally(stop)
 
     onCleanup(() => {
       abort.abort()

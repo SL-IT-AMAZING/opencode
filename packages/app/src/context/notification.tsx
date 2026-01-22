@@ -79,7 +79,7 @@ export const { use: useNotification, provider: NotificationProvider } = createSi
             session: sessionID,
           })
           const href = `/${base64Encode(directory)}/session/${sessionID}`
-          void platform.notify("Response ready", session?.title ?? sessionID, href)
+          void platform.notify("ANYON ready", session?.title ?? sessionID, href)
           break
         }
         case "session.error": {
