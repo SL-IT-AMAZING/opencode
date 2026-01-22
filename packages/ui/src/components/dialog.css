@@ -1,11 +1,11 @@
 /* [data-component="dialog-trigger"] { } */
 
 [data-component="dialog-overlay"] {
-  position: fixed;  /* PRESERVED */
-  inset: 0;  /* PRESERVED */
-  z-index: 50;  /* PRESERVED */
-  background-color: rgba(0, 0, 0, 0.5);  /* Slightly darker */
-  backdrop-filter: blur(4px);  /* Subtle blur for depth */
+  position: fixed; /* PRESERVED */
+  inset: 0; /* PRESERVED */
+  z-index: 50; /* PRESERVED */
+  background-color: rgba(0, 0, 0, 0.5); /* Slightly darker */
+  backdrop-filter: blur(4px); /* Subtle blur for depth */
   -webkit-backdrop-filter: blur(4px);
 
   /* animation: overlayHide 250ms ease 100ms forwards; */
@@ -51,14 +51,14 @@
       backdrop-filter: blur(var(--glass-blur-strong));
       -webkit-backdrop-filter: blur(var(--glass-blur-strong));
       border: 1px solid var(--glass-border);
-      border-radius: var(--radius-2xl);  /* was --radius-xl */
-      background-clip: padding-box;  /* PRESERVED */
+      border-radius: var(--radius-2xl); /* was --radius-xl */
+      background-clip: padding-box; /* PRESERVED */
 
       /* Enhanced floating shadow with inner glow */
       box-shadow:
         0 24px 48px -12px rgba(0, 0, 0, 0.5),
         0 12px 24px -6px rgba(0, 0, 0, 0.35),
-        0 0 0 1px rgba(255, 255, 255, 0.05) inset;  /* Inner glow */
+        0 0 0 1px rgba(255, 255, 255, 0.05) inset; /* Inner glow */
 
       /* animation: contentHide 300ms ease-in forwards; */
       /**/

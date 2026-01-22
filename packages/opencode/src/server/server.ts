@@ -2058,6 +2058,37 @@ export namespace Server {
           return c.json(content)
         },
       )
+      .post(
+        "/file/content",
+        describeRoute({
+          summary: "Write file",
+          description: "Write content to a specified file.",
+          operationId: "file.write",
+          responses: {
+            200: {
+              description: "File written successfully",
+              content: {
+                "application/json": {
+                  schema: resolver(z.boolean()),
+                },
+              },
+            },
+            ...errors(400),
+          },
+        }),
+        validator(
+          "json",
+          z.object({
+            path: z.string().meta({ description: "Path to the file relative to project directory" }),
+            content: z.string().meta({ description: "Content to write to the file" }),
+          }),
+        ),
+        async (c) => {
+          const { path, content } = c.req.valid("json")
+          await File.write(path, content)
+          return c.json(true)
+        },
+      )
       .get(
         "/file/status",
         describeRoute({
@@ -2828,6 +2859,7 @@ export namespace Server {
   )
 
   export async function openapi() {
+    // @ts-expect-error - TS2589: Type instantiation is excessively deep due to Hono route chaining
     const result = await generateSpecs(App(), {
       documentation: {
         info: {

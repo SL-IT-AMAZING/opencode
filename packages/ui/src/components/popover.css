@@ -72,7 +72,7 @@
   }
 
   [data-slot="popover-arrow"] {
-    fill: var(--background-stronger);  /* Match glass background */
+    fill: var(--background-stronger); /* Match glass background */
   }
 }
 

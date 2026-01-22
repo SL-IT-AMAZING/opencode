@@ -42,12 +42,12 @@
   --container-6xl: 72rem;
   --container-7xl: 80rem;
 
-  --radius-xs: 0.125rem;    /* 2px */
-  --radius-sm: 0.25rem;     /* 4px */
-  --radius-md: 0.75rem;     /* 12px - was 0.5rem */
-  --radius-lg: 1.25rem;     /* 20px - was 0.75rem */
-  --radius-xl: 1.5rem;      /* 24px - was 1rem */
-  --radius-2xl: 2rem;       /* 32px - was 1.25rem */
+  --radius-xs: 0.125rem; /* 2px */
+  --radius-sm: 0.25rem; /* 4px */
+  --radius-md: 0.75rem; /* 12px - was 0.5rem */
+  --radius-lg: 1.25rem; /* 20px - was 0.75rem */
+  --radius-xl: 1.5rem; /* 24px - was 1rem */
+  --radius-2xl: 2rem; /* 32px - was 1.25rem */
 
   --shadow-xs:
     0 1px 2px -1px rgba(19, 16, 16, 0.04), 0 1px 2px 0 rgba(19, 16, 16, 0.06), 0 1px 3px 0 rgba(19, 16, 16, 0.08);
@@ -81,13 +81,9 @@
 
   /* Elevated shadow tokens */
   --shadow-elevated:
-    0 8px 32px -4px rgba(0, 0, 0, 0.4),
-    0 4px 16px -2px rgba(0, 0, 0, 0.3),
-    0 2px 8px -1px rgba(0, 0, 0, 0.2);
+    0 8px 32px -4px rgba(0, 0, 0, 0.4), 0 4px 16px -2px rgba(0, 0, 0, 0.3), 0 2px 8px -1px rgba(0, 0, 0, 0.2);
   --shadow-float:
-    0 24px 48px -12px rgba(0, 0, 0, 0.5),
-    0 12px 24px -6px rgba(0, 0, 0, 0.35),
-    0 4px 12px -2px rgba(0, 0, 0, 0.25);
+    0 24px 48px -12px rgba(0, 0, 0, 0.5), 0 12px 24px -6px rgba(0, 0, 0, 0.35), 0 4px 12px -2px rgba(0, 0, 0, 0.25);
   --shadow-glow: 0 0 40px -8px rgba(100, 100, 120, 0.15);
 
   color-scheme: dark;
@@ -96,8 +92,8 @@
   /* OC-1 fallback variables (dark) - updated to cool graphite palette */
   --background-base: #0a0a0e;
   --background-weak: #0c0c10;
-  --background-strong: #0c0c0f;     /* Darker cool black */
-  --background-stronger: #1c1c22;   /* Cool medium gray */
+  --background-strong: #0c0c0f; /* Darker cool black */
+  --background-stronger: #1c1c22; /* Cool medium gray */
 
   /* Glass surface colors */
   --surface-glass: rgba(22, 22, 28, 0.7);

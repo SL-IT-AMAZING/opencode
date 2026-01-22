@@ -24,11 +24,20 @@ export function FileViewer(props: FileViewerProps) {
     top: number
     left: number
   } | null>(null)
+  const [editedContent, setEditedContent] = createSignal<string | null>(null)
+  const [isSaving, setIsSaving] = createSignal(false)
+  const [isEditMode, setIsEditMode] = createSignal(false)
 
   const normalizedPath = createMemo(() => file.normalize(props.path))
   const isMarkdown = createMemo(() => {
     const p = normalizedPath()
     return p?.endsWith(".md") || p?.endsWith(".mdx")
+  })
+
+  // Reset edit mode when switching files
+  createEffect(() => {
+    normalizedPath()
+    setIsEditMode(false)
   })
 
   // Load file when path changes
@@ -40,10 +49,35 @@ export function FileViewer(props: FileViewerProps) {
   // Direct store access - Solid handles reactivity automatically
   const fileData = createMemo(() => file.get(normalizedPath() ?? ""))
 
-  const content = createMemo(() => fileData()?.content?.content ?? "")
+  const originalContent = createMemo(() => fileData()?.content?.content ?? "")
+  const content = createMemo(() => editedContent() ?? originalContent())
+  const isDirty = createMemo(() => editedContent() !== null && editedContent() !== originalContent())
   const isLoading = createMemo(() => fileData()?.loading ?? false)
   const isLoaded = createMemo(() => fileData()?.loaded ?? false)
   const error = createMemo(() => fileData()?.error)
+
+  // Reset edited content when file changes or reloads
+  createEffect(() => {
+    originalContent()
+    setEditedContent(null)
+  })
+
+  const handleChange = (newContent: string) => {
+    setEditedContent(newContent)
+  }
+
+  const handleSave = async () => {
+    const path = normalizedPath()
+    const edited = editedContent()
+    if (!path || edited === null || isSaving()) return
+
+    setIsSaving(true)
+    file.save(path, edited).then(() => {
+      setEditedContent(null)
+    }).finally(() => {
+      setIsSaving(false)
+    })
+  }
 
   const handleSelect = (
     text: string,
@@ -135,17 +169,62 @@ export function FileViewer(props: FileViewerProps) {
                 }
               >
                 <div class="flex-1 min-h-0 flex flex-col">
-                  <MonacoEditor path={normalizedPath() ?? ""} content={content()} onSelect={handleSelect} />
+                  <MonacoEditor
+                    path={normalizedPath() ?? ""}
+                    content={content()}
+                    onSelect={handleSelect}
+                    onChange={handleChange}
+                    onSave={handleSave}
+                  />
                 </div>
               </Suspense>
             </ErrorBoundary>
           }
         >
-          {/* Markdown */}
-          <div class="flex-1 overflow-auto">
-            <div class="max-w-4xl mx-auto p-6">
-              <Markdown text={content()} class="prose prose-invert prose-zinc max-w-none" />
+          {/* Markdown with Edit/Preview toggle */}
+          <div class="flex-1 relative min-h-0 overflow-hidden">
+            {/* Floating toggle buttons */}
+            <div class="absolute top-3 right-3 z-10">
+              <div class="flex items-center gap-1 p-1 rounded-lg bg-background-base/80 backdrop-blur-sm border border-border-weak-base shadow-md">
+                <Button
+                  size="small"
+                  variant={!isEditMode() ? "primary" : "ghost"}
+                  onClick={() => setIsEditMode(false)}
+                >
+                  <Icon name="glasses" size="small" />
+                  <span class="text-12-regular">Preview</span>
+                </Button>
+                <Button
+                  size="small"
+                  variant={isEditMode() ? "primary" : "ghost"}
+                  onClick={() => setIsEditMode(true)}
+                >
+                  <Icon name="edit-small-2" size="small" />
+                  <span class="text-12-regular">Edit</span>
+                </Button>
+              </div>
             </div>
+            {/* Content area - full height */}
+            <Show
+              when={isEditMode()}
+              fallback={
+                <div class="h-full overflow-auto">
+                  <div class="max-w-4xl mx-auto p-6 pt-14">
+                    <Markdown text={content()} class="prose prose-invert prose-zinc max-w-none" />
+                  </div>
+                </div>
+              }
+            >
+              <div class="h-full flex flex-col">
+                <MonacoEditor
+                  path={normalizedPath() ?? ""}
+                  content={content()}
+                  onSelect={handleSelect}
+                  onChange={handleChange}
+                  onSave={handleSave}
+                />
+              </div>
+            </Show>
           </div>
         </Show>
       </Show>

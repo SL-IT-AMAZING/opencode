@@ -105,7 +105,10 @@
       "roughness": 0,
       "opacity": 100,
       "seed": 6,
-      "points": [[0, 0], [220, 0]]
+      "points": [
+        [0, 0],
+        [220, 0]
+      ]
     },
     {
       "id": "border-label",

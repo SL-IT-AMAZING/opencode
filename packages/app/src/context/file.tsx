@@ -260,6 +260,37 @@ export const { use: useFile, provider: FileProvider } = createSimpleContext({
       load(path, { force: true })
     })
 
+    async function save(input: string, content: string) {
+      const path = normalize(input)
+      if (!path) return
+
+      await sdk.client.file.write({ path, content }).catch((e) => {
+        showToast({
+          variant: "error",
+          title: "Failed to save file",
+          description: e.message,
+        })
+        throw e
+      })
+
+      // Update store with new content
+      setStore(
+        "file",
+        path,
+        produce((draft) => {
+          if (draft.content) {
+            draft.content.content = content
+          }
+        }),
+      )
+
+      showToast({
+        variant: "success",
+        title: "File saved",
+        description: path,
+      })
+    }
+
     const get = (input: string) => store.file[normalize(input)]
 
     const scrollTop = (input: string) => view.file[normalize(input)]?.scrollTop
@@ -313,6 +344,7 @@ export const { use: useFile, provider: FileProvider } = createSimpleContext({
       getOriginalUrl,
       get,
       load,
+      save,
       scrollTop,
       scrollLeft,
       setScrollTop,

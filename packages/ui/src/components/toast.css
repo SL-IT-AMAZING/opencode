@@ -34,7 +34,7 @@
   -webkit-backdrop-filter: blur(var(--glass-blur));
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-float);  /* Stronger floating shadow */
+  box-shadow: var(--shadow-float); /* Stronger floating shadow */
   color: var(--text-invert-base);
 
   [data-slot="toast-inner"] {

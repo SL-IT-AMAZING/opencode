@@ -165,7 +165,10 @@
       "strokeColor": "#ffcc00",
       "backgroundColor": "transparent",
       "strokeWidth": 2,
-      "points": [[0, 0], [60, 0]]
+      "points": [
+        [0, 0],
+        [60, 0]
+      ]
     },
     {
       "id": "dialog-section-label",
@@ -341,7 +344,10 @@
       "strokeColor": "#ffcc00",
       "backgroundColor": "transparent",
       "strokeWidth": 2,
-      "points": [[0, 0], [60, 0]]
+      "points": [
+        [0, 0],
+        [60, 0]
+      ]
     },
     {
       "id": "specs-section",
