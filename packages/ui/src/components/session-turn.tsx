@@ -34,8 +34,16 @@ function computeStatusFromPart(part: PartType | undefined): string | undefined {
 
   if (part.type === "tool") {
     switch (part.tool) {
-      case "task":
+      case "task": {
+        const state = part.state
+        if (state.status === "running" || state.status === "pending") {
+          const input = state.input as { subagent_type?: string }
+          if (input.subagent_type) {
+            return `Delegating to ${input.subagent_type}`
+          }
+        }
         return "Delegating work"
+      }
       case "todowrite":
       case "todoread":
         return "Planning next steps"
