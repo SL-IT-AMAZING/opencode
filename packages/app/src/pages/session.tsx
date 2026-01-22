@@ -58,6 +58,7 @@ import {
   NewSessionView,
 } from "@/components/session"
 import { usePlatform } from "@/context/platform"
+import { useServer } from "@/context/server"
 import { same } from "@/utils/same"
 import { PreviewPane } from "@/components/preview/preview-pane"
 
@@ -161,6 +162,7 @@ export default function Page() {
   const codeComponent = useCodeComponent()
   const command = useCommand()
   const platform = usePlatform()
+  const server = useServer()
   const params = useParams()
   const navigate = useNavigate()
   const sdk = useSDK()
@@ -382,6 +384,9 @@ export default function Page() {
   }
 
   createEffect(() => {
+    // Wait for server to be ready before checking project status
+    if (!server.ready()) return
+
     // Use sync.directory (from URL) instead of sync.project?.worktree
     // because new folders aren't registered as projects yet
     const directory = sync.directory
@@ -429,9 +434,9 @@ export default function Page() {
           // Mark this folder as asked (regardless of choice) to prevent repeated popups
           markAsked(directory)
         })
-        .catch(() => {
-          // If file.list fails, still mark as asked to avoid repeated attempts
-          markAsked(directory)
+        .catch((err) => {
+          // Don't mark as asked on errors - allow retry when server is ready
+          console.error("Failed to check project status for git init popup:", err)
         })
     }, 100)
   })
