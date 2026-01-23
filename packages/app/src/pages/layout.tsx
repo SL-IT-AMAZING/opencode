@@ -1012,19 +1012,6 @@ export default function Layout(props: ParentProps) {
               <Show when={expanded()}>Open project</Show>
             </Button>
           </Tooltip>
-          <Tooltip placement="right" value="Share feedback" inactive={expanded()}>
-            <Button
-              as={"a"}
-              href="https://anyon.cc/desktop-feedback"
-              target="_blank"
-              class="flex w-full text-left justify-start text-text-base stroke-[1.5px] rounded-lg px-2"
-              variant="ghost"
-              size="large"
-              icon="bubble-5"
-            >
-              <Show when={expanded()}>Share feedback</Show>
-            </Button>
-          </Tooltip>
         </div>
       </div>
     )

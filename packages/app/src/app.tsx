@@ -1,5 +1,5 @@
 import "@/index.css"
-import { ErrorBoundary, Show, type ParentProps } from "solid-js"
+import { ErrorBoundary, Show, onMount, type ParentProps } from "solid-js"
 import { Router, Route, Navigate } from "@solidjs/router"
 import { MetaProvider } from "@solidjs/meta"
 import { Font } from "@anyon/ui/font"
@@ -18,8 +18,10 @@ import { TerminalProvider } from "@/context/terminal"
 import { PromptProvider } from "@/context/prompt"
 import { FileProvider } from "@/context/file"
 import { NotificationProvider } from "@/context/notification"
-import { DialogProvider } from "@anyon/ui/context/dialog"
+import { DialogProvider, useDialog } from "@anyon/ui/context/dialog"
 import { CommandProvider } from "@/context/command"
+import { LanguageProvider, useLanguage } from "@/context/language"
+import { DialogSelectLanguage } from "@/components/dialog-select-language"
 import Layout from "@/pages/layout"
 import Home from "@/pages/home"
 import DirectoryLayout from "@/pages/directory-layout"
@@ -54,6 +56,27 @@ function ServerKey(props: ParentProps) {
   )
 }
 
+function LanguageCheck(props: ParentProps) {
+  const language = useLanguage()
+  const dialog = useDialog()
+
+  onMount(() => {
+    // Wait for persisted storage to be ready
+    const checkLanguage = () => {
+      if (!language.ready()) {
+        setTimeout(checkLanguage, 50)
+        return
+      }
+      if (!language.language()) {
+        dialog.show(() => <DialogSelectLanguage onSelect={(lang) => language.set(lang)} />)
+      }
+    }
+    checkLanguage()
+  })
+
+  return <>{props.children}</>
+}
+
 export function App() {
   return (
     <MetaProvider>
@@ -61,7 +84,9 @@ export function App() {
       <ThemeProvider>
         <ErrorBoundary fallback={(error) => <ErrorPage error={error} />}>
           <DialogProvider>
-            <MarkedProvider>
+            <LanguageProvider>
+              <LanguageCheck>
+                <MarkedProvider>
               <DiffComponentProvider component={Diff}>
                 <CodeComponentProvider component={Code}>
                   <ServerProvider defaultUrl={defaultServerUrl}>
@@ -107,6 +132,8 @@ export function App() {
                 </CodeComponentProvider>
               </DiffComponentProvider>
             </MarkedProvider>
+              </LanguageCheck>
+            </LanguageProvider>
           </DialogProvider>
         </ErrorBoundary>
       </ThemeProvider>
