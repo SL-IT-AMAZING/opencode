@@ -19,8 +19,19 @@ export const en = {
   "gettingStarted.connectAny": "Connect any provider to use models, inc. Claude, GPT, Gemini etc.",
 
   // Home page
+  "home.recentProjects": "Recent projects",
   "home.noProjects": "No recent projects",
   "home.getStarted": "Get started by opening a local project",
+  "home.openProject": "Open project",
+
+  // Settings
+  "settings.title": "Settings",
+  "settings.language": "Language",
+  "settings.theme": "Theme",
+  "settings.appearance": "Appearance",
+  "settings.diffStyle": "Diff style",
+  "settings.diffUnified": "Unified",
+  "settings.diffSplit": "Split",
 
   // Git dialog
   "git.startProject": "Start project",

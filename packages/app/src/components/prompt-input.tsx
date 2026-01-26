@@ -48,6 +48,7 @@ import { SessionContextUsage } from "@/components/session-context-usage"
 import { usePermission } from "@/context/permission"
 import { useGlobalSync } from "@/context/global-sync"
 import { usePlatform } from "@/context/platform"
+import { useLanguage } from "@/context/language"
 import { createOpencodeClient, type Message, type Part } from "@anyon/sdk/v2/client"
 import { Binary } from "@anyon/util/binary"
 import { showToast } from "@anyon/ui/toast"
@@ -109,6 +110,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const globalSync = useGlobalSync()
   const platform = usePlatform()
   const local = useLocal()
+  const language = useLanguage()
   const files = useFile()
   const prompt = usePrompt()
   const layout = useLayout()
@@ -1372,6 +1374,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         messageID,
         parts: requestParts,
         variant,
+        system:
+          language.language() === "ko"
+            ? "IMPORTANT: Please respond in Korean (한국어로 응답해주세요)."
+            : undefined,
       })
       .catch((err) => {
         showToast({

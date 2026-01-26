@@ -11,11 +11,27 @@ export namespace Shell {
     if (!pid || opts?.exited?.()) return
 
     if (process.platform === "win32") {
-      await new Promise<void>((resolve) => {
-        const killer = spawn("taskkill", ["/pid", String(pid), "/f", "/t"], { stdio: "ignore" })
-        killer.once("exit", () => resolve())
-        killer.once("error", () => resolve())
-      })
+      // Try native kill first (faster, no subprocess overhead)
+      try {
+        process.kill(pid, "SIGTERM")
+        await Bun.sleep(SIGKILL_TIMEOUT_MS)
+        if (!opts?.exited?.()) {
+          process.kill(pid, "SIGKILL")
+        }
+        if (opts?.exited?.()) return
+      } catch {
+        // Process may have already exited or native kill not supported
+        if (opts?.exited?.()) return
+      }
+
+      // Fallback to taskkill for tree termination if process still running
+      if (!opts?.exited?.()) {
+        await new Promise<void>((resolve) => {
+          const killer = spawn("taskkill", ["/pid", String(pid), "/f", "/t"], { stdio: "ignore" })
+          killer.once("exit", () => resolve())
+          killer.once("error", () => resolve())
+        })
+      }
       return
     }
 

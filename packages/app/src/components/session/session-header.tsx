@@ -17,6 +17,7 @@ import { Select } from "@anyon/ui/select"
 import { Popover } from "@anyon/ui/popover"
 import { TextField } from "@anyon/ui/text-field"
 import { DialogSelectServer } from "@/components/dialog-select-server"
+import { DialogSettings } from "@/components/dialog-settings"
 import { SessionLspIndicator } from "@/components/session-lsp-indicator"
 import { SessionMcpIndicator } from "@/components/session-mcp-indicator"
 import { SessionCollabStatus } from "@/components/session-collab-status"
@@ -228,6 +229,15 @@ export function SessionHeader() {
                 <Icon name="layout-right-partial" size="small" />
               </Button>
             </TooltipKeybind>
+            <Tooltip class="hidden md:block shrink-0" value="Settings">
+              <Button
+                variant="ghost"
+                class="size-6 p-0"
+                onClick={() => dialog.show(() => <DialogSettings />)}
+              >
+                <Icon name="settings-gear" size="small" />
+              </Button>
+            </Tooltip>
           </div>
           <Show when={shareEnabled() && currentSession()}>
             <Popover

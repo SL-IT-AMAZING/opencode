@@ -53,6 +53,7 @@ import { useTheme } from "@anyon/ui/theme"
 import { DialogSelectProvider } from "@/components/dialog-select-provider"
 import { DialogEditProject } from "@/components/dialog-edit-project"
 import { DialogSelectServer } from "@/components/dialog-select-server"
+import { DialogSettings } from "@/components/dialog-settings"
 import { useCommand, type CommandOption } from "@/context/command"
 import { ConstrainDragXAxis } from "@/utils/solid-dnd"
 import { DialogSelectDirectory } from "@/components/dialog-select-directory"
@@ -955,7 +956,7 @@ export default function Layout(props: ParentProps) {
             </DragDropProvider>
           </div>
         </div>
-        <div class="flex flex-col gap-1.5 self-stretch items-start shrink-0 px-2 py-3">
+        <div class="flex flex-col gap-0 self-stretch items-start shrink-0 px-2 py-3">
           <Switch>
             <Match when={providers.all().length > 0 && !providers.paid().length && expanded()}>
               <div class="rounded-lg bg-background-stronger shadow-xs-border-base">
@@ -1010,6 +1011,17 @@ export default function Layout(props: ParentProps) {
               onClick={chooseProject}
             >
               <Show when={expanded()}>Open project</Show>
+            </Button>
+          </Tooltip>
+          <Tooltip placement="right" value="Settings" inactive={expanded()}>
+            <Button
+              class="flex w-full text-left justify-start text-text-base stroke-[1.5px] rounded-lg px-2"
+              variant="ghost"
+              size="large"
+              icon="settings-gear"
+              onClick={() => dialog.show(() => <DialogSettings />)}
+            >
+              <Show when={expanded()}>Settings</Show>
             </Button>
           </Tooltip>
         </div>

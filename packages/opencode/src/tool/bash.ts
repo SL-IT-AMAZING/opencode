@@ -1,5 +1,6 @@
 import z from "zod"
 import { spawn } from "child_process"
+import { realpathSync } from "fs"
 import { Tool } from "./tool"
 import path from "path"
 import DESCRIPTION from "./bash.txt"
@@ -108,15 +109,32 @@ export const BashTool = Tool.define("bash", async () => {
         if (["cd", "rm", "cp", "mv", "mkdir", "touch", "chmod", "chown"].includes(command[0])) {
           for (const arg of command.slice(1)) {
             if (arg.startsWith("-") || (command[0] === "chmod" && arg.startsWith("+"))) continue
-            const resolved = await $`realpath ${arg}`
-              .cwd(cwd)
-              .quiet()
-              .nothrow()
-              .text()
-              .then((x) => x.trim())
+
+            let resolved: string
+            if (process.platform === "win32") {
+              // Use native path resolution on Windows (avoids subprocess overhead)
+              try {
+                const fullPath = path.isAbsolute(arg) ? arg : path.join(cwd, arg)
+                resolved = realpathSync(fullPath)
+              } catch {
+                // Path doesn't exist yet (e.g., mkdir target), resolve without realpath
+                const fullPath = path.isAbsolute(arg) ? arg : path.join(cwd, arg)
+                resolved = path.resolve(fullPath)
+              }
+            } else {
+              // Unix: use shell realpath for proper symlink resolution
+              resolved = await $`realpath ${arg}`
+                .cwd(cwd)
+                .quiet()
+                .nothrow()
+                .text()
+                .then((x) => x.trim())
+            }
+
             log.info("resolved path", { arg, resolved })
             if (resolved) {
               // Git Bash on Windows returns Unix-style paths like /c/Users/...
+              // This is now only relevant for Unix since Windows uses native resolution
               const normalized =
                 process.platform === "win32" && resolved.match(/^\/[a-z]\//)
                   ? resolved.replace(/^\/([a-z])\//, (_, drive) => `${drive.toUpperCase()}:\\`).replace(/\//g, "\\")
