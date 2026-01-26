@@ -5,6 +5,7 @@ import { IconButton } from "@anyon/ui/icon-button"
 import { TextField } from "@anyon/ui/text-field"
 import { Icon } from "@anyon/ui/icon"
 import { createSignal, Show } from "solid-js"
+import { useTranslation } from "@/i18n"
 
 interface DialogGitInitProps {
   onInit: () => void
@@ -15,6 +16,7 @@ interface DialogGitInitProps {
 
 export function DialogGitInit(props: DialogGitInitProps) {
   const dialog = useDialog()
+  const t = useTranslation()
   const [showClone, setShowClone] = createSignal(false)
   const [url, setUrl] = createSignal("")
 
@@ -40,10 +42,10 @@ export function DialogGitInit(props: DialogGitInitProps) {
         showClone() ? (
           <div class="flex items-center gap-2">
             <IconButton icon="arrow-left" size="normal" onClick={() => setShowClone(false)} />
-            <span>GitHub에서 Clone</span>
+            <span>{t("git.cloneFromGithub")}</span>
           </div>
         ) : (
-          <span class="block text-center">프로젝트 시작</span>
+          <span class="block text-center">{t("git.startProject")}</span>
         )
       }
       action={showClone() ? undefined : <></>}
@@ -55,7 +57,7 @@ export function DialogGitInit(props: DialogGitInitProps) {
           fallback={
             <>
               <TextField
-                label="Repository URL"
+                label={t("git.repoUrl")}
                 placeholder="https://github.com/user/repo"
                 value={url()}
                 onInput={(e: InputEvent & { currentTarget: HTMLInputElement }) => setUrl(e.currentTarget.value)}
@@ -64,16 +66,16 @@ export function DialogGitInit(props: DialogGitInitProps) {
               />
               <div class="flex justify-end gap-2">
                 <Button variant="ghost" size="large" onClick={() => dialog.close()}>
-                  취소
+                  {t("git.cancel")}
                 </Button>
                 <Button variant="primary" size="large" onClick={handleClone} disabled={!url().trim()}>
-                  Clone
+                  {t("git.clone")}
                 </Button>
               </div>
             </>
           }
         >
-          <p class="text-14-regular text-text-subtle">이 폴더에 Git 저장소가 없습니다. 어떻게 시작할까요?</p>
+          <p class="text-14-regular text-text-subtle">{t("git.noRepo")}</p>
           <div class="grid grid-cols-2 gap-3">
             <button
               class="flex flex-col items-center gap-3 p-5 rounded-lg border border-border-base hover:bg-surface-raised-base transition-colors cursor-pointer"
@@ -81,8 +83,8 @@ export function DialogGitInit(props: DialogGitInitProps) {
             >
               <Icon name="folder" size="large" class="text-text-subtle" />
               <div class="text-center">
-                <div class="text-14-medium text-text-base">새로 시작</div>
-                <div class="text-13-regular text-text-subtle">빈 저장소로 시작</div>
+                <div class="text-14-medium text-text-base">{t("git.newStart")}</div>
+                <div class="text-13-regular text-text-subtle">{t("git.emptyRepo")}</div>
               </div>
             </button>
             <button
@@ -91,8 +93,8 @@ export function DialogGitInit(props: DialogGitInitProps) {
             >
               <Icon name="github" size="large" class="text-text-subtle" />
               <div class="text-center">
-                <div class="text-14-medium text-text-base">Clone</div>
-                <div class="text-13-regular text-text-subtle">GitHub에서 복제</div>
+                <div class="text-14-medium text-text-base">{t("git.clone")}</div>
+                <div class="text-13-regular text-text-subtle">{t("git.cloneFromGithub")}</div>
               </div>
             </button>
           </div>

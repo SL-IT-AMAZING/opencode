@@ -230,6 +230,8 @@ export namespace SessionProcessor {
                   break
 
                 case "finish-step":
+                  // Ensure all streaming writes are persisted before step completion
+                  await Session.flushPendingPartWrites()
                   const usage = Session.getUsage({
                     model: input.model,
                     usage: value.usage,
@@ -299,6 +301,8 @@ export namespace SessionProcessor {
                   break
 
                 case "text-end":
+                  // Flush any pending streaming writes before finalizing
+                  await Session.flushPendingPartWrites()
                   if (currentText) {
                     currentText.text = currentText.text.trimEnd()
                     const textOutput = await Plugin.trigger(

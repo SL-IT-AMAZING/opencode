@@ -379,16 +379,40 @@ export namespace Session {
     }),
   ])
 
+  // Track pending part writes for flush at boundaries
+  const pendingPartWrites = new Map<string, Promise<void>>()
+
   export const updatePart = fn(UpdatePartInput, async (input) => {
     const part = "delta" in input ? input.part : input
     const delta = "delta" in input ? input.delta : undefined
-    await Storage.write(["part", part.messageID, part.id], part)
+    const isStreamingDelta = delta !== undefined
+
+    if (isStreamingDelta) {
+      // Fire-and-forget for streaming deltas - don't block on disk I/O
+      // Subscribers get full data from event, not from Storage
+      const key = `${part.messageID}:${part.id}`
+      const writePromise = Storage.write(["part", part.messageID, part.id], part).catch((e) =>
+        log.error("Part write failed", { key, error: e }),
+      )
+      pendingPartWrites.set(key, writePromise)
+    } else {
+      // Await writes for non-streaming updates (step-start, step-finish, tool results, etc.)
+      await Storage.write(["part", part.messageID, part.id], part)
+    }
+
     Bus.publish(MessageV2.Event.PartUpdated, {
       part,
       delta,
     })
     return part
   })
+
+  /** Flush all pending part writes - call at step/message boundaries */
+  export async function flushPendingPartWrites() {
+    const writes = Array.from(pendingPartWrites.values())
+    pendingPartWrites.clear()
+    await Promise.all(writes)
+  }
 
   export const getUsage = fn(
     z.object({

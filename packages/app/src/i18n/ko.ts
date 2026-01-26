@@ -21,8 +21,19 @@ export const ko: Record<TranslationKey, string> = {
   "gettingStarted.connectAny": "Claude, GPT, Gemini 등 다양한 모델을 사용하려면 프로바이더를 연결하세요.",
 
   // Home page
+  "home.recentProjects": "최근 프로젝트",
   "home.noProjects": "최근 프로젝트 없음",
   "home.getStarted": "로컬 프로젝트를 열어 시작하세요",
+  "home.openProject": "프로젝트 열기",
+
+  // Settings
+  "settings.title": "설정",
+  "settings.language": "언어",
+  "settings.theme": "테마",
+  "settings.appearance": "모양",
+  "settings.diffStyle": "Diff 스타일",
+  "settings.diffUnified": "통합",
+  "settings.diffSplit": "분할",
 
   // Git dialog
   "git.startProject": "프로젝트 시작",

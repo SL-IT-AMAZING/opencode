@@ -192,7 +192,8 @@ export namespace Storage {
     const target = path.join(dir, ...key) + ".json"
     return withErrorHandling(async () => {
       using _ = await Lock.write(target)
-      await Bun.write(target, JSON.stringify(content, null, 2))
+      // Compact JSON for better Windows NTFS performance (no pretty-printing)
+      await Bun.write(target, JSON.stringify(content))
     })
   }
 
