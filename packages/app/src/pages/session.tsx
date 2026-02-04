@@ -1,24 +1,15 @@
-import { For, onCleanup, onMount, Show, Match, Switch, createMemo, createEffect, on, createSignal } from "solid-js"
+import { For, onCleanup, Show, createMemo, createEffect, on, createSignal } from "solid-js"
 import { createMediaQuery } from "@solid-primitives/media"
-import { createResizeObserver } from "@solid-primitives/resize-observer"
-import { Dynamic } from "solid-js/web"
 import { useLocal } from "@/context/local"
-import { selectionFromLines, useFile, type SelectedLineRange } from "@/context/file"
+import { useFile } from "@/context/file"
 import { createStore } from "solid-js/store"
-import { PromptInput } from "@/components/prompt-input"
-import { SessionContextUsage } from "@/components/session-context-usage"
 import { IconButton } from "@anyon/ui/icon-button"
 import { Button } from "@anyon/ui/button"
 import { Icon } from "@anyon/ui/icon"
-import { Tooltip, TooltipKeybind } from "@anyon/ui/tooltip"
-import { DiffChanges } from "@anyon/ui/diff-changes"
+import { TooltipKeybind } from "@anyon/ui/tooltip"
 import { ResizeHandle } from "@anyon/ui/resize-handle"
 import { Tabs } from "@anyon/ui/tabs"
-import { useCodeComponent } from "@anyon/ui/context/code"
-import { SessionTurn } from "@anyon/ui/session-turn"
-import { createAutoScroll } from "@anyon/ui/hooks"
 import { SessionReview } from "@anyon/ui/session-review"
-import { SessionMessageRail } from "@anyon/ui/session-message-rail"
 
 import { DragDropProvider, DragDropSensors, DragOverlay, SortableProvider, closestCenter } from "@thisbeyond/solid-dnd"
 import type { DragEvent } from "@thisbeyond/solid-dnd"
@@ -30,9 +21,6 @@ import { QuickActionBar } from "@/components/quick-action-bar"
 import { FileExplorerPanel } from "@/components/file-explorer-panel"
 import { CollabTimeline } from "@/components/collab-timeline"
 import { CollabTeam } from "@/components/collab-team"
-import { FileViewer } from "@/components/file-viewer"
-import { TextSelectionPopup } from "@/components/text-selection-popup"
-import { checksum, base64Encode, base64Decode } from "@anyon/util/encode"
 import { useDialog } from "@anyon/ui/context/dialog"
 import { DialogSelectFile } from "@/components/dialog-select-file"
 import { DialogSelectModel } from "@/components/dialog-select-model"
@@ -49,18 +37,10 @@ import { extractPromptFromParts } from "@/utils/prompt"
 import { ConstrainDragYAxis, getDraggableId } from "@/utils/solid-dnd"
 import { usePermission } from "@/context/permission"
 import { showToast } from "@anyon/ui/toast"
-import {
-  SessionContextTab,
-  SortableTab,
-  SortableSessionTab,
-  FileVisual,
-  SortableTerminalTab,
-  NewSessionView,
-} from "@/components/session"
-import { usePlatform } from "@/context/platform"
+import { SortableTerminalTab } from "@/components/session"
 import { useServer } from "@/context/server"
-import { same } from "@/utils/same"
-import { PreviewPane } from "@/components/preview/preview-pane"
+import { SplitContainer } from "@/components/split-pane/split-container"
+import { collectPaneIds } from "@/components/split-pane/utils"
 
 type DiffStyle = "unified" | "split"
 
@@ -159,9 +139,7 @@ export default function Page() {
   const sync = useSync()
   const terminal = useTerminal()
   const dialog = useDialog()
-  const codeComponent = useCodeComponent()
   const command = useCommand()
-  const platform = usePlatform()
   const server = useServer()
   const params = useParams()
   const navigate = useNavigate()
@@ -169,179 +147,138 @@ export default function Page() {
   const prompt = usePrompt()
   const permission = usePermission()
   const sessionKey = createMemo(() => `${params.dir}${params.id ? "/" + params.id : ""}`)
-  const tabs = createMemo(() => layout.tabs(sessionKey()))
-  const view = createMemo(() => layout.view(sessionKey()))
   const sessions = createMemo(() => layout.sessions(params.dir ?? ""))
   const projectTerminal = createMemo(() => {
     const dir = sync.directory
     return dir ? layout.terminalFor(dir) : layout.terminal
   })
 
-  // Track opened preview URLs to avoid duplicates
-  const openedPreviewUrls = new Set<string>()
-
-  // Derive current session from active tab (for multi-tab support)
-  const activeSessionId = createMemo(() => {
-    const active = tabs().active()
-    if (active?.startsWith("session-")) {
-      return active.replace("session-", "")
-    }
-    // Fall back to URL param when no session tab is active
-    return params.id
-  })
-
-  // Track the last active session tab (for returning after file operations)
-  const [lastActiveSession, setLastActiveSession] = createSignal<string | undefined>()
-
   const isDesktop = createMediaQuery("(min-width: 768px)")
 
+  // Split layout state
+  const splitLayout = createMemo(() => layout.split(sessionKey()))
+  const [focusedSessionId, setFocusedSessionId] = createSignal<string | undefined>()
+  const focusedActiveSessionId = createMemo(() => focusedSessionId() ?? params.id)
+  const activeSessionId = focusedActiveSessionId
+
+  // Right panel always shows on desktop, so showTabs reflects that for styling purposes
+  const showTabs = createMemo(() => isDesktop())
+
+  const idle = { type: "idle" as const }
+
+  const [store, setStore] = createStore({
+    activeDraggable: undefined as string | undefined,
+    activeTerminalDraggable: undefined as string | undefined,
+    expanded: {} as Record<string, boolean>,
+    messageId: undefined as string | undefined,
+    mobileTab: "session" as "session" | "review",
+    newSessionWorktree: "main",
+  })
+
+  // Parent-level memos derived from focusedActiveSessionId (needed by commands)
+  const newSessionWorktree = createMemo(() => {
+    if (store.newSessionWorktree === "create") return "create"
+    const project = sync.project
+    if (project && sync.data.path.directory !== project.worktree) return sync.data.path.directory
+    return "main"
+  })
+  const info = createMemo(() => (focusedActiveSessionId() ? sync.session.get(focusedActiveSessionId()!) : undefined))
+  const messages = createMemo(() => (focusedActiveSessionId() ? (sync.data.message[focusedActiveSessionId()!] ?? []) : []))
+  const emptyUserMessages: UserMessage[] = []
+  const userMessages = createMemo(() => messages().filter((m) => m.role === "user") as UserMessage[], emptyUserMessages)
+  const revertMessageID = createMemo(() => info()?.revert?.messageID)
+  const visibleUserMessages = createMemo(() => {
+    const revert = revertMessageID()
+    if (!revert) return userMessages()
+    return userMessages().filter((m) => m.id < revert)
+  }, emptyUserMessages)
+  const lastUserMessage = createMemo(() => visibleUserMessages().at(-1))
+  const status = createMemo(() => sync.data.session_status[focusedActiveSessionId() ?? ""] ?? idle)
+  const diffs = createMemo(() => (focusedActiveSessionId() ? (sync.data.session_diff[focusedActiveSessionId()!] ?? []) : []))
+  const activeMessage = createMemo(() => {
+    if (!store.messageId) return lastUserMessage()
+    const found = visibleUserMessages()?.find((m) => m.id === store.messageId)
+    return found ?? lastUserMessage()
+  })
+
+  // Simplified navigateMessageByOffset - just updates messageId, pane handles scrolling
+  function navigateMessageByOffset(offset: number) {
+    const msgs = visibleUserMessages()
+    if (msgs.length === 0) return
+
+    const current = activeMessage()
+    const currentIndex = current ? msgs.findIndex((m) => m.id === current.id) : -1
+
+    let targetIndex: number
+    if (currentIndex === -1) {
+      targetIndex = offset > 0 ? 0 : msgs.length - 1
+    } else {
+      targetIndex = currentIndex + offset
+    }
+
+    if (targetIndex < 0 || targetIndex >= msgs.length) return
+
+    setStore("messageId", msgs[targetIndex].id)
+  }
+
+  const setActiveMessage = (message: UserMessage | undefined) => {
+    setStore("messageId", message?.id)
+  }
+
+  // Tab helpers for right panel file explorer
   function normalizeTab(tab: string) {
     if (!tab.startsWith("file://")) return tab
     return file.tab(tab)
   }
 
-  function normalizeTabs(list: string[]) {
-    const seen = new Set<string>()
-    const next: string[] = []
-    for (const item of list) {
-      const value = normalizeTab(item)
-      if (seen.has(value)) continue
-      seen.add(value)
-      next.push(value)
-    }
-    return next
-  }
-
+  // openTab delegates to focused pane's tab API
   const openTab = (value: string) => {
     const next = normalizeTab(value)
-    // Track last session before switching to a file tab
-    if (next.startsWith("file://")) {
-      const currentActive = tabs().active()
-      if (currentActive?.startsWith("session-")) {
-        setLastActiveSession(currentActive)
-      }
-    }
-    tabs().open(next)
+    const focusedId = splitLayout().focusedPane() ?? collectPaneIds(splitLayout().root())[0]
+    if (!focusedId) return
+    splitLayout().pane(focusedId).open(next)
     const path = file.pathFromTab(next)
     if (path) file.load(path)
   }
 
-  // Intercept localhost link clicks to open in preview tab instead of external browser
-  onMount(() => {
-    const handler = (e: MouseEvent) => {
-      // Allow Ctrl/Cmd+Click to open externally
-      if (e.ctrlKey || e.metaKey) return
-
-      const target = e.target as HTMLElement
-      const anchor = target.closest("a")
-      if (!anchor) return
-
-      const href = anchor.getAttribute("href")
-      if (!href) return
-
-      // Check if HTTP/HTTPS URL - open in preview tab
-      try {
-        const url = new URL(href)
-        const isHttpUrl = url.protocol === "http:" || url.protocol === "https:"
-
-        if (isHttpUrl) {
-          e.preventDefault()
-          e.stopPropagation()
-          const previewTabValue = file.previewTab(href)
-          openTab(previewTabValue)
-        }
-      } catch {
-        // Invalid URL, ignore
-      }
-    }
-
-    document.addEventListener("click", handler, true)
-    onCleanup(() => document.removeEventListener("click", handler, true))
-  })
-
-  // Detect localhost URLs in AI tool output (e.g., when AI runs `bun dev`)
-  createEffect(() => {
-    const sessionId = activeSessionId()
-    if (!sessionId) return
-
-    const messages = sync.data.message[sessionId] ?? []
-
-    // Strip ANSI escape codes (colors, formatting) that break regex matching
-    const stripAnsi = (str: string) => str.replace(/\x1b\[[0-9;]*m/g, "")
-
-    for (const msg of messages) {
-      const parts = sync.data.part[msg.id] ?? []
-
-      // Check tool parts for localhost URLs in completed state
-      for (const part of parts) {
-        if (part.type !== "tool") continue
-        if (part.state.status !== "completed") continue
-
-        // Strip ANSI codes before matching - dev server output contains color codes
-        const output = stripAnsi(part.state.output ?? "")
-
-        const serverReadyPatterns = [
-          /Local:\s*(https?:\/\/(?:localhost|127\.0\.0\.1):\d+)/i,
-          /listening.*?(https?:\/\/(?:localhost|127\.0\.0\.1):\d+)/i,
-          /started.*?(https?:\/\/(?:localhost|127\.0\.0\.1):\d+)/i,
-          /running.*?(https?:\/\/(?:localhost|127\.0\.0\.1):\d+)/i,
-        ]
-
-        for (const pattern of serverReadyPatterns) {
-          const match = output.match(pattern)
-          if (match && match[1] && !openedPreviewUrls.has(match[1])) {
-            openedPreviewUrls.add(match[1])
-            tabs().open(`preview://url:${match[1]}`)
-            break
-          }
-        }
-      }
-    }
-  })
-
-  createEffect(() => {
-    const active = tabs().active()
-    if (!active) return
-
-    const path = file.pathFromTab(active)
-    if (path) file.load(path)
-  })
-
-  createEffect(() => {
-    const current = tabs().all()
-    if (current.length === 0) return
-
-    const next = normalizeTabs(current)
-    if (same(current, next)) return
-
-    tabs().setAll(next)
-
-    const active = tabs().active()
-    if (!active) return
-    if (!active.startsWith("file://")) return
-
-    const normalized = normalizeTab(active)
-    if (active === normalized) return
-    tabs().setActive(normalized)
-  })
+  // Agent/model tracking from focusedActiveSessionId
+  createEffect(
+    on(
+      () => lastUserMessage()?.id,
+      () => {
+        const msg = lastUserMessage()
+        if (!msg) return
+        if (msg.agent) local.agent.set(msg.agent)
+        if (msg.model) local.model.set(msg.model)
+      },
+    ),
+  )
 
   // Auto-add session to open tabs when navigating via sidebar
-  createEffect(() => {
-    const sessionId = params.id
-    if (!sessionId) return
-    // Only add and set active if session wasn't already open
-    const sessionTab = `session-${sessionId}`
-    const wasOpen = tabs().all().includes(sessionTab)
-    if (!wasOpen) {
-      // Add to unified tabs list (appends to end - Chrome style)
-      tabs().open(sessionTab)
-      // Also track in sessions for sidebar
-      sessions().open(sessionId)
-    }
-  })
+  // Uses on() to only trigger when params.id changes, not when layout changes
+  // (otherwise closing a tab re-triggers this and re-adds the tab)
+  createEffect(
+    on(
+      () => params.id,
+      (sessionId) => {
+        if (!sessionId) return
+        // Don't add tabs for sessions that no longer exist (archived/deleted)
+        if (!sync.session.get(sessionId)) return
+        const sessionTab = `session-${sessionId}`
+        // Check if any pane already has this session open
+        const allPaneIds = collectPaneIds(splitLayout().root())
+        const alreadyOpen = allPaneIds.some((id) => splitLayout().pane(id).tabs().includes(sessionTab))
+        if (alreadyOpen) return
+        // Only add to the first pane if no pane has it
+        const targetId = allPaneIds[0]
+        if (!targetId) return
+        splitLayout().pane(targetId).open(sessionTab)
+        sessions().open(sessionId)
+      },
+    ),
+  )
 
   // Auto git init dialog when opening a folder without .git
-  // Use localStorage to persist "already asked" state across page reloads
   const GIT_INIT_ASKED_KEY = "git-init-asked"
   const getAskedFolders = (): string[] => {
     try {
@@ -367,7 +304,6 @@ export default function Page() {
 
     // Windows: Allow any drive letter path that's not a system folder
     if (/^[a-z]:\//.test(normalized)) {
-      // Exclude Windows system folders where projects shouldn't be created
       const systemPaths = [
         "/windows/",
         "/program files/",
@@ -383,27 +319,20 @@ export default function Page() {
   }
 
   createEffect(() => {
-    // Wait for server to be ready before checking project status
     if (!server.ready()) return
 
-    // Use sync.directory (from URL) instead of sync.project?.worktree
-    // because new folders aren't registered as projects yet
     const directory = sync.directory
     if (!directory) return
     if (!isUserFolder(directory)) return
 
-    // Check localStorage to see if we already asked about this folder
     if (getAskedFolders().includes(directory)) return
 
-    // Delay to wait for terminal WebSocket connection
     setTimeout(() => {
       sdk.client.project
         .current()
         .then((res) => {
-          // Backend detects git repos and sets vcs: "git"
           const isGitRepo = res.data?.vcs === "git"
           if (!isGitRepo) {
-            // Show dialog to choose git init or clone
             dialog.show(() => (
               <DialogGitInit
                 onInit={() => {
@@ -413,7 +342,6 @@ export default function Page() {
                   terminal.writeWhenReady(`\x15git clone ${url} . && npm install\n`)
                 }}
                 onShowGitHubConnect={() => {
-                  // Show GitHub connect dialog to create remote repo
                   dialog.show(() => (
                     <DialogGitHubConnect
                       onConnect={(repoUrl) => {
@@ -430,104 +358,12 @@ export default function Page() {
               />
             ))
           }
-          // Mark this folder as asked (regardless of choice) to prevent repeated popups
           markAsked(directory)
         })
         .catch((err) => {
-          // Don't mark as asked on errors - allow retry when server is ready
           console.error("Failed to check project status for git init popup:", err)
         })
     }, 100)
-  })
-
-  const info = createMemo(() => (activeSessionId() ? sync.session.get(activeSessionId()!) : undefined))
-  const getSessionTitle = (sessionId: string) => {
-    const session = sync.session.get(sessionId)
-    return session?.title || "New Session"
-  }
-  const revertMessageID = createMemo(() => info()?.revert?.messageID)
-  const messages = createMemo(() => (activeSessionId() ? (sync.data.message[activeSessionId()!] ?? []) : []))
-  const messagesReady = createMemo(() => {
-    const id = activeSessionId()
-    if (!id) return true
-    return sync.data.message[id] !== undefined
-  })
-  const emptyUserMessages: UserMessage[] = []
-  const userMessages = createMemo(() => messages().filter((m) => m.role === "user") as UserMessage[], emptyUserMessages)
-  const visibleUserMessages = createMemo(() => {
-    const revert = revertMessageID()
-    if (!revert) return userMessages()
-    return userMessages().filter((m) => m.id < revert)
-  }, emptyUserMessages)
-  const lastUserMessage = createMemo(() => visibleUserMessages().at(-1))
-
-  createEffect(
-    on(
-      () => lastUserMessage()?.id,
-      () => {
-        const msg = lastUserMessage()
-        if (!msg) return
-        if (msg.agent) local.agent.set(msg.agent)
-        if (msg.model) local.model.set(msg.model)
-      },
-    ),
-  )
-
-  const [store, setStore] = createStore({
-    activeDraggable: undefined as string | undefined,
-    activeTerminalDraggable: undefined as string | undefined,
-    expanded: {} as Record<string, boolean>,
-    messageId: undefined as string | undefined,
-    mobileTab: "session" as "session" | "review",
-    newSessionWorktree: "main",
-    promptHeight: 0,
-  })
-
-  const newSessionWorktree = createMemo(() => {
-    if (store.newSessionWorktree === "create") return "create"
-    const project = sync.project
-    if (project && sync.data.path.directory !== project.worktree) return sync.data.path.directory
-    return "main"
-  })
-
-  const activeMessage = createMemo(() => {
-    if (!store.messageId) return lastUserMessage()
-    const found = visibleUserMessages()?.find((m) => m.id === store.messageId)
-    return found ?? lastUserMessage()
-  })
-  const setActiveMessage = (message: UserMessage | undefined) => {
-    setStore("messageId", message?.id)
-  }
-
-  function navigateMessageByOffset(offset: number) {
-    const msgs = visibleUserMessages()
-    if (msgs.length === 0) return
-
-    const current = activeMessage()
-    const currentIndex = current ? msgs.findIndex((m) => m.id === current.id) : -1
-
-    let targetIndex: number
-    if (currentIndex === -1) {
-      targetIndex = offset > 0 ? 0 : msgs.length - 1
-    } else {
-      targetIndex = currentIndex + offset
-    }
-
-    if (targetIndex < 0 || targetIndex >= msgs.length) return
-
-    scrollToMessage(msgs[targetIndex], "auto")
-  }
-
-  const diffs = createMemo(() => (activeSessionId() ? (sync.data.session_diff[activeSessionId()!] ?? []) : []))
-
-  const idle = { type: "idle" as const }
-  let inputRef!: HTMLDivElement
-  let promptDock: HTMLDivElement | undefined
-  let scroller: HTMLDivElement | undefined
-
-  createEffect(() => {
-    if (!activeSessionId()) return
-    sync.session.sync(activeSessionId()!)
   })
 
   // Create terminal on project entry (regardless of panel state)
@@ -548,37 +384,6 @@ export default function Page() {
         }, 350)
       })
     }
-  })
-
-  createEffect(
-    on(
-      () => visibleUserMessages().at(-1)?.id,
-      (lastId, prevLastId) => {
-        if (lastId && prevLastId && lastId > prevLastId) {
-          setStore("messageId", undefined)
-        }
-      },
-      { defer: true },
-    ),
-  )
-
-  const status = createMemo(() => sync.data.session_status[activeSessionId() ?? ""] ?? idle)
-
-  createEffect(
-    on(
-      () => activeSessionId(),
-      () => {
-        setStore("messageId", undefined)
-        setStore("expanded", {})
-      },
-      { defer: true },
-    ),
-  )
-
-  createEffect(() => {
-    const id = lastUserMessage()?.id
-    if (!id) return
-    setStore("expanded", id, status().type !== "idle")
   })
 
   command.register(() => [
@@ -741,17 +546,14 @@ export default function Page() {
           await sdk.client.session.abort({ sessionID }).catch(() => {})
         }
         const revert = info()?.revert?.messageID
-        // Find the last user message that's not already reverted
         const message = userMessages().findLast((x) => !revert || x.id < revert)
         if (!message) return
         await sdk.client.session.revert({ sessionID, messageID: message.id })
-        // Restore the prompt from the reverted message
         const parts = sync.data.part[message.id]
         if (parts) {
           const restored = extractPromptFromParts(parts, { directory: sdk.directory })
           prompt.set(restored)
         }
-        // Navigate to the message before the reverted one (which will be the new last visible message)
         const priorMessage = userMessages().findLast((x) => x.id < message.id)
         setActiveMessage(priorMessage)
       },
@@ -770,17 +572,13 @@ export default function Page() {
         if (!revertMessageID) return
         const nextMessage = userMessages().find((x) => x.id > revertMessageID)
         if (!nextMessage) {
-          // Full unrevert - restore all messages and navigate to last
           await sdk.client.session.unrevert({ sessionID })
           prompt.reset()
-          // Navigate to the last message (the one that was at the revert point)
           const lastMsg = userMessages().findLast((x) => x.id >= revertMessageID)
           setActiveMessage(lastMsg)
           return
         }
-        // Partial redo - move forward to next message
         await sdk.client.session.revert({ sessionID, messageID: nextMessage.id })
-        // Navigate to the message before the new revert point
         const priorMsg = userMessages().findLast((x) => x.id < nextMessage.id)
         setActiveMessage(priorMsg)
       },
@@ -810,50 +608,20 @@ export default function Page() {
         })
       },
     },
+    {
+      id: "pane.split",
+      title: "Split pane",
+      description: "Split the current pane side by side",
+      category: "View",
+      keybind: "mod+\\",
+      disabled: !isDesktop(),
+      onSelect: () => {
+        const focusedId = splitLayout().focusedPane() ?? collectPaneIds(splitLayout().root())[0]
+        if (!focusedId) return
+        splitLayout().splitPane(focusedId)
+      },
+    },
   ])
-
-  const handleKeyDown = (event: KeyboardEvent) => {
-    const activeElement = document.activeElement as HTMLElement | undefined
-    if (activeElement) {
-      const isProtected = activeElement.closest("[data-prevent-autofocus]")
-      const isInput = /^(INPUT|TEXTAREA|SELECT)$/.test(activeElement.tagName) || activeElement.isContentEditable
-      if (isProtected || isInput) return
-    }
-    if (dialog.active) return
-
-    if (activeElement === inputRef) {
-      if (event.key === "Escape") inputRef?.blur()
-      return
-    }
-
-    if (event.key.length === 1 && event.key !== "Unidentified" && !(event.ctrlKey || event.metaKey)) {
-      inputRef?.focus()
-    }
-  }
-
-  const handleDragStart = (event: unknown) => {
-    const id = getDraggableId(event)
-    if (!id) return
-    setStore("activeDraggable", id)
-  }
-
-  const handleDragOver = (_event: DragEvent) => {
-    // SortableProvider handles visual reordering during drag
-    // Do not modify actual tab order here - it causes index conflicts
-  }
-
-  const handleDragEnd = (event: DragEvent) => {
-    const { draggable, droppable } = event
-    if (draggable && droppable) {
-      const currentTabs = tabs().all()
-      const fromIndex = currentTabs.indexOf(draggable.id.toString())
-      const toIndex = currentTabs.indexOf(droppable.id.toString())
-      if (fromIndex !== -1 && toIndex !== -1 && fromIndex !== toIndex) {
-        tabs().move(draggable.id.toString(), toIndex)
-      }
-    }
-    setStore("activeDraggable", undefined)
-  }
 
   const handleTerminalDragStart = (event: unknown) => {
     const id = getDraggableId(event)
@@ -877,224 +645,8 @@ export default function Page() {
     setStore("activeTerminalDraggable", undefined)
   }
 
-  const contextOpen = createMemo(() => tabs().active() === "context" || tabs().all().includes("context"))
-  const contextActive = createMemo(() => tabs().active() === "context")
-
-  const openedTabs = createMemo(() =>
-    tabs()
-      .all()
-      .filter((tab) => tab !== "context"),
-  )
-
-  // All tabs unified: sessions + files + previews in single ordered list (Chrome-style)
-  // New tabs (sessions, files, or previews) appear at the end (right side)
-  const allTabs = createMemo(() =>
-    tabs()
-      .all()
-      .filter((tab) => tab.startsWith("session-") || tab.startsWith("file://") || tab.startsWith("preview://")),
-  )
-
-  // Helper: check if there are any file tabs open
-  const hasFileTabs = createMemo(() => allTabs().some((tab) => tab.startsWith("file://")))
-
-  // Active file tab for file viewer
-  const activeFileTab = createMemo(() => {
-    const active = tabs().active()
-    if (!active?.startsWith("file://")) return null
-    return file.pathFromTab(active)
-  })
-
-  // Active preview tab for preview pane
-  const activePreviewTab = createMemo(() => {
-    const active = tabs().active()
-    if (!active?.startsWith("preview://")) return null
-    return file.previewFromTab(active)
-  })
-
-  // Switch to session (deactivate file tabs)
-  const switchToSession = () => {
-    tabs().setActive(undefined)
-  }
-
-  // Close a specific tab
-  const closeTab = (tab: string) => {
-    tabs().close(tab)
-  }
-
-  // Handle ask about selection from file viewer
-  const handleAskAboutSelection = (selection: { text: string; startLine: number; endLine: number }) => {
-    const path = activeFileTab()
-    if (!path) return
-
-    // Add selected code to prompt context
-    prompt.context.add({
-      type: "file",
-      path,
-      selection: {
-        startLine: selection.startLine,
-        endLine: selection.endLine,
-        startChar: 0,
-        endChar: 0,
-      },
-    })
-
-    // Switch to the last active session (or first session if none)
-    const targetSession = lastActiveSession()
-    if (targetSession) {
-      tabs().setActive(targetSession)
-    } else {
-      // Fall back to first open session
-      const firstSession = sessions().list()[0]
-      if (firstSession) {
-        tabs().setActive(`session-${firstSession}`)
-      } else {
-        tabs().setActive(undefined)
-      }
-    }
-
-    // Focus prompt input
-    inputRef?.focus()
-  }
-
-  // Close file viewer and go back to session
-  const closeFileViewer = () => {
-    const active = tabs().active()
-    if (active?.startsWith("file://")) {
-      tabs().close(active)
-    }
-  }
-
-  const reviewTab = createMemo(() => diffs().length > 0 || tabs().active() === "review")
-  const mobileReview = createMemo(() => !isDesktop() && diffs().length > 0 && store.mobileTab === "review")
-
-  // Right panel always shows on desktop, so showTabs reflects that for styling purposes
-  const showTabs = createMemo(() => isDesktop())
-
-  const activeTab = createMemo(() => {
-    const active = tabs().active()
-    if (active) return active
-    if (reviewTab()) return "review"
-
-    const first = openedTabs()[0]
-    if (first) return first
-    if (contextOpen()) return "context"
-    return "review"
-  })
-
-  createEffect(() => {
-    if (!layout.ready()) return
-    if (tabs().active()) return
-    if (diffs().length === 0 && openedTabs().length === 0 && !contextOpen()) return
-    tabs().setActive(activeTab())
-  })
-
-  const isWorking = createMemo(() => status().type !== "idle")
-  const autoScroll = createAutoScroll({
-    working: isWorking,
-  })
-
-  let scrollSpyFrame: number | undefined
-  let scrollSpyTarget: HTMLDivElement | undefined
-
-  const anchor = (id: string) => `message-${id}`
-
-  const setScrollRef = (el: HTMLDivElement | undefined) => {
-    scroller = el
-    autoScroll.scrollRef(el)
-  }
-
-  createResizeObserver(
-    () => promptDock,
-    ({ height }) => {
-      const next = Math.ceil(height)
-
-      if (next === store.promptHeight) return
-
-      const el = scroller
-      const stick = el ? el.scrollHeight - el.clientHeight - el.scrollTop < 10 : false
-
-      setStore("promptHeight", next)
-
-      if (stick && el) {
-        requestAnimationFrame(() => {
-          el.scrollTo({ top: el.scrollHeight, behavior: "auto" })
-        })
-      }
-    },
-  )
-
-  const updateHash = (id: string) => {
-    window.history.replaceState(null, "", `#${anchor(id)}`)
-  }
-
-  const scrollToMessage = (message: UserMessage, behavior: ScrollBehavior = "smooth") => {
-    setActiveMessage(message)
-
-    const el = document.getElementById(anchor(message.id))
-    if (el && scroller) {
-      scroller.scrollTo({ top: el.offsetTop, behavior })
-    }
-    updateHash(message.id)
-  }
-
-  const getActiveMessageId = (container: HTMLDivElement) => {
-    const cutoff = container.scrollTop + 100
-    const nodes = container.querySelectorAll<HTMLElement>("[data-message-id]")
-    let id: string | undefined
-
-    for (const node of nodes) {
-      const next = node.dataset.messageId
-      if (!next) continue
-      if (node.offsetTop > cutoff) break
-      id = next
-    }
-
-    return id
-  }
-
-  const scheduleScrollSpy = (container: HTMLDivElement) => {
-    scrollSpyTarget = container
-    if (scrollSpyFrame !== undefined) return
-
-    scrollSpyFrame = requestAnimationFrame(() => {
-      scrollSpyFrame = undefined
-
-      const target = scrollSpyTarget
-      scrollSpyTarget = undefined
-      if (!target) return
-
-      const id = getActiveMessageId(target)
-      if (!id) return
-      if (id === store.messageId) return
-
-      setStore("messageId", id)
-    })
-  }
-
-  createEffect(() => {
-    const sessionID = activeSessionId()
-    const ready = messagesReady()
-    if (!sessionID || !ready) return
-
-    requestAnimationFrame(() => {
-      const id = window.location.hash.slice(1)
-      const hashTarget = id ? document.getElementById(id) : undefined
-      if (hashTarget) {
-        hashTarget.scrollIntoView({ behavior: "auto", block: "start" })
-        return
-      }
-      autoScroll.forceScrollToBottom()
-    })
-  })
-
-  createEffect(() => {
-    document.addEventListener("keydown", handleKeyDown)
-  })
-
-  onCleanup(() => {
-    document.removeEventListener("keydown", handleKeyDown)
-    if (scrollSpyFrame !== undefined) cancelAnimationFrame(scrollSpyFrame)
-  })
+  // Track opened preview URLs for terminal localhost detection
+  const openedPreviewUrls = new Set<string>()
 
   return (
     <div class="relative bg-background-base size-full overflow-hidden flex flex-col">
@@ -1131,7 +683,6 @@ export default function Page() {
           }}
           style={{
             "min-width": isDesktop() ? "400px" : undefined,
-            "--prompt-height": store.promptHeight ? `${store.promptHeight}px` : undefined,
           }}
         >
           {/* Right panel toggle - shows when panel is closed */}
@@ -1153,305 +704,25 @@ export default function Page() {
             </div>
           </Show>
 
-          {/* Session and file tabs bar - Chrome style */}
-          <Show when={allTabs().length > 0}>
-            <DragDropProvider
-              onDragStart={handleDragStart}
-              onDragEnd={handleDragEnd}
-              onDragOver={handleDragOver}
-              collisionDetector={closestCenter}
-            >
-              <DragDropSensors />
-              <ConstrainDragYAxis />
-              <Tabs value={tabs().active() ?? "session"} onChange={openTab} class="shrink-0 !h-auto">
-                <Tabs.List
-                  classList={{
-                    "h-12 shrink-0 bg-background-base overflow-hidden": true,
-                    "pr-10": !layout.rightPanel.opened(),
-                  }}
-                >
-                  {/* Unified tabs: sessions + files mixed together */}
-                  <SortableProvider ids={allTabs()}>
-                    <For each={allTabs()}>
-                      {(tab) => (
-                        <Show
-                          when={tab.startsWith("session-")}
-                          fallback={<SortableTab tab={tab} onTabClose={closeTab} onTabClick={openTab} />}
-                        >
-                          <SortableSessionTab
-                            sessionId={tab.replace("session-", "")}
-                            title={getSessionTitle(tab.replace("session-", ""))}
-                            onClose={(id) => {
-                              const sessionTab = `session-${id}`
-                              // Close from unified tabs list (handles active tab switch)
-                              tabs().close(sessionTab)
-                              // Also remove from sessions tracking
-                              sessions().close(id)
-                            }}
-                            onClick={(id) => {
-                              tabs().setActive(`session-${id}`)
-                              setLastActiveSession(`session-${id}`)
-                            }}
-                          />
-                        </Show>
-                      )}
-                    </For>
-                  </SortableProvider>
-
-                  {/* Context tab - shown when context is open */}
-                  <Show when={contextOpen()}>
-                    <div class="h-full flex-shrink min-w-0">
-                      <div class="relative h-full">
-                        <Tabs.Trigger
-                          value="context"
-                          closeButton={
-                            <IconButton
-                              icon="close"
-                              variant="ghost"
-                              onClick={(e: MouseEvent) => {
-                                e.stopPropagation()
-                                tabs().close("context")
-                              }}
-                            />
-                          }
-                        >
-                          <Icon name="brain" />
-                          <span class="ml-1">Context</span>
-                        </Tabs.Trigger>
-                      </div>
-                    </div>
-                  </Show>
-
-                  {/* New session button */}
-                  <Tooltip value="New session">
-                    <IconButton
-                      icon="plus"
-                      variant="ghost"
-                      class="ml-1 shrink-0"
-                      onClick={async () => {
-                        // Create actual session via API
-                        const newSession = await sdk.client.session.create().then((x) => x.data)
-                        if (newSession) {
-                          // Add session tab to unified tabs list (appends to end - Chrome style)
-                          tabs().open(`session-${newSession.id}`)
-                          // Also track in sessions for sidebar
-                          sessions().open(newSession.id)
-                          setLastActiveSession(`session-${newSession.id}`)
-                        }
-                        prompt.reset()
-                      }}
-                    />
-                  </Tooltip>
-                </Tabs.List>
-              </Tabs>
-              <DragOverlay>
-                <Show when={store.activeDraggable}>
-                  {(draggedId) => {
-                    const isSession = () => draggedId().startsWith("session-")
-                    const sessionId = () => draggedId().replace("session-", "")
-                    const path = createMemo(() => file.pathFromTab(draggedId()))
-                    return (
-                      <div class="relative p-1 h-12 flex items-center bg-background-stronger text-14-regular">
-                        <Show
-                          when={isSession()}
-                          fallback={<Show when={path()}>{(p) => <FileVisual path={p()} />}</Show>}
-                        >
-                          <Icon name="bubble-5" />
-                          <span class="ml-1 truncate">{getSessionTitle(sessionId())}</span>
-                        </Show>
-                      </div>
-                    )
-                  }}
-                </Show>
-              </DragOverlay>
-            </DragDropProvider>
-          </Show>
-
-          {/* Content area */}
-          <div
-            classList={{
-              "flex-1 min-h-0 overflow-hidden relative": true,
-              "py-6 md:py-3": !activeSessionId() && !hasFileTabs(),
+          {/* Split container replaces the tab bar + content area */}
+          <SplitContainer
+            root={splitLayout().root()}
+            focusedPane={splitLayout().focusedPane()}
+            onFocusPane={(id) => splitLayout().setFocusedPane(id)}
+            onRatioChange={(splitId, ratio) => splitLayout().updateRatio(splitId, ratio)}
+            onSplit={(paneId, tab) => splitLayout().splitPane(paneId, tab)}
+            onUnsplit={(paneId) => splitLayout().unsplitPane(paneId)}
+            canSplit={true}
+            isDesktop={isDesktop()}
+            sessionKey={sessionKey()}
+            onActiveSessionChange={(paneId, sessionId) => {
+              if (paneId === splitLayout().focusedPane() || !splitLayout().focusedPane()) {
+                setFocusedSessionId(sessionId)
+              }
             }}
-          >
-            {/* Content Gating - Preview, File, or Session */}
-            <Switch>
-              <Match when={activePreviewTab()}>{(preview) => <PreviewPane preview={preview()} />}</Match>
-              <Match when={activeFileTab()}>
-                {(path) => (
-                  <div
-                    class="absolute inset-x-0 top-0"
-                    style={{
-                      "background-color": "#1e1e1e",
-                      bottom: "calc(var(--prompt-height, 8rem) + 32px)",
-                    }}
-                  >
-                    <FileViewer path={path()} onAskAboutSelection={handleAskAboutSelection} />
-                  </div>
-                )}
-              </Match>
-              <Match when={contextActive()}>
-                <div class="relative h-full overflow-hidden">
-                  <SessionContextTab
-                    messages={messages}
-                    visibleUserMessages={() => visibleUserMessages()}
-                    view={() => view()}
-                    info={() => info()}
-                  />
-                </div>
-              </Match>
-              <Match when={activeSessionId()}>
-                <Show when={activeMessage()}>
-                  <Show
-                    when={!mobileReview()}
-                    fallback={
-                      <div class="relative h-full overflow-hidden">
-                        <SessionReviewTab
-                          diffs={diffs}
-                          view={view}
-                          diffStyle="unified"
-                          classes={{
-                            root: "pb-[calc(var(--prompt-height,8rem)+32px)]",
-                            header: "px-4",
-                            container: "px-4",
-                          }}
-                        />
-                      </div>
-                    }
-                  >
-                    <div class="relative w-full h-full min-w-0">
-                      <Show when={isDesktop()}>
-                        <div class="absolute inset-0 pointer-events-none z-10">
-                          <SessionMessageRail
-                            messages={visibleUserMessages()}
-                            current={activeMessage()}
-                            onMessageSelect={scrollToMessage}
-                            wide={!showTabs()}
-                            class="pointer-events-auto"
-                          />
-                        </div>
-                      </Show>
-                      <div
-                        ref={setScrollRef}
-                        onScroll={(e) => {
-                          autoScroll.handleScroll()
-                          if (isDesktop()) scheduleScrollSpy(e.currentTarget)
-                        }}
-                        onClick={autoScroll.handleInteraction}
-                        class="relative min-w-0 w-full h-full overflow-y-auto no-scrollbar"
-                      >
-                        <TextSelectionPopup>
-                          <div
-                            ref={autoScroll.contentRef}
-                            class="flex flex-col gap-32 items-start justify-start pb-[calc(var(--prompt-height,8rem)+64px)] md:pb-[calc(var(--prompt-height,10rem)+64px)] transition-[margin]"
-                            classList={{
-                              "mt-0.5": !showTabs(),
-                              "mt-0": showTabs(),
-                            }}
-                          >
-                            <For each={visibleUserMessages()}>
-                              {(message) => (
-                                <div
-                                  id={anchor(message.id)}
-                                  data-message-id={message.id}
-                                  classList={{
-                                    "min-w-0 w-full max-w-full": true,
-                                    "last:min-h-[calc(100vh-5.5rem-var(--prompt-height,8rem)-64px)] md:last:min-h-[calc(100vh-4.5rem-var(--prompt-height,10rem)-64px)]":
-                                      platform.platform !== "desktop",
-                                    "last:min-h-[calc(100vh-7rem-var(--prompt-height,8rem)-64px)] md:last:min-h-[calc(100vh-6rem-var(--prompt-height,10rem)-64px)]":
-                                      platform.platform === "desktop",
-                                  }}
-                                >
-                                  <SessionTurn
-                                    sessionID={activeSessionId()!}
-                                    messageID={message.id}
-                                    lastUserMessageID={lastUserMessage()?.id}
-                                    stepsExpanded={store.expanded[message.id] ?? false}
-                                    onStepsExpandedToggle={() =>
-                                      setStore("expanded", message.id, (open: boolean | undefined) => !open)
-                                    }
-                                    classes={{
-                                      root: "min-w-0 w-full relative",
-                                      content:
-                                        "flex flex-col justify-between !overflow-visible [&_[data-slot=session-turn-message-header]]:top-[-32px]",
-                                      container:
-                                        "px-4 md:px-6 " +
-                                        (!showTabs()
-                                          ? "md:max-w-200 md:mx-auto"
-                                          : visibleUserMessages().length > 1
-                                            ? "md:pr-6 md:pl-18"
-                                            : ""),
-                                    }}
-                                  />
-                                </div>
-                              )}
-                            </For>
-                          </div>
-                        </TextSelectionPopup>
-                      </div>
-                    </div>
-                  </Show>
-                </Show>
-              </Match>
-              <Match when={true}>
-                <NewSessionView
-                  worktree={newSessionWorktree()}
-                  onWorktreeChange={(value) => {
-                    if (value === "create") {
-                      setStore("newSessionWorktree", value)
-                      return
-                    }
-
-                    setStore("newSessionWorktree", "main")
-
-                    const target = value === "main" ? sync.project?.worktree : value
-                    if (!target) return
-                    if (target === sync.data.path.directory) return
-                    layout.projects.open(target)
-                    navigate(`/${base64Encode(target)}/session`)
-                  }}
-                />
-              </Match>
-            </Switch>
-          </div>
-
-          {/* Prompt input */}
-          <div
-            ref={(el) => (promptDock = el)}
-            class="absolute inset-x-0 bottom-0 pt-12 pb-4 md:pb-8 flex flex-col justify-center items-center z-50 px-4 md:px-0 bg-gradient-to-t from-background-stronger via-background-stronger to-transparent pointer-events-none"
-          >
-            <div
-              classList={{
-                "w-full md:px-6 pointer-events-auto": true,
-                "md:max-w-200": !showTabs(),
-              }}
-            >
-              <PromptInput
-                ref={(el) => {
-                  inputRef = el
-                }}
-                activeSessionId={activeSessionId()}
-                newSessionWorktree={newSessionWorktree()}
-                onNewSessionWorktreeReset={() => setStore("newSessionWorktree", "main")}
-                onMessageSent={() => {
-                  const active = tabs().active()
-
-                  // Track the current session as last active when a message is sent
-                  if (active?.startsWith("session-")) {
-                    setLastActiveSession(active)
-                  }
-
-                  // Switch back to session tab if on preview/file tab
-                  if (active?.startsWith("preview://") || active?.startsWith("file://")) {
-                    const sessionTab = lastActiveSession() || `session-${info()?.id}`
-                    if (sessionTab) {
-                      tabs().setActive(sessionTab)
-                    }
-                  }
-                }}
-              />
-            </div>
-          </div>
+            newSessionWorktree={newSessionWorktree()}
+            onNewSessionWorktreeReset={() => setStore("newSessionWorktree", "main")}
+          />
 
           <Show when={isDesktop()}>
             <ResizeHandle
@@ -1533,7 +804,7 @@ export default function Page() {
               </Tabs.List>
               <div class="flex-1 min-h-0 flex flex-col">
                 <Tabs.Content value="files" class="flex-1 min-h-0 overflow-auto">
-                  <FileExplorerPanel onFileOpen={openTab} activeFile={activeFileTab() ?? undefined} />
+                  <FileExplorerPanel onFileOpen={openTab} activeFile={undefined} />
                 </Tabs.Content>
                 <Tabs.Content value="timeline" class="flex-1 min-h-0 overflow-auto">
                   <CollabTimeline />
@@ -1663,10 +934,12 @@ export default function Page() {
                                     }
                                   }}
                                   onLocalhostDetected={(url) => {
-                                    // Debounce: only open each URL once per session
                                     if (!openedPreviewUrls.has(url)) {
                                       openedPreviewUrls.add(url)
-                                      tabs().open(`preview://url:${url}`)
+                                      const focusedId = splitLayout().focusedPane() ?? collectPaneIds(splitLayout().root())[0]
+                                      if (focusedId) {
+                                        splitLayout().pane(focusedId).open(`preview://url:${url}`)
+                                      }
                                     }
                                   }}
                                 />

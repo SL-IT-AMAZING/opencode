@@ -1,4 +1,4 @@
-import { createStore, produce } from "solid-js/store"
+import { createStore, produce, reconcile } from "solid-js/store"
 import { batch, createEffect, createMemo, onMount } from "solid-js"
 import { createSimpleContext } from "@anyon/ui/context"
 import { useGlobalSync } from "./global-sync"
@@ -7,6 +7,19 @@ import { useServer } from "./server"
 import { Project } from "@anyon/sdk/v2"
 import { persisted } from "@/utils/persist"
 import { same } from "@/utils/same"
+import type { PaneNode, PaneLeaf, SplitLayout } from "@/components/split-pane/types"
+import {
+  findPane,
+  updateLeaf,
+  splitPane as splitPaneFn,
+  removePane,
+  updateRatio as updateRatioFn,
+  moveTab as moveTabFn,
+  countLeaves,
+  collectPaneIds,
+  migrateFromTabs,
+  validateTree,
+} from "@/components/split-pane/utils"
 
 const AVATAR_COLOR_KEYS = ["pink", "mint", "orange", "purple", "cyan", "lime"] as const
 export type AvatarColorKey = (typeof AVATAR_COLOR_KEYS)[number]
@@ -50,7 +63,7 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
     const globalSync = useGlobalSync()
     const server = useServer()
     const [store, setStore, _, ready] = persisted(
-      "layout.v7",
+      "layout.v8",
       createStore({
         sidebar: {
           opened: false,
@@ -83,6 +96,7 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
         sessionView: {} as Record<string, SessionView>,
         openSessions: {} as Record<string, string[]>, // Track open session tabs per directory
         terminalState: {} as Record<string, { opened: boolean }>, // Per-project terminal state
+        splitLayout: {} as Record<string, SplitLayout>,
       }),
     )
 
@@ -345,6 +359,155 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
           setStore("mobileSidebar", "opened", (x) => !x)
         },
       },
+      split(sessionKey: string) {
+        const ensureLayout = () => {
+          if (store.splitLayout?.[sessionKey]) return
+          const existing = store.sessionTabs[sessionKey]
+          const layout = existing
+            ? migrateFromTabs({ all: existing.all, active: existing.active })
+            : migrateFromTabs({ all: [] })
+          if (!store.splitLayout) {
+            setStore("splitLayout", { [sessionKey]: layout })
+            return
+          }
+          setStore("splitLayout", sessionKey, layout)
+        }
+
+        const getLayout = createMemo(() => {
+          const existing = store.splitLayout?.[sessionKey]
+          if (existing && validateTree(existing.root)) return existing
+          return undefined
+        })
+
+        return {
+          root: createMemo(() => {
+            const l = getLayout()
+            if (l) return l.root
+            // Default single-leaf fallback
+            const existing = store.sessionTabs[sessionKey]
+            if (existing) return { type: "leaf" as const, id: "pane-0", tabs: [...existing.all], active: existing.active }
+            return { type: "leaf" as const, id: "pane-0", tabs: [] as string[], active: undefined }
+          }),
+          focusedPane: createMemo(() => getLayout()?.focusedPane),
+
+          setFocusedPane(id: string) {
+            ensureLayout()
+            setStore("splitLayout", sessionKey, "focusedPane", id)
+          },
+
+          splitPane(paneId: string, tabToMove?: string) {
+            ensureLayout()
+            const current = store.splitLayout[sessionKey]
+            if (!current) return
+            const newRoot = splitPaneFn(current.root, paneId, tabToMove)
+            setStore("splitLayout", sessionKey, "root", reconcile(newRoot))
+          },
+
+          unsplitPane(paneId: string) {
+            ensureLayout()
+            const current = store.splitLayout[sessionKey]
+            if (!current) return
+            const newRoot = removePane(current.root, paneId)
+            if (!newRoot) return
+            setStore("splitLayout", sessionKey, "root", reconcile(newRoot))
+          },
+
+          updateRatio(splitId: string, ratio: number) {
+            ensureLayout()
+            const current = store.splitLayout[sessionKey]
+            if (!current) return
+            const newRoot = updateRatioFn(current.root, splitId, ratio)
+            setStore("splitLayout", sessionKey, "root", reconcile(newRoot))
+          },
+
+          moveTabBetweenPanes(fromPaneId: string, toPaneId: string, tab: string) {
+            ensureLayout()
+            const current = store.splitLayout[sessionKey]
+            if (!current) return
+            const newRoot = moveTabFn(current.root, fromPaneId, toPaneId, tab)
+            setStore("splitLayout", sessionKey, "root", reconcile(newRoot))
+          },
+
+          pane(paneId: string) {
+            const leaf = createMemo(() => {
+              const l = getLayout()
+              if (!l) return undefined
+              return findPane(l.root, paneId)
+            })
+            return {
+              tabs: createMemo(() => leaf()?.tabs ?? []),
+              active: createMemo(() => leaf()?.active),
+              setActive(tab: string | undefined) {
+                ensureLayout()
+                const current = store.splitLayout[sessionKey]
+                if (!current) return
+                const newRoot = updateLeaf(current.root, paneId, (l) => ({ ...l, active: tab }))
+                setStore("splitLayout", sessionKey, "root", reconcile(newRoot))
+              },
+              open(tab: string) {
+                ensureLayout()
+                const current = store.splitLayout[sessionKey]
+                if (!current) return
+                const pane = findPane(current.root, paneId)
+                if (!pane) return
+                if (pane.tabs.includes(tab)) {
+                  const newRoot = updateLeaf(current.root, paneId, (l) => ({ ...l, active: tab }))
+                  setStore("splitLayout", sessionKey, "root", reconcile(newRoot))
+                  return
+                }
+                const newRoot = updateLeaf(current.root, paneId, (l) => ({
+                  ...l,
+                  tabs: [...l.tabs, tab],
+                  active: tab,
+                }))
+                setStore("splitLayout", sessionKey, "root", reconcile(newRoot))
+              },
+              close(tab: string) {
+                ensureLayout()
+                const current = store.splitLayout[sessionKey]
+                if (!current) return
+                const pane = findPane(current.root, paneId)
+                if (!pane) return
+                const newTabs = pane.tabs.filter((t) => t !== tab)
+                const newActive = pane.active === tab
+                  ? (newTabs[pane.tabs.indexOf(tab) - 1] ?? newTabs[0])
+                  : pane.active
+                const newRoot = updateLeaf(current.root, paneId, (l) => ({
+                  ...l,
+                  tabs: newTabs,
+                  active: newActive,
+                }))
+                // Auto-collapse: if pane is now empty and tree has multiple leaves, remove this pane
+                if (newTabs.length === 0 && countLeaves(newRoot) > 1) {
+                  const collapsed = removePane(newRoot, paneId)
+                  if (collapsed) {
+                    setStore("splitLayout", sessionKey, "root", reconcile(collapsed))
+                    if (store.splitLayout[sessionKey]?.focusedPane === paneId) {
+                      const remaining = collectPaneIds(collapsed)
+                      setStore("splitLayout", sessionKey, "focusedPane", remaining[0])
+                    }
+                    return
+                  }
+                }
+                setStore("splitLayout", sessionKey, "root", reconcile(newRoot))
+              },
+              move(tab: string, toIndex: number) {
+                ensureLayout()
+                const current = store.splitLayout[sessionKey]
+                if (!current) return
+                const pane = findPane(current.root, paneId)
+                if (!pane) return
+                const fromIndex = pane.tabs.indexOf(tab)
+                if (fromIndex === -1) return
+                const newTabs = [...pane.tabs]
+                newTabs.splice(toIndex, 0, newTabs.splice(fromIndex, 1)[0])
+                const newRoot = updateLeaf(current.root, paneId, (l) => ({ ...l, tabs: newTabs }))
+                setStore("splitLayout", sessionKey, "root", reconcile(newRoot))
+              },
+            }
+          },
+        }
+      },
       view(sessionKey: string) {
         const s = createMemo(() => store.sessionView[sessionKey] ?? { scroll: {} })
         return {
@@ -493,8 +656,9 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
           },
         }
       },
-      // Close a session tab from ALL sessionTabs entries (used when archiving)
+      // Close a session tab from ALL sessionTabs and splitLayout entries (used when archiving)
       closeSessionTab(tab: string) {
+        // 1. Legacy sessionTabs cleanup
         const allSessionKeys = Object.keys(store.sessionTabs)
         for (const sessionKey of allSessionKeys) {
           const current = store.sessionTabs[sessionKey]
@@ -509,6 +673,39 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
               setStore("sessionTabs", sessionKey, "active", next)
             }
           })
+        }
+
+        // 2. Split layout cleanup — remove tab from all panes, auto-collapse empty panes
+        const allSplitKeys = Object.keys(store.splitLayout ?? {})
+        for (const key of allSplitKeys) {
+          const layout = store.splitLayout[key]
+          if (!layout) continue
+          const paneIds = collectPaneIds(layout.root)
+          for (const paneId of paneIds) {
+            const pane = findPane(layout.root, paneId)
+            if (!pane || !pane.tabs.includes(tab)) continue
+            const newTabs = pane.tabs.filter((t) => t !== tab)
+            const newActive = pane.active === tab
+              ? (newTabs[pane.tabs.indexOf(tab) - 1] ?? newTabs[0])
+              : pane.active
+            let newRoot = updateLeaf(layout.root, paneId, (l) => ({
+              ...l,
+              tabs: newTabs,
+              active: newActive,
+            }))
+            if (newTabs.length === 0 && countLeaves(newRoot) > 1) {
+              const collapsed = removePane(newRoot, paneId)
+              if (collapsed) {
+                newRoot = collapsed
+                if (store.splitLayout[key]?.focusedPane === paneId) {
+                  const remaining = collectPaneIds(collapsed)
+                  setStore("splitLayout", key, "focusedPane", remaining[0])
+                }
+              }
+            }
+            setStore("splitLayout", key, "root", reconcile(newRoot))
+            break
+          }
         }
       },
     }

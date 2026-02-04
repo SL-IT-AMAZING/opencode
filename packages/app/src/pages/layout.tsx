@@ -311,14 +311,24 @@ export default function Layout(props: ParentProps) {
     const index = sessions.findIndex((s) => s.id === session.id)
     const nextSession = sessions[index + 1] ?? sessions[index - 1]
 
-    // Close the session tab from openSessions and sessionTabs
+    // Navigate FIRST so params.id changes before tab cleanup
+    // This prevents the auto-add effect from re-adding the archived session
+    if (session.id === params.id) {
+      if (nextSession) {
+        navigate(`/${params.dir}/session/${nextSession.id}`)
+      } else {
+        navigate(`/${params.dir}/session`)
+      }
+    }
+
+    // Close the session tab from openSessions, sessionTabs, and splitLayout
     const directoryKey = base64Encode(session.directory)
     const sessionTab = `session-${session.id}`
 
     // Remove from openSessions (sidebar tracking)
     layout.sessions(directoryKey).close(session.id)
 
-    // Remove the tab from all sessionTabs entries (it could be in any of them)
+    // Remove the tab from all sessionTabs and splitLayout entries
     layout.closeSessionTab(sessionTab)
 
     await globalSDK.client.session.update({
@@ -332,13 +342,6 @@ export default function Layout(props: ParentProps) {
         if (match.found) draft.session.splice(match.index, 1)
       }),
     )
-    if (session.id === params.id) {
-      if (nextSession) {
-        navigate(`/${params.dir}/session/${nextSession.id}`)
-      } else {
-        navigate(`/${params.dir}/session`)
-      }
-    }
   }
 
   command.register(() => {
