@@ -36,6 +36,7 @@ import { Checkbox } from "./checkbox"
 import { DiffChanges } from "./diff-changes"
 import { Markdown } from "./markdown"
 import { ImagePreview } from "./image-preview"
+import { Spinner } from "./spinner"
 import { getDirectory as _getDirectory, getFilename } from "@anyon/util/path"
 import { checksum } from "@anyon/util/encode"
 import { createAutoScroll } from "../hooks"
@@ -893,6 +894,7 @@ ToolRegistry.register({
                 title: `${props.input.subagent_type || props.tool} Agent`,
                 titleClass: "capitalize",
                 subtitle: props.input.description,
+                action: props.status === "running" ? <Spinner /> : undefined,
               }}
               onSubtitleClick={handleSubtitleClick}
             >

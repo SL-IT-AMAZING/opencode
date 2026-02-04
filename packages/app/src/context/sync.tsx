@@ -5,6 +5,7 @@ import { retry } from "@anyon/util/retry"
 import { createSimpleContext } from "@anyon/ui/context"
 import { useGlobalSync } from "./global-sync"
 import { useSDK } from "./sdk"
+import { usePlatform } from "./platform"
 import type { Message, Part } from "@anyon/sdk/v2/client"
 
 export const { use: useSync, provider: SyncProvider } = createSimpleContext({
@@ -12,6 +13,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
   init: () => {
     const globalSync = useGlobalSync()
     const sdk = useSDK()
+    const platform = usePlatform()
     const [store, setStore] = globalSync.child(sdk.directory)
     const absolute = (path: string) => (store.path.directory + "/" + path).replace("//", "/")
 
@@ -73,6 +75,14 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
             retry(() => sdk.client.session.todo({ sessionID })),
             retry(() => sdk.client.session.diff({ sessionID })),
           ])
+
+          // Fetch workflow data (non-blocking, best-effort)
+          ;(platform.fetch ?? fetch)(`${sdk.url}/session/${sessionID}/workflow?directory=${encodeURIComponent(sdk.directory)}`)
+            .then((res) => (res.ok ? res.json() : null))
+            .then((data) => {
+              if (data) setStore("workflow", sessionID, data)
+            })
+            .catch(() => {})
 
           batch(() => {
             setStore(

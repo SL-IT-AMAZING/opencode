@@ -119,23 +119,25 @@ export function WorkflowDocView(props: WorkflowDocViewProps) {
           <Show when={nextStepLabel()}>
             {(label) => (
               <Button
-                variant="primary"
+                variant="ghost"
                 size="small"
+                class="text-text-info-base hover:bg-surface-info-base/10 gap-1"
                 onClick={() => props.onAdvanceStep?.()}
               >
-                <span>Next: {label()}</span>
-                <Icon name="chevron-right" class="size-3.5 ml-1" />
+                <span class="text-12-medium">Next: {label()}</span>
+                <Icon name="chevron-right" class="size-3.5" />
               </Button>
             )}
           </Show>
           <Show when={!nextStepLabel() && props.workflow?.currentStep === "erd"}>
             <Button
-              variant="primary"
+              variant="ghost"
               size="small"
+              class="text-text-success-base hover:bg-surface-success-base/10 gap-1"
               onClick={() => props.onAdvanceStep?.()}
             >
-              <span>Complete Workflow</span>
-              <Icon name="check" class="size-3.5 ml-1" />
+              <span class="text-12-medium">Complete Workflow</span>
+              <Icon name="check" class="size-3.5" />
             </Button>
           </Show>
         </div>

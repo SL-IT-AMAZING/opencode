@@ -170,6 +170,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     return sync.data.session_status[sessionId] ?? { type: "idle" }
   })
   const working = createMemo(() => status()?.type !== "idle")
+  const hasWorkflow = createMemo(() => {
+    const sid = props.activeSessionId ?? params.id
+    if (!sid) return false
+    if (sync.data.workflow[sid]) return true
+    try { return localStorage.getItem(`workflow-exists-${sid}`) === "true" } catch { return false }
+  })
   const imageAttachments = createMemo(
     () => prompt.current().filter((part) => part.type === "image") as ImageAttachmentPart[],
   )
@@ -1073,7 +1079,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       const textPart = currentPrompt.find((p) => p.type === "text")
       const idea = textPart && "content" in textPart ? textPart.content.trim() : ""
       if (idea) {
-        fetch(`${sdk.url}/session/${session.id}/workflow`, {
+        ;(platform.fetch ?? fetch)(`${sdk.url}/session/${session.id}/workflow?directory=${encodeURIComponent(sdk.directory)}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ idea }),
@@ -1827,11 +1833,24 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             />
             <div class="flex items-center gap-2">
               <SessionContextUsage />
-              <Show when={store.mode === "normal" && layout.workflow.isMinimized(sessionKey())}>
-                <Tooltip placement="top" value="Open Workflow">
-                  <Button type="button" variant="ghost" class="size-6 relative" onClick={() => layout.workflow.restore(sessionKey())}>
+              <Show when={store.mode === "normal" && hasWorkflow()}>
+                <Tooltip placement="top" value={layout.workflow.isMinimized(sessionKey()) ? "Open Workflow" : "Minimize Workflow"}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    class="size-6 relative"
+                    onClick={() => {
+                      if (layout.workflow.isMinimized(sessionKey())) {
+                        layout.workflow.restore(sessionKey())
+                      } else {
+                        layout.workflow.minimize(sessionKey())
+                      }
+                    }}
+                  >
                     <Icon name="code" class="size-4.5" />
-                    <div class="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-icon-info-active" />
+                    <Show when={layout.workflow.isMinimized(sessionKey())}>
+                      <div class="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-icon-info-active" />
+                    </Show>
                   </Button>
                 </Tooltip>
               </Show>

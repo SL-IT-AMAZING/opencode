@@ -13,7 +13,6 @@ import { useCodeComponent } from "@anyon/ui/context/code"
 import { useLocal } from "@/context/local"
 import { usePlatform } from "@/context/platform"
 import { SessionTurn } from "@anyon/ui/session-turn"
-import { Spinner } from "@anyon/ui/spinner"
 import { createAutoScroll } from "@anyon/ui/hooks"
 import { SessionReview } from "@anyon/ui/session-review"
 import { SessionMessageRail } from "@anyon/ui/session-message-rail"
@@ -310,20 +309,6 @@ export function Pane(props: PaneProps) {
     sync.session.sync(activeSessionId()!)
   })
 
-  // Agent/model tracking (only from focused pane)
-  createEffect(
-    on(
-      () => lastUserMessage()?.id,
-      () => {
-        if (!props.isFocused) return
-        const msg = lastUserMessage()
-        if (!msg) return
-        if (msg.agent) local.agent.set(msg.agent)
-        if (msg.model) local.model.set(msg.model)
-      },
-    ),
-  )
-
   // Auto-load file from active tab
   createEffect(() => {
     const active = paneTabs().active()
@@ -576,9 +561,18 @@ export function Pane(props: PaneProps) {
                 if (sid) return sid
                 const sessionTab = paneTabs().tabs().find(t => t.startsWith("session-"))
                 if (sessionTab) return sessionTab.replace("session-", "")
+                // Search workflows by document path
+                const currentPath = path()
+                for (const [sessionId, wf] of Object.entries(sync.data.workflow)) {
+                  if (!wf?.steps) continue
+                  for (const step of Object.values(wf.steps) as Array<{ document?: string }>) {
+                    if (step?.document === currentPath) return sessionId
+                  }
+                }
                 // sessionKey is "dir/sessionId" — extract the sessionId part
-                const parts = props.sessionKey.split("/")
-                return parts[parts.length - 1]
+                const key = props.sessionKey
+                const lastSlash = key.lastIndexOf("/")
+                return lastSlash >= 0 ? key.substring(lastSlash + 1) : undefined
               }
               const workflow = createMemo(() => {
                 const sid = resolveSessionId()
@@ -586,15 +580,27 @@ export function Pane(props: PaneProps) {
               })
               const handleAdvanceStep = async () => {
                 const sid = resolveSessionId()
-                if (!sid) return
-                await fetch(`${sdk.url}/session/${sid}/workflow/advance`, { method: "POST" })
+                if (!sid) {
+                  console.warn("[workflow] cannot advance: no session ID resolved")
+                  return
+                }
+                try {
+                  const res = await (platform.fetch ?? fetch)(`${sdk.url}/session/${sid}/workflow/advance?directory=${encodeURIComponent(sdk.directory)}`, {
+                    method: "POST",
+                  })
+                  if (!res.ok) {
+                    console.error("[workflow] advance failed:", res.status, await res.text())
+                  }
+                } catch (e) {
+                  console.error("[workflow] advance error:", e)
+                }
               }
               return (
                 <div
                   class="absolute inset-x-0 top-0"
                   style={{
                     "background-color": "#1e1e1e",
-                    bottom: "calc(var(--prompt-height, 8rem) + 32px)",
+                    bottom: "0",
                   }}
                 >
                   <WorkflowDocView
@@ -734,17 +740,11 @@ export function Pane(props: PaneProps) {
       </div>
 
       {/* Per-pane prompt input */}
+      <Show when={!activeWorkflowTab()}>
       <div
         ref={(el) => (promptDock = el)}
         class="absolute inset-x-0 bottom-0 pt-12 pb-4 md:pb-8 flex flex-col justify-center items-center z-50 px-4 md:px-0 bg-gradient-to-t from-background-stronger via-background-stronger to-transparent pointer-events-none"
       >
-        {/* Working indicator */}
-        <Show when={isWorking()}>
-          <div class="flex items-center gap-2 text-sm text-foreground-subtle pb-3 pointer-events-auto">
-            <Spinner />
-            <span>Working...</span>
-          </div>
-        </Show>
         <div class="w-full md:px-6 pointer-events-auto">
           <PromptInput
             activeSessionId={activeSessionId()}
@@ -763,6 +763,7 @@ export function Pane(props: PaneProps) {
           />
         </div>
       </div>
+      </Show>
     </div>
   )
 }

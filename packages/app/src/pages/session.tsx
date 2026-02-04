@@ -42,6 +42,7 @@ import { SortableTerminalTab } from "@/components/session"
 import { useServer } from "@/context/server"
 import { SplitContainer } from "@/components/split-pane/split-container"
 import { collectPaneIds } from "@/components/split-pane/utils"
+import { usePlatform } from "@/context/platform"
 
 type DiffStyle = "unified" | "split"
 
@@ -147,6 +148,7 @@ export default function Page() {
   const sdk = useSDK()
   const prompt = usePrompt()
   const permission = usePermission()
+  const platform = usePlatform()
   const sessionKey = createMemo(() => `${params.dir}${params.id ? "/" + params.id : ""}`)
   const sessions = createMemo(() => layout.sessions(params.dir ?? ""))
   const projectTerminal = createMemo(() => {
@@ -301,7 +303,10 @@ export default function Page() {
       const workflowTab = tabs.find(t => t.startsWith("workflow://"))
       if (workflowTab) {
         const path = file.workflowFromTab(workflowTab)
-        if (path) setLastWorkflowPath(path)
+        if (path) {
+          setLastWorkflowPath(path)
+          try { localStorage.setItem(`workflow-path-${activeSessionId()}`, path) } catch {}
+        }
       }
     }
   })
@@ -312,7 +317,16 @@ export default function Page() {
       () => layout.workflow.isMinimized(sessionKey()),
       (minimized, prevMinimized) => {
         if (prevMinimized && !minimized) {
-          const workflowPath = lastWorkflowPath()
+          let workflowPath = lastWorkflowPath()
+          if (!workflowPath) {
+            const sid = activeSessionId()
+            const wf = sid ? sync.data.workflow[sid] : undefined
+            if (wf?.currentStep) workflowPath = `.sisyphus/plans/${wf.currentStep}.md`
+          }
+          if (!workflowPath) {
+            const sid = activeSessionId()
+            try { workflowPath = localStorage.getItem(`workflow-path-${sid}`) ?? undefined } catch {}
+          }
           if (!workflowPath) return
           const workflowTabId = file.workflowTab(workflowPath)
           const allPaneIds = collectPaneIds(splitLayout().root())
@@ -332,19 +346,6 @@ export default function Page() {
         }
       },
       { defer: true },
-    ),
-  )
-
-  // Agent/model tracking from focusedActiveSessionId
-  createEffect(
-    on(
-      () => lastUserMessage()?.id,
-      () => {
-        const msg = lastUserMessage()
-        if (!msg) return
-        if (msg.agent) local.agent.set(msg.agent)
-        if (msg.model) local.model.set(msg.model)
-      },
     ),
   )
 
@@ -732,7 +733,7 @@ export default function Page() {
         const textPart = parts.find((p) => p.type === "text" && p.content.trim())
         const idea = textPart && "content" in textPart ? textPart.content.trim() : ""
         if (!idea) return
-        await fetch(`${sdk.url}/session/${sessionID}/workflow/start`, {
+        await (platform.fetch ?? fetch)(`${sdk.url}/session/${sessionID}/workflow/start?directory=${encodeURIComponent(sdk.directory)}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ idea }),

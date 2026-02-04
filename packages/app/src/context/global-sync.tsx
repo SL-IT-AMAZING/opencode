@@ -307,6 +307,7 @@ function createGlobalSync() {
         break
       case "workflow.updated":
         setStore("workflow", event.properties.sessionID, event.properties.info)
+        try { localStorage.setItem(`workflow-exists-${event.properties.sessionID}`, "true") } catch {}
         break
       case "session.status": {
         setStore("session_status", event.properties.sessionID, reconcile(event.properties.status))

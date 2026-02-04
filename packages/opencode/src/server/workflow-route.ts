@@ -1,4 +1,5 @@
 import { Hono } from "hono"
+import { stream } from "hono/streaming"
 import { describeRoute, validator, resolver } from "hono-openapi"
 import { z } from "zod"
 import { Workflow } from "../workflow"
@@ -110,15 +111,16 @@ export const WorkflowRoute = new Hono()
       const body = c.req.valid("json")
       const workflow = await Workflow.create(sessionID, body.idea)
 
-      // Fire-and-forget: start anyon-alpha agent for PRD
-      SessionPrompt.prompt({
-        sessionID,
-        agent: "anyon-alpha",
-        parts: [{ type: "text", text: body.idea }],
-        noReply: true,
+      // Use stream to keep Instance context alive for the prompt
+      c.header("Content-Type", "application/json")
+      return stream(c, async (s) => {
+        s.write(JSON.stringify(workflow))
+        SessionPrompt.prompt({
+          sessionID,
+          agent: "anyon-alpha",
+          parts: [{ type: "text", text: body.idea }],
+        }).catch((e) => console.error("[workflow] start prompt FAILED:", e))
       })
-
-      return c.json(workflow)
     },
   )
   .post(
@@ -149,18 +151,19 @@ export const WorkflowRoute = new Hono()
       const workflow = await Workflow.advanceStep(sessionID)
       if (!workflow) return c.json(null)
 
-      // Trigger next agent if available
       const agent = AGENT_MAP[workflow.currentStep]
-      if (agent) {
+      if (!agent) return c.json(workflow)
+
+      // Use stream to keep Instance context alive for the prompt
+      c.header("Content-Type", "application/json")
+      return stream(c, async (s) => {
+        s.write(JSON.stringify(workflow))
         SessionPrompt.prompt({
           sessionID,
           agent,
           parts: [{ type: "text", text: `Continue workflow. Idea: ${workflow.idea}` }],
-          noReply: true,
-        })
-      }
-
-      return c.json(workflow)
+        }).catch((e) => console.error("[workflow] advance prompt FAILED:", e))
+      })
     },
   )
   .patch(
