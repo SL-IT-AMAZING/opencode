@@ -1,5 +1,6 @@
 import { defineConfig } from "vitest/config"
 import solidPlugin from "vite-plugin-solid"
+import path from "path"
 
 export default defineConfig({
   plugins: [solidPlugin()],
@@ -21,6 +22,12 @@ export default defineConfig({
     },
   },
   resolve: {
+    alias: [
+      {
+        find: /^@\//,
+        replacement: path.resolve(__dirname, "../packages/opencode/src") + "/",
+      },
+    ],
     conditions: ["development", "browser"],
   },
 })

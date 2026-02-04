@@ -1068,6 +1068,20 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     }
     if (!session) return
 
+    // Create workflow tracking if pending
+    if (local.workflow.pending()) {
+      const textPart = currentPrompt.find((p) => p.type === "text")
+      const idea = textPart && "content" in textPart ? textPart.content.trim() : ""
+      if (idea) {
+        fetch(`${sdk.url}/session/${session.id}/workflow`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idea }),
+        })
+      }
+      local.workflow.set(false)
+    }
+
     const model = {
       modelID: currentModel.id,
       providerID: currentModel.provider.id,
@@ -1813,6 +1827,14 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             />
             <div class="flex items-center gap-2">
               <SessionContextUsage />
+              <Show when={store.mode === "normal" && layout.workflow.isMinimized(sessionKey())}>
+                <Tooltip placement="top" value="Open Workflow">
+                  <Button type="button" variant="ghost" class="size-6 relative" onClick={() => layout.workflow.restore(sessionKey())}>
+                    <Icon name="code" class="size-4.5" />
+                    <div class="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-icon-info-active" />
+                  </Button>
+                </Tooltip>
+              </Show>
               <Show when={store.mode === "normal"}>
                 <Tooltip placement="top" value="Attach file">
                   <Button type="button" variant="ghost" class="size-6" onClick={() => fileInputRef.click()}>

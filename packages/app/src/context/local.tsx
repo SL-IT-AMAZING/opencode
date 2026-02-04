@@ -1,5 +1,5 @@
 import { createStore, produce, reconcile } from "solid-js/store"
-import { batch, createMemo, onCleanup } from "solid-js"
+import { batch, createMemo, createSignal, onCleanup } from "solid-js"
 import { filter, firstBy, flat, groupBy, mapValues, pipe, uniqueBy, values } from "remeda"
 import type { FileContent, FileNode, Model, Provider, File as FileStatus } from "@anyon/sdk/v2"
 import { createSimpleContext } from "@anyon/ui/context"
@@ -616,11 +616,17 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
       }
     })()
 
+    const [pendingWorkflow, setPendingWorkflow] = createSignal(false)
+
     const result = {
       slug: createMemo(() => base64Encode(sdk.directory)),
       model,
       agent,
       file,
+      workflow: {
+        pending: pendingWorkflow,
+        set: setPendingWorkflow,
+      },
     }
     return result
   },

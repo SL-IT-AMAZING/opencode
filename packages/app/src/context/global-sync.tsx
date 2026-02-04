@@ -69,6 +69,9 @@ type State = {
   part: {
     [messageID: string]: Part[]
   }
+  workflow: {
+    [sessionID: string]: any
+  }
 }
 
 function createGlobalSync() {
@@ -118,6 +121,7 @@ function createGlobalSync() {
         limit: 5,
         message: {},
         part: {},
+        workflow: {},
       })
       bootstrapInstance(directory)
     }
@@ -300,6 +304,9 @@ function createGlobalSync() {
         break
       case "todo.updated":
         setStore("todo", event.properties.sessionID, reconcile(event.properties.todos, { key: "id" }))
+        break
+      case "workflow.updated":
+        setStore("workflow", event.properties.sessionID, event.properties.info)
         break
       case "session.status": {
         setStore("session_status", event.properties.sessionID, reconcile(event.properties.status))

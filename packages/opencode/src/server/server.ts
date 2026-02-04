@@ -38,6 +38,8 @@ import { SessionCompaction } from "../session/compaction"
 import { SessionRevert } from "../session/revert"
 import { lazy } from "../util/lazy"
 import { Todo } from "../session/todo"
+import { WorkflowRoute } from "./workflow-route"
+import { Workflow } from "../workflow"
 import { InstanceBootstrap } from "../project/bootstrap"
 import { MCP } from "../mcp"
 import { Storage } from "../storage/storage"
@@ -78,6 +80,7 @@ export namespace Server {
   // Preview and proxy routes added separately to avoid TypeScript type inference depth limit
   app.route("/preview", PreviewRoute)
   app.route("/proxy", ProxyRoute)
+  app.route("/", WorkflowRoute)
   export const App = lazy(() =>
     app
       .onError((err, c) => {
@@ -2875,6 +2878,7 @@ export namespace Server {
 
   export function listen(opts: { port: number; hostname: string; mdns?: boolean; cors?: string[] }) {
     _corsWhitelist = opts.cors ?? []
+    Workflow.initBridge()
 
     const args = {
       hostname: opts.hostname,

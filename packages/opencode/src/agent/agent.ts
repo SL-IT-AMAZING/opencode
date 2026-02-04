@@ -1,4 +1,5 @@
 import { Config } from "../config/config"
+import { Log } from "../util/log"
 import z from "zod"
 import { Provider } from "../provider/provider"
 import { generateObject, type ModelMessage } from "ai"
@@ -202,6 +203,12 @@ export namespace Agent {
 
   export async function list() {
     const cfg = await Config.get()
+    const log = Log.create({ service: "agent" })
+    log.info("Agent.list: config.agent keys", {
+      agents: Object.keys(cfg.agent ?? {}).slice(0, 20),
+      hasAnyon: !!cfg.agent?.["anyon-alpha"],
+      totalAgents: Object.keys(cfg.agent ?? {}).length
+    })
     return pipe(
       await state(),
       values(),

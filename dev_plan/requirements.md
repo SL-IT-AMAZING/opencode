@@ -1,112 +1,155 @@
 # Requirements
 
-## REQ-001: Split-Screen Tab System
+## REQ-WF-001: Workflow Step Model
+
 **Status**: draft
-**Priority**: HIGH
+**Priority**: high
+**PoC**: POC-001
 
-### Problem
-The OpenCode web app has a single-pane session area. Users need to view documents (PRD, ERD, component previews) alongside the AI chat simultaneously.
+The system must support a multi-step workflow with ordered steps: PRD -> User Flow -> ERD.
 
-### Solution
-A general-purpose split-screen system where any tab can be split side-by-side, like VS Code editor groups.
+### Acceptance Criteria
+- Each step has a type (`prd`, `userflow`, `erd`), status (`pending`, `active`, `complete`), and optional document content
+- Workflow state is persisted per-session via Storage
+- Steps progress linearly: only one step can be `active` at a time
+- Advancing sets current step to `complete` and next step to `active`
+- Bus events are published on workflow state changes
+
+### Cross-References
+- Components: COMP-WF-001, COMP-WF-002
+- Tests: TC-WF-001, TC-WF-002, TC-WF-003
+- Backend: `packages/opencode/src/workflow/index.ts`
 
 ---
 
-## Functional Requirements
+## REQ-WF-002: File-Write Trigger
 
-### REQ-F001: Single Pane Default
-**Status**: verified (POC-001)
-- Default state is a single pane with all tabs
-- Zero UI overhead when not splitting
-- Identical behavior to current app
-- **PoC ref**: POC-001 (migrateFromTabs)
-
-### REQ-F002: Split Pane
-**Status**: verified (POC-001, POC-002)
-- Click split button in tab bar to split the focused pane
-- Active tab moves to the new right pane
-- Keyboard shortcut: `Mod+\`
-- Maximum 3 panes (2 splits deep)
-- **PoC ref**: POC-001 (splitPane, countLeaves), POC-002 (SplitContainer rendering)
-
-### REQ-F003: Resize Panes
-**Status**: verified (POC-002)
-- Drag resize handle between panes to adjust width ratio
-- Minimum pane width: 300px
-- Ratio clamped to 0.1-0.9
-- **PoC ref**: POC-001 (updateRatio), POC-002 (resize handle interaction)
-
-### REQ-F004: Close/Collapse Pane
-**Status**: verified (POC-001)
-- When last tab in a pane is closed, pane auto-collapses
-- Parent split node replaced by surviving sibling
-- Smooth animation (CSS transition)
-- **PoC ref**: POC-001 (removePane, moveTab auto-collapse)
-
-### REQ-F005: Tab Drag Between Panes
-**Status**: verified (POC-003)
-- Single DragDropProvider wraps all panes
-- Each pane has its own SortableProvider
-- Dragging tab to different pane moves it
-- Source pane auto-collapses if empty after move
-- **PoC ref**: POC-003 (multi-SortableProvider under single DragDropProvider)
-
-### REQ-F006: Focus Tracking
 **Status**: draft
-- Click within a pane sets it as focused
-- Focused pane determines which session receives prompt messages
-- Visual indicator (border highlight) on focused pane
-- Commands operate on focused pane's session
+**Priority**: high
+**PoC**: POC-002
 
-### REQ-F007: Auto-Split for Documents
-**Status**: draft
-- When opening PRD/ERD preview tab, auto-split with chat on left and preview on right
-- Only triggers if currently single-pane
-- User can manually unsplit afterward
+When a `.md` file is written to the project's `dev_plan/` directory, the system detects it and maps it to a workflow step.
 
-### REQ-F008: Persist Layout
-**Status**: draft
-- Split state persisted to localStorage (via existing persisted() utility)
-- Restored on page reload
-- Invalid persisted state falls back to single pane
-- **PoC ref**: POC-001 (validateTree)
+### Acceptance Criteria
+- File watcher detects new/changed `.md` files in `dev_plan/`
+- Filename mapping: `prd.md` -> prd, `userflow.md` -> userflow, `erd.md` -> erd
+- Detection triggers `workflow.step.completed` Bus event
+- Event includes session ID, step type, and file path
+- Works with existing @parcel/watcher infrastructure
 
-### REQ-F009: Mobile Exclusion
-**Status**: draft
-- No splitting on mobile (isDesktop() guard)
-- Split button hidden on mobile
-- Falls back to single-pane behavior
+### Cross-References
+- Components: none (backend only)
+- Tests: TC-WF-004, TC-WF-005
+- Backend: `packages/opencode/src/file/watcher.ts`, `packages/opencode/src/workflow/index.ts`
 
 ---
 
-## Non-Functional Requirements
+## REQ-WF-003: Auto-Open Workflow Tab + Split Pane
 
-### REQ-NF001: Animation
-- Split: CSS transition-[width] 200ms ease-out
-- Unsplit: surviving pane animates to 100%
-- Resize drag: immediate (no animation)
+**Status**: draft
+**Priority**: high
+**PoC**: POC-003
 
-### REQ-NF002: Performance
-- Single-pane mode: zero additional DOM nodes or computation
-- Split mode: minimal overhead (2-3 extra div wrappers per pane)
+When a workflow document is detected, it auto-opens as a `workflow://` tab in a new split pane alongside the chat.
 
-### REQ-NF003: Backward Compatibility
-- Existing tabs() API in layout.tsx must continue working
-- All existing keyboard shortcuts and commands must work
-- Right panel (file explorer, terminal) unaffected
+### Acceptance Criteria
+- `workflow://` is a new tab prefix (like `file://` and `preview://`)
+- On file-write trigger, the pane auto-splits if not already split
+- Workflow tab opens in the new pane with the document loaded
+- If workflow tab already exists, it switches to the updated document
+- Tab renders `WorkflowDocView` component (not plain `FileViewer`)
+
+### Cross-References
+- Components: COMP-WF-001
+- Tests: TC-WF-006, TC-WF-007
+- Frontend: `pane.tsx`, `file.tsx`, `session.tsx`
 
 ---
 
-## Cross-References
+## REQ-WF-004: Step Progression Buttons
 
-| Requirement | Component | Test Cases | PoC |
-|-------------|-----------|------------|-----|
-| REQ-F001 | SplitContainer, layout.tsx | TC-001 | POC-001 |
-| REQ-F002 | SplitContainer, pane-tab-bar, utils | TC-002, TC-003 | POC-001, POC-002 |
-| REQ-F003 | SplitContainer (ResizeHandle) | TC-004 | POC-002 |
-| REQ-F004 | utils (removePane), SplitContainer | TC-005 | POC-001 |
-| REQ-F005 | SplitContainer (DragDropProvider) | TC-006 | POC-003 |
-| REQ-F006 | pane.tsx, session.tsx | TC-007 | - |
-| REQ-F007 | session.tsx | TC-008 | - |
-| REQ-F008 | layout.tsx | TC-009 | POC-001 |
-| REQ-F009 | session.tsx | TC-010 | - |
+**Status**: draft
+**Priority**: medium
+**PoC**: POC-003
+
+Action buttons appear in the workflow tab for advancing to the next step.
+
+### Acceptance Criteria
+- Buttons are contextual per step:
+  - After PRD: "Next: User Flow"
+  - After User Flow: "Next: ERD"
+  - After ERD: "Complete Workflow"
+- Clicking a button calls the workflow advance API
+- The button sends a prompt to the active session for the next step
+- Step indicator shows "Step X of 3"
+
+### Cross-References
+- Components: COMP-WF-003
+- Tests: TC-WF-008, TC-WF-009
+- Backend: `POST /session/:sessionID/workflow/advance`
+
+---
+
+## REQ-WF-005: In-Place Document Editing
+
+**Status**: draft
+**Priority**: medium
+**PoC**: POC-003
+
+Users can edit the generated document directly in the workflow tab.
+
+### Acceptance Criteria
+- FileViewer handles markdown rendering and editing (already exists)
+- Edits are saved to the file on disk
+- Changes persist across page reloads
+- User can toggle between preview and edit mode
+
+### Cross-References
+- Components: COMP-WF-001
+- Tests: TC-WF-010
+- Frontend: `FileViewer` component (reused)
+
+---
+
+## REQ-WF-006: Workflow State Persistence
+
+**Status**: draft
+**Priority**: high
+**PoC**: POC-001
+
+Workflow state must persist across page reloads and server restarts.
+
+### Acceptance Criteria
+- Workflow state stored via `Storage.write(["workflow", sessionID], info)`
+- State includes: current step, all step statuses, documents, timestamps
+- Minimized state stored in layout context (persisted to localStorage)
+- On reload: workflow tab restores if it was open, icon shows if minimized
+
+### Cross-References
+- Components: COMP-WF-001
+- Tests: TC-WF-011, TC-WF-012
+- Backend: `Storage` module
+
+---
+
+## REQ-WF-007: Minimize/Restore Genie Animation
+
+**Status**: draft
+**Priority**: medium
+**PoC**: POC-004
+
+Closing the workflow tab triggers a macOS-style genie effect that shrinks the pane into a small icon in the prompt input bar.
+
+### Acceptance Criteria
+- Closing a `workflow://` tab triggers genie animation instead of immediate close
+- Animation: pane content shrinks (scale + translate) toward icon position (~300ms)
+- On complete: pane closes, icon appears in prompt bar
+- Clicking icon triggers reverse animation: icon expands into split pane
+- Icon only visible when workflow exists AND tab is minimized
+- Icon shows badge indicating current step (PRD/Flow/ERD)
+- Minimized state persisted in layout context
+
+### Cross-References
+- Components: COMP-WF-004, COMP-WF-005
+- Tests: TC-WF-013, TC-WF-014, TC-WF-015
+- Frontend: `workflow-genie.tsx`, `prompt-input.tsx`, `layout.tsx`

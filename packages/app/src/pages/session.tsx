@@ -27,6 +27,7 @@ import { DialogSelectModel } from "@/components/dialog-select-model"
 import { DialogSelectMcp } from "@/components/dialog-select-mcp"
 import { DialogGitInit } from "@/components/dialog-git-init"
 import { DialogGitHubConnect } from "@/components/dialog-github-connect"
+import { DialogWorkflowStart } from "@/components/dialog-workflow-start"
 import { useCommand } from "@/context/command"
 import { useNavigate, useParams } from "@solidjs/router"
 import { UserMessage } from "@anyon/sdk/v2"
@@ -241,6 +242,99 @@ export default function Page() {
     if (path) file.load(path)
   }
 
+  // Listen for workflow step completion and auto-open workflow tab in split pane
+  createEffect(() => {
+    const unsub = sdk.event.listen((e) => {
+      const event = e.details
+      if (event.type !== "workflow.step.completed") return
+
+      const { sessionID, filePath } = event.properties
+
+      // Only handle events for the currently focused session
+      if (sessionID !== focusedActiveSessionId()) return
+
+      // Create workflow tab ID for the file
+      const workflowTabId = file.workflowTab(filePath)
+
+      // Get current pane structure
+      const allPaneIds = collectPaneIds(splitLayout().root())
+      const focusedId = splitLayout().focusedPane() ?? allPaneIds[0]
+      if (!focusedId) return
+
+      // Check if workflow tab is already open in any pane
+      const alreadyOpen = allPaneIds.some((id) => splitLayout().pane(id).tabs().includes(workflowTabId))
+      if (alreadyOpen) {
+        // Just activate it in its current pane
+        const paneWithTab = allPaneIds.find((id) => splitLayout().pane(id).tabs().includes(workflowTabId))
+        if (paneWithTab) {
+          splitLayout().pane(paneWithTab).setActive(workflowTabId)
+        }
+        return
+      }
+
+      // If no split exists yet (only one pane), split the current pane
+      if (allPaneIds.length === 1 && isDesktop()) {
+        splitLayout().splitPane(focusedId)
+        // Get the new pane that was created (it will be the second one)
+        const newPaneIds = collectPaneIds(splitLayout().root())
+        const newPaneId = newPaneIds.find((id) => id !== focusedId)
+        if (newPaneId) {
+          splitLayout().pane(newPaneId).open(workflowTabId)
+        }
+      } else {
+        // If split already exists, open in the focused pane
+        splitLayout().pane(focusedId).open(workflowTabId)
+      }
+    })
+
+    onCleanup(() => unsub())
+  })
+
+  // Track last workflow file path for restore
+  const [lastWorkflowPath, setLastWorkflowPath] = createSignal<string | undefined>()
+
+  // Save workflow path when a workflow tab is opened anywhere
+  createEffect(() => {
+    const allPaneIds = collectPaneIds(splitLayout().root())
+    for (const id of allPaneIds) {
+      const tabs = splitLayout().pane(id).tabs()
+      const workflowTab = tabs.find(t => t.startsWith("workflow://"))
+      if (workflowTab) {
+        const path = file.workflowFromTab(workflowTab)
+        if (path) setLastWorkflowPath(path)
+      }
+    }
+  })
+
+  // Restore workflow: when isMinimized goes from true→false, re-open workflow tab in split pane
+  createEffect(
+    on(
+      () => layout.workflow.isMinimized(sessionKey()),
+      (minimized, prevMinimized) => {
+        if (prevMinimized && !minimized) {
+          const workflowPath = lastWorkflowPath()
+          if (!workflowPath) return
+          const workflowTabId = file.workflowTab(workflowPath)
+          const allPaneIds = collectPaneIds(splitLayout().root())
+          const focusedId = splitLayout().focusedPane() ?? allPaneIds[0]
+          if (!focusedId) return
+
+          if (allPaneIds.length === 1 && isDesktop()) {
+            splitLayout().splitPane(focusedId)
+            const newPaneIds = collectPaneIds(splitLayout().root())
+            const newPaneId = newPaneIds.find((id) => id !== focusedId)
+            if (newPaneId) {
+              splitLayout().pane(newPaneId).open(workflowTabId)
+            }
+          } else {
+            splitLayout().pane(focusedId).open(workflowTabId)
+          }
+        }
+      },
+      { defer: true },
+    ),
+  )
+
   // Agent/model tracking from focusedActiveSessionId
   createEffect(
     on(
@@ -318,6 +412,20 @@ export default function Page() {
     return false
   }
 
+  const showWorkflowDialog = () => {
+    setTimeout(() => {
+      dialog.show(() => (
+        <DialogWorkflowStart
+          onStartWorkflow={() => {
+            local.agent.set("anyon-alpha")
+            local.workflow.set(true)
+          }}
+          onSkip={() => {}}
+        />
+      ))
+    }, 100)
+  }
+
   createEffect(() => {
     if (!server.ready()) return
 
@@ -333,6 +441,7 @@ export default function Page() {
         .then((res) => {
           const isGitRepo = res.data?.vcs === "git"
           if (!isGitRepo) {
+            markAsked(directory)
             dialog.show(() => (
               <DialogGitInit
                 onInit={() => {
@@ -340,6 +449,7 @@ export default function Page() {
                 }}
                 onClone={(url) => {
                   terminal.writeWhenReady(`\x15git clone ${url} . && npm install\n`)
+                  showWorkflowDialog()
                 }}
                 onShowGitHubConnect={() => {
                   dialog.show(() => (
@@ -348,9 +458,10 @@ export default function Page() {
                         terminal.writeWhenReady(
                           `\x15git remote add origin ${repoUrl} && git add -A && git commit -m "Initial commit" && git push -u origin main\n`,
                         )
+                        showWorkflowDialog()
                       }}
                       onSkip={() => {
-                        // User skipped, no action needed
+                        showWorkflowDialog()
                       }}
                     />
                   ))
@@ -358,7 +469,6 @@ export default function Page() {
               />
             ))
           }
-          markAsked(directory)
         })
         .catch((err) => {
           console.error("Failed to check project status for git init popup:", err)
@@ -606,6 +716,28 @@ export default function Page() {
           modelID: model.id,
           providerID: model.provider.id,
         })
+      },
+    },
+    {
+      id: "workflow.start",
+      title: "Start guided workflow",
+      description: "Start a guided PRD → User Flow → ERD workflow",
+      category: "Workflow",
+      slash: "plan-workflow",
+      disabled: !activeSessionId(),
+      onSelect: async () => {
+        const sessionID = activeSessionId()
+        if (!sessionID) return
+        const parts = prompt.current()
+        const textPart = parts.find((p) => p.type === "text" && p.content.trim())
+        const idea = textPart && "content" in textPart ? textPart.content.trim() : ""
+        if (!idea) return
+        await fetch(`${sdk.url}/session/${sessionID}/workflow/start`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idea }),
+        })
+        prompt.reset()
       },
     },
     {

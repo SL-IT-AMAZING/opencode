@@ -864,6 +864,37 @@ export type EventGlobalDisposed = {
   }
 }
 
+export type EventWorkflowUpdated = {
+  type: "workflow.updated"
+  properties: {
+    sessionID: string
+    info: {
+      sessionID: string
+      currentStep: "prd" | "userflow" | "erd"
+      steps: Array<{
+        type: "prd" | "userflow" | "erd"
+        status: "pending" | "active" | "complete"
+        document?: string
+        updatedAt?: string
+      }>
+      idea: string
+      time: {
+        created: string
+        updated: string
+      }
+    }
+  }
+}
+
+export type EventWorkflowStepCompleted = {
+  type: "workflow.step.completed"
+  properties: {
+    sessionID: string
+    step: "prd" | "userflow" | "erd"
+    filePath: string
+  }
+}
+
 export type Event =
   | EventInstallationUpdated
   | EventInstallationUpdateAvailable
@@ -911,6 +942,8 @@ export type Event =
   | EventPtyDeleted
   | EventServerConnected
   | EventGlobalDisposed
+  | EventWorkflowUpdated
+  | EventWorkflowStepCompleted
 
 export type GlobalEvent = {
   directory: string

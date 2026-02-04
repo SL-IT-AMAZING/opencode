@@ -10,11 +10,13 @@ export interface DialogProps extends ParentProps {
   classList?: ComponentProps<"div">["classList"]
   /** Prevent dialog from closing on Escape key or outside click */
   preventClose?: boolean
+  /** Center dialog by overriding left/right margins */
+  centered?: boolean
 }
 
 export function Dialog(props: DialogProps) {
   return (
-    <div data-component="dialog">
+    <div data-component="dialog" style={props.centered ? { left: "0", right: "0" } : undefined}>
       <div data-slot="dialog-container">
         <Kobalte.Content
           data-slot="dialog-content"

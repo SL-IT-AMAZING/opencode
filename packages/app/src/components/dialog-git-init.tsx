@@ -38,6 +38,7 @@ export function DialogGitInit(props: DialogGitInitProps) {
 
   return (
     <Dialog
+      centered
       title={
         showClone() ? (
           <div class="flex items-center gap-2">

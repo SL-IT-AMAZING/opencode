@@ -97,6 +97,7 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
         openSessions: {} as Record<string, string[]>, // Track open session tabs per directory
         terminalState: {} as Record<string, { opened: boolean }>, // Per-project terminal state
         splitLayout: {} as Record<string, SplitLayout>,
+        workflowMinimized: {} as Record<string, boolean>,
       }),
     )
 
@@ -655,6 +656,25 @@ export const { use: useLayout, provider: LayoutProvider } = createSimpleContext(
             )
           },
         }
+      },
+      workflow: {
+        isMinimized(sessionKey: string) {
+          return store.workflowMinimized?.[sessionKey] ?? false
+        },
+        minimize(sessionKey: string) {
+          if (!store.workflowMinimized) {
+            setStore("workflowMinimized", { [sessionKey]: true })
+            return
+          }
+          setStore("workflowMinimized", sessionKey, true)
+        },
+        restore(sessionKey: string) {
+          if (!store.workflowMinimized) {
+            setStore("workflowMinimized", { [sessionKey]: false })
+            return
+          }
+          setStore("workflowMinimized", sessionKey, false)
+        },
       },
       // Close a session tab from ALL sessionTabs and splitLayout entries (used when archiving)
       closeSessionTab(tab: string) {

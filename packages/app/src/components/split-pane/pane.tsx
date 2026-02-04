@@ -13,6 +13,7 @@ import { useCodeComponent } from "@anyon/ui/context/code"
 import { useLocal } from "@/context/local"
 import { usePlatform } from "@/context/platform"
 import { SessionTurn } from "@anyon/ui/session-turn"
+import { Spinner } from "@anyon/ui/spinner"
 import { createAutoScroll } from "@anyon/ui/hooks"
 import { SessionReview } from "@anyon/ui/session-review"
 import { SessionMessageRail } from "@anyon/ui/session-message-rail"
@@ -20,6 +21,7 @@ import { FileViewer } from "@/components/file-viewer"
 import { TextSelectionPopup } from "@/components/text-selection-popup"
 import { PromptInput } from "@/components/prompt-input"
 import { PreviewPane } from "@/components/preview/preview-pane"
+import { WorkflowDocView } from "@/components/workflow-doc-view"
 import {
   SessionContextTab,
   SortableTab,
@@ -136,7 +138,7 @@ export function Pane(props: PaneProps) {
   const allTabs = createMemo(() =>
     paneTabs()
       .tabs()
-      .filter((tab) => tab.startsWith("session-") || tab.startsWith("file://") || tab.startsWith("preview://")),
+      .filter((tab) => tab.startsWith("session-") || tab.startsWith("file://") || tab.startsWith("preview://") || tab.startsWith("workflow://")),
   )
   const hasFileTabs = createMemo(() => allTabs().some((tab) => tab.startsWith("file://")))
   const activeFileTab = createMemo(() => {
@@ -148,6 +150,11 @@ export function Pane(props: PaneProps) {
     const active = paneTabs().active()
     if (!active?.startsWith("preview://")) return null
     return file.previewFromTab(active)
+  })
+  const activeWorkflowTab = createMemo(() => {
+    const tab = paneTabs().active()
+    if (tab && file.isWorkflowTab(tab)) return file.workflowFromTab(tab)
+    return undefined
   })
   const reviewTab = createMemo(() => diffs().length > 0 || paneTabs().active() === "review")
   const mobileReview = createMemo(() => !props.isDesktop && diffs().length > 0)
@@ -267,6 +274,9 @@ export function Pane(props: PaneProps) {
   }
 
   const closeTab = (tab: string) => {
+    if (file.isWorkflowTab(tab)) {
+      layout.workflow.minimize(props.sessionKey)
+    }
     paneTabs().close(tab)
   }
 
@@ -559,6 +569,44 @@ export function Pane(props: PaneProps) {
       >
         <Switch>
           <Match when={activePreviewTab()}>{(preview) => <PreviewPane preview={preview()} />}</Match>
+          <Match when={activeWorkflowTab()}>
+            {(path) => {
+              const resolveSessionId = () => {
+                const sid = activeSessionId()
+                if (sid) return sid
+                const sessionTab = paneTabs().tabs().find(t => t.startsWith("session-"))
+                if (sessionTab) return sessionTab.replace("session-", "")
+                // sessionKey is "dir/sessionId" — extract the sessionId part
+                const parts = props.sessionKey.split("/")
+                return parts[parts.length - 1]
+              }
+              const workflow = createMemo(() => {
+                const sid = resolveSessionId()
+                return sid ? sync.data.workflow[sid] : undefined
+              })
+              const handleAdvanceStep = async () => {
+                const sid = resolveSessionId()
+                if (!sid) return
+                await fetch(`${sdk.url}/session/${sid}/workflow/advance`, { method: "POST" })
+              }
+              return (
+                <div
+                  class="absolute inset-x-0 top-0"
+                  style={{
+                    "background-color": "#1e1e1e",
+                    bottom: "calc(var(--prompt-height, 8rem) + 32px)",
+                  }}
+                >
+                  <WorkflowDocView
+                    path={path()}
+                    workflow={workflow()}
+                    onAdvanceStep={handleAdvanceStep}
+                    onAskAboutSelection={handleAskAboutSelection}
+                  />
+                </div>
+              )
+            }}
+          </Match>
           <Match when={activeFileTab()}>
             {(path) => (
               <div
@@ -690,6 +738,13 @@ export function Pane(props: PaneProps) {
         ref={(el) => (promptDock = el)}
         class="absolute inset-x-0 bottom-0 pt-12 pb-4 md:pb-8 flex flex-col justify-center items-center z-50 px-4 md:px-0 bg-gradient-to-t from-background-stronger via-background-stronger to-transparent pointer-events-none"
       >
+        {/* Working indicator */}
+        <Show when={isWorking()}>
+          <div class="flex items-center gap-2 text-sm text-foreground-subtle pb-3 pointer-events-auto">
+            <Spinner />
+            <span>Working...</span>
+          </div>
+        </Show>
         <div class="w-full md:px-6 pointer-events-auto">
           <PromptInput
             activeSessionId={activeSessionId()}

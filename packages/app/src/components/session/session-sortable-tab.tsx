@@ -61,6 +61,32 @@ export function FileVisual(props: { path: string; active?: boolean }): JSX.Eleme
   )
 }
 
+export function WorkflowVisual(props: { path: string; active?: boolean }): JSX.Element {
+  const filename = createMemo(() => getFilename(props.path))
+  return (
+    <div class="flex items-center gap-x-1.5">
+      <div class="flex items-center gap-x-1">
+        <div
+          classList={{
+            "size-2 rounded-full": true,
+            "bg-accent-base": props.active,
+            "bg-text-tertiary": !props.active,
+          }}
+        />
+        <Icon
+          name="task"
+          size="small"
+          classList={{
+            "text-icon-base": props.active,
+            "text-icon-tertiary": !props.active,
+          }}
+        />
+      </div>
+      <span class="text-14-medium truncate">Workflow: {filename()}</span>
+    </div>
+  )
+}
+
 export function SortableSessionTab(props: {
   sessionId: string
   title: string
@@ -106,7 +132,12 @@ export function SortableTab(props: {
   const sortable = createSortable(props.tab)
   const path = createMemo(() => file.pathFromTab(props.tab))
   const preview = createMemo(() => file.previewFromTab(props.tab))
+  const workflow = createMemo(() => file.workflowFromTab(props.tab))
   const tooltipValue = createMemo(() => {
+    const w = workflow()
+    if (w) {
+      return `Workflow: ${w}`
+    }
     const p = preview()
     if (p) {
       // Extract original localhost URL from proxy URL for display
@@ -127,6 +158,7 @@ export function SortableTab(props: {
             hideCloseButton
           >
             <Switch>
+              <Match when={workflow()}>{(w) => <WorkflowVisual path={w()} />}</Match>
               <Match when={preview()}>{(p) => <PreviewVisual preview={p()} />}</Match>
               <Match when={path()}>{(p) => <FileVisual path={p()} />}</Match>
             </Switch>

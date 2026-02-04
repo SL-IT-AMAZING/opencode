@@ -107,7 +107,7 @@ export function DialogGitHubConnect(props: DialogGitHubConnectProps) {
   }
 
   return (
-    <Dialog title="GitHub에 연결">
+    <Dialog centered title="GitHub에 연결">
       <div class="flex flex-col gap-6 px-2.5 pb-3">
         <Show
           when={authStatus()?.authenticated}

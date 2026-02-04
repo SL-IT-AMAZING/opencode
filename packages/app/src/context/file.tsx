@@ -166,6 +166,20 @@ export const { use: useFile, provider: FileProvider } = createSimpleContext({
       return tabValue.startsWith("preview://")
     }
 
+    function workflowTab(input: string) {
+      const path = normalize(input)
+      return `workflow://${path}`
+    }
+
+    function workflowFromTab(tabValue: string): string | null {
+      if (!tabValue.startsWith("workflow://")) return null
+      return normalize(tabValue.slice("workflow://".length))
+    }
+
+    function isWorkflowTab(tabValue: string): boolean {
+      return tabValue.startsWith("workflow://")
+    }
+
     const inflight = new Map<string, Promise<void>>()
 
     const [store, setStore] = createStore<{
@@ -341,6 +355,9 @@ export const { use: useFile, provider: FileProvider } = createSimpleContext({
       previewTab,
       previewFromTab,
       isPreviewTab,
+      workflowTab,
+      workflowFromTab,
+      isWorkflowTab,
       getOriginalUrl,
       get,
       load,
